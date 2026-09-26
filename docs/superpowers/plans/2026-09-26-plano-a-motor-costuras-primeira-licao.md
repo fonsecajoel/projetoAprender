@@ -286,7 +286,6 @@ describe('as três classes de erro', () => {
       esperado: 'número',
       obtido: 'texto',
       origem: O,
-      passo: 1,
     };
     expect(r.classe).toBe('Recusa');
     expect(Object.keys(r)).toContain('remedio');
@@ -400,11 +399,11 @@ if (!('ResizeObserver' in globalThis)) {
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ObservadorFalso;
 }
 
-// O Blockly chama `getBBox` para medir o texto de um bloco. O jsdom nao o
-// implementa -- e a lib `DOM` do TypeScript tambem nao o poe em `SVGElement`,
-// poe-no em `SVGGraphicsElement`. Por isso o guarda tem de procurar o
-// prototipo em runtime e o tipo tem de ser declarado a mao: nenhuma das duas
-// coisas se resolve sozinha.
+// O Blockly chama `getBBox` para medir o texto de um bloco. O jsdom não o
+// implementa — e a lib `DOM` do TypeScript também não o põe em
+// `SVGElement`, põe-no em `SVGGraphicsElement`. Por isso o guarda tem de
+// procurar o protótipo em runtime e o tipo tem de ser declarado à mão:
+// nenhuma das duas coisas se resolve sozinha.
 type Medivel = { getBBox?: () => DOMRect };
 
 const prototipoSVG = (typeof SVGGraphicsElement !== 'undefined'
@@ -440,9 +439,9 @@ function ficheiros(raiz: string): string[] {
 
 const todos = ficheiros(NUCLEO);
 // Os testes contam para o invariante tanto como o resto: um teste que importa
-// uma projecao para poder escrever o resultado esperado nao esta a testar o
-// nucleo, esta a depender dele. A contagem e que os separa, para que o numero
-// que este script imprime diga quantos ficheiros *de producao* o nucleo tem.
+// uma projeção para poder escrever o resultado esperado não está a testar o
+// núcleo, está a depender dele. A contagem é que os separa, para que o número
+// que este script imprime diga quantos ficheiros *de produção* o núcleo tem.
 const deTeste = todos.filter((f) => f.includes('.test.'));
 
 const violacoes = todos.filter((f) => PROIBIDO.test(readFileSync(f, 'utf8')));
@@ -485,7 +484,8 @@ Preserve as `dependencies` e `devDependencies` que o Step 1 criou, com a versão
 }
 ```
 
-O `package.json` tem quatro scripts e não tem um quinto. Não existe
+O `package.json` tem seis scripts — `dev`, `build`, `typecheck`, `test`,
+`test:watch` e `arvore` — e não tem um sétimo. Não existe
 `npm run sondas` porque as sondas **são** `npm test`: a Task 13 escreve
 `src/conteudo/portao.test.ts`, que corre todas as sondas de todas as
 lições escritas e falha se alguma falhar. Um script separado seria uma
@@ -493,6 +493,11 @@ segunda porta para o mesmo Criterion — e a segunda porta é sempre a que
 fica meio aberta. O que não pode correr dentro do vitest é a verificação
 da árvore, porque essa é sobre ficheiros e não sobre comportamento, e por
 isso tem script próprio.
+
+> **A primeira versão deste plano dizia "quatro scripts" e mostrava seis.**
+> A conta estava errada e o número errado num plano é pior do que o número
+> em falta: dá a quem lê a ideia de que há dois scripts a menos, e passa
+> despercebido porque ninguém conta scripts que leu.
 
 - [ ] **Step 6: Escrever o teste falhado**
 
@@ -557,11 +562,11 @@ describe('registar', () => {
 });
 
 describe('cabeEm', () => {
-  // A restrição é uma coluna da tabela, e não um `restricao('número')` fixo no
-  // laço. Com ela fixa, uma linha que diz "número em texto" tinha de passar
-  // um número e de ser julgada por um sítio de número — e o nome da linha
-  // passava a ser mentira. `número em texto` só é falso se o sítio for de
-  // texto, e é por isso que o sítio viaja na linha.
+  // A restrição é uma coluna da tabela, e não um `restricao('número')`
+  // fixo no laço. Com ela fixa, uma linha que diz "número em texto" tinha
+  // de passar um número e de ser julgada por um sítio de número — e o nome
+  // da linha passava a ser mentira. `número em texto` só é falso se o
+  // sítio for de texto, e é por isso que o sítio viaja na linha.
   const casos: Array<[string, RestricaoDeTipo, Valor, boolean]> = [
     ['número em número', restricao('número'), numero(3), true],
     ['texto em número', restricao('número'), palavra('olá'), false],
@@ -627,7 +632,7 @@ export const LINGUAGENS: readonly Language[] = [
 
 /** Como cada linguagem se escreve para quem lê. Vive no núcleo porque três
  *  ecrãs precisam dele — o painel de texto, o seletor e a sonda — e porque
- *  escrevê-lo à mão em cada um deles é como um aluno em Java acaba a ler
+ *  escrevê-lo à mão em cada um deles é como um aluno de Java acaba a ler
  *  "O teu código em Python". Não é sintaxe: é o nome da coisa. */
 export const NOMES: Record<Language, string> = {
   python: 'Python',
@@ -703,11 +708,11 @@ export interface QuebraEquivalencia {
 
 export type Erro = Recusa | FalhaRuntime | QuebraEquivalencia;
 
-// `nome: string = tipo` e nao `nome = tipo`. Sem a anotacao, o TypeScript
-// infere o tipo do parametro a partir do valor por omissao -- e o valor por
-// omissao e um `Tipo`, portanto `restricao('numero', 'total')` deixava de
-// compilar. O nome de um sitio e uma `string` que o suele ser `Tipo`; nao e
-// um `Tipo` que as vezes seja uma frase.
+// `nome: string = tipo` e não `nome = tipo`. Sem a anotação, o TypeScript
+// infere o tipo do parâmetro a partir do valor por omissão — e o valor por
+// omissão é um `Tipo`, portanto `restricao('número', 'total')` deixava de
+// compilar. O nome de um sítio é uma `string` que o suele ser `Tipo`; não é
+// um `Tipo` que às vezes seja uma frase.
 export function restricao(tipo: Tipo, nome: string = tipo): RestricaoDeTipo {
   return {
     tipo,
@@ -785,7 +790,13 @@ export class TraceBuilder {
     this.eventos.push({ tipo: 'passo', passo, bloco });
   }
 
-  valor(passo: number, v: Valor): void {
+  /** Chama o `registar` de módulo em vez de repetir o literal: o evento de
+   *  valor é construído num sítio só, e o `registar` livre é a coisa que os
+   *  testes importam. Chamá-lo por um nome diferente do que tem aqui — era
+   *  `valor`, um substantivo entre verbos — é a razão pela qual o
+   *  `avaliador.ts` da T2, escrito contra este ficheiro, chamava
+   *  `trace.registar` e recebia `is not a function` em quinze sítios. */
+  registar(passo: number, v: Valor): void {
     this.valores.push(v);
     this.eventos.push(registar(passo, v));
   }
@@ -955,12 +966,13 @@ escreve o par de testes dourados que fecham esta regra.
 `src/nucleo/avaliador.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { avaliador, MAX_ITERACOES, pilhaDe } from './avaliador';
+import { avaliador, MAX_ITERACOES, pilhaDe, regraDeLinhas } from './avaliador';
+import { RANGE_INTEIROS } from './tipos';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { Avaliador } from './avaliador';
 import { identificador } from './blocos';
-import type { BlocoLeigo } from './avaliador';
 import { dizer, guardar, guardarTexto, log, pilha, repetir } from './testes/dados';
-
-const O = { bloco: 'guardar', ranhura: 0, passo: 1 };
 
 describe('identificador', () => {
   it('mantém um nome simples', () => {
@@ -1004,10 +1016,17 @@ describe('guardar', () => {
     expect(v.valor).toBe(5);
   });
 
-  it('guarda um literal de texto sem erro, mas esse valor não é um número', () => {
+  it('guardar texto dá um valor de texto, e isso já é um erro', () => {
+    // O nome antigo deste teste dizia "sem erro", e o teste seguinte — que
+    // existe — diz que é uma `Recusa`. O nome mentia sobre o comportamento
+    // que o ficheiro está a descrever. Um teste cujo nome é falso ensina o
+    // leitor a ignorar o teste, e é o primeiro sítio onde se aprende a não
+    // confiar em testes.
     const a = avaliador();
     const v = a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
     expect(v.tipo).toBe('texto');
+    expect(v.recusado).toBe(true);
+    expect(a.trace.erros.length).toBe(1);
   });
 
   it('recusa guardar texto, com porque não vazio', () => {
@@ -1060,6 +1079,35 @@ describe('guardar', () => {
   });
 });
 
+describe('a palavra do robô', () => {
+  it('guardar guarda 5 como número, e ninguém se queixa', () => {
+    const a = avaliador();
+    a.executar(pilha(guardar('total', 5)));
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
+    expect(v.tipo).toBe('número');
+    expect(v.valor).toBe(5);
+    expect(a.trace.erros.length).toBe(0);
+  });
+
+  it('guardarTexto guarda o mesmo 5 como palavra, e isso é recusado', () => {
+    // `guardarTexto` embrulha em `{txt: '5'}`. O `5` que a pessoa escreveu e
+    // o `5` que o robô disse não são o mesmo valor: um é número, o outro é
+    // uma palavra com dois algarismos dentro. Uma variável de número não
+    // aceita a segunda forma, e é essa recusa — não um erro qualquer — que a
+    // lição da variável precisa de mostrar. A versão anterior deste par
+    // dizia o contrário, e o `vitest` apanhou-o.
+    const a = avaliador();
+    a.executar(pilha(guardarTexto('total', 5)));
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(v.valor).toBe('5');
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('Recusa');
+    expect(e && e.classe === 'Recusa' && e.esperado).toBe('número');
+    expect(e && e.classe === 'Recusa' && e.obtido).toBe('texto');
+  });
+});
+
 describe('repetir', () => {
   it('repete o corpo o número de vezes pedido', () => {
     const a = avaliador();
@@ -1095,6 +1143,35 @@ describe('repetir', () => {
     expect(a.trace.valores.filter((v) => v.origem.bloco === 'guardar').length).toBe(0);
   });
 
+  it('um número de repetições grande demais dá o erro do laço, não o do valor', () => {
+    // Dois limites, dois fatos. `RANGE_INTEIROS` diz que nenhum número
+    // acima de 1000 existe; `MAX_ITERACOES` diz que um laço não repete mais
+    // de 10000 vezes. Se o `repetir` decidisse pelo `valorDe`, quem escrevesse
+    // `repetir(10001)` lia "este número é grande demais" e nunca soube que o
+    // problema era o número de repetições. O teste abaixo é a razão de o
+    // `repetir` olhar para o valor cru antes de o converter.
+    const a = avaliador();
+    a.executar(pilha(repetir(MAX_ITERACOES + 1, [guardar('x', 1)])));
+    expect(a.trace.erros.length).toBe(1);
+    expect(a.trace.erros[0]?.classe).toBe('FalhaRuntime');
+    expect(a.trace.erros[0]?.porque).toContain('repetições');
+  });
+
+  it('repetir(1000) é aceite: está no alcance do número e dentro do laço', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(RANGE_INTEIROS, [guardar('x', 1)])));
+    expect(a.trace.erros.length).toBe(0);
+    expect(a.trace.valores.filter((v) => v.origem.bloco === 'guardar').length).toBe(
+      RANGE_INTEIROS,
+    );
+  });
+
+  it('um número de repetições negativo é FalhaRuntime', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(-1, [guardar('x', 1)])));
+    expect(a.trace.erros[0]?.classe).toBe('FalhaRuntime');
+  });
+
   it('repetir aninhado executa o corpo interno vezes × vezes', () => {
     const a = avaliador();
     a.executar(pilha(repetir(2, [repetir(3, [guardar('x', 1)])])));
@@ -1120,11 +1197,17 @@ describe('dizer', () => {
   });
 
   it('recusa um valor que já tinha sido recusado a chegar a dizer', () => {
+    // São dois erros, não um: o do `guardar` (palavra num slot de número) e o
+    // do `dizer` (a variável recusada a chegar a um sítio de texto). A
+    // versão anterior lia `erros[0]` — o do `guardar` — e por isso passava
+    // mesmo que o `dizer` aceitasse o valor. Lê o último.
     const a = avaliador();
     a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
     a.avaliar('dizer', { VALOR: { ref: 'total' } }, 1);
-    const e = a.trace.erros[0];
+    expect(a.trace.erros.length).toBe(2);
+    const e = a.trace.erros[1];
     expect(e?.classe).toBe('Recusa');
+    expect(e?.origem.bloco).toBe('dizer');
     expect(e && e.porque.length).toBeGreaterThan(0);
   });
 });
@@ -1153,7 +1236,7 @@ describe('valores de entrada', () => {
   });
   it('uma forma desconhecida é Recusa com porque', () => {
     const a = avaliador();
-    a.avaliar('dador_num', { VALOR: {qqq: 1} }, 1);
+    a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
     expect(a.trace.erros[0]?.classe).toBe('Recusa');
   });
 });
@@ -1172,11 +1255,18 @@ describe('blocos não implementados', () => {
 describe('executar', () => {
   it('uma pilha corre os blocos por ordem e para no primeiro erro', () => {
     const a = avaliador();
-    a.executar(pilha(guardar('total', 1), log({ ref: 'total' }), dizer(5), log({ ref: 'total' })));
+    a.executar(pilha(guardar('total', 1), dizer(5), log({ ref: 'total' })));
     const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
     expect(guardou.length).toBe(1);
     expect(a.trace.erros.length).toBe(1);
     expect(a.trace.erros[0]?.origem.bloco).toBe('dizer');
+  });
+
+  it('o bloco depois do erro não corre', () => {
+    const a = avaliador();
+    a.executar(pilha(guardar('total', 1), dizer(5), guardar('outro', 2)));
+    const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
+    expect(guardou.length).toBe(1);
   });
 
   it('programa vazio não produz erros nem valores', () => {
@@ -1195,11 +1285,177 @@ describe('executar', () => {
 
 describe('partilha de Regra', () => {
   it('dois avaliadores com a mesma Regra veem as mesmas linhas', () => {
+    // A linha tem de ser escrita por um `executar`, não por um `avaliar`
+    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` directo que
+    // a deixa por abrir. A versão anterior deste teste escrevia a linha com
+    // dois `avaliar` e depois jurava que os dois avaliadores a partilhavam —
+    // e passava a testar que a `Regra` não partilha nada.
     const primeiro = avaliador();
     const segundo = avaliador(primeiro.regra);
-    primeiro.avaliar('guardar', { nome: 'total', VALOR: 5 }, 1);
+    primeiro.executar(pilha(guardar('total', 5)));
     const v = segundo.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
     expect(v.valor).toBe(5);
+  });
+
+  it('atribuir abre uma linha que ninguém inicializou', () => {
+    // Atribuir cria; ler o que não foi atribuído falha. Se `define`
+    // ignorasse a linha por não existir, `avaliar('guardar', …)` avulso
+    // seria um no-op silencioso — e é assim que nasce um teste que passa
+    // sem estar a testar nada.
+    const r = regraDeLinhas();
+    const a = avaliador(r);
+    a.avaliar('guardar', { nome: 'total', VALOR: 7 }, 1);
+    expect(r.obtém('total', 1)?.valor).toBe(7);
+  });
+
+  it('inicializar a mesma linha de novo apaga o que lá estava', () => {
+    const r = regraDeLinhas();
+    const a = avaliador(r);
+    a.avaliar('guardar', { nome: 'total', VALOR: 7 }, 1);
+    r.inicializa(1);
+    expect(r.existe('total', 1)).toBe(false);
+  });
+});
+
+describe('o motor não conhece linguagens', () => {
+  it('nenhum erro do motor nomeia uma linguagem', () => {
+    // A spec §6.4: uma linguagem é a sua sintaxe, e a sintaxe é o que a
+    // projeção escreve. O `E`, o `restricao` e o `valor` vivem no núcleo e
+    // não podem trazer um nome de linguagem — quem aprende Go não há de ler
+    // "Python" numa mensagem sobre um número.
+    //
+    // Cada caso devolve o avaliador que usou, para que a leitura do `trace`
+    // seja feita no mesmo objeto que produziu o erro. Um caso que corre
+    // `avaliador()` internamente e devolve `void` obriga a refazer a mesma
+    // execução para poder olhar para o resultado — e um teste que repete a
+    // execução é um teste que pode passar na segunda vez e falhar na
+    // primeira.
+    const casos: Array<[string, () => Avaliador]> = [
+      ['guardar texto num slot de número', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
+        return a;
+      }],
+      ['guardar sem nome', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: '', VALOR: 1 }, 1);
+        return a;
+      }],
+      ['guardar fora de RANGE_INTEIROS', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'total', VALOR: 1_000_000 }, 1);
+        return a;
+      }],
+      ['guardar sem valor', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'total' }, 1);
+        return a;
+      }],
+      ['dizer um número', () => {
+        const a = avaliador();
+        a.avaliar('dizer', { VALOR: 5 }, 1);
+        return a;
+      }],
+      ['dizer um valor já recusado', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
+        a.avaliar('dizer', { VALOR: { ref: 'total' } }, 1);
+        return a;
+      }],
+      ['referência a uma variável que não existe', () => {
+        const a = avaliador();
+        a.avaliar('dador_num', { VALOR: { ref: 'fantasma' } }, 1);
+        return a;
+      }],
+      ['forma de valor desconhecida', () => {
+        const a = avaliador();
+        a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
+        return a;
+      }],
+      ['bloco não implementado', () => {
+        const a = avaliador();
+        a.avaliar('condicao', { VALOR: 1 }, 1);
+        return a;
+      }],
+      ['repetição não inteira', () => {
+        const a = avaliador();
+        a.executar(pilha(repetir(1.5, [guardar('x', 1)])));
+        return a;
+      }],
+      ['repetição acima do limite', () => {
+        const a = avaliador();
+        a.executar(pilha(repetir(MAX_ITERACOES + 1, [guardar('x', 1)])));
+        return a;
+      }],
+    ];
+
+    for (const [nome, caso] of casos) {
+      const a = caso();
+      expect(a.trace.erros.length, nome).toBeGreaterThan(0);
+      for (const e of a.trace.erros) {
+        const texto = e.porque + '\n' + ('remedio' in e ? e.remedio : '');
+        expect(texto, nome).not.toMatch(/Python|Java|Go|TypeScript|JavaScript|SQL/);
+      }
+    }
+  });
+
+  it('todo erro do motor tem porque e remedio não vazios', () => {
+    // A regra que a Task 1 fixou para `Recusa`, aplicada agora a todos os
+    // sítios onde o motor decide falhar. Um erro sem `remedio` é um erro
+    // que obriga o aluno a adivinhar, e o produto inteiro existe para
+    // trocar adivinhação por razão.
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
+    for (const e of a.trace.erros) {
+      expect(e.porque.length).toBeGreaterThan(0);
+      if ('remedio' in e) expect(e.remedio.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// O `verificar-arvore.ts` já garante que `nucleo/` não *importa* `projecoes/`.
+// Isto é a outra metade: que o núcleo não *chame* para dentro de uma
+// projeção, nem pelo nome de uma função dela. A tentação é concreta e
+// silenciosa — `avaliarTexto` é o nome que toda a gente dá à função que
+// converte texto numa linguagem, e um dia um ficheiro do núcleo vai
+// `import { avaliarTexto } from '../projecoes/…'` e passar a tratar
+// sintaxe, que é a coisa que a spec §6.4 proíbe ao núcleo.
+//
+// Só os ficheiros de produção são lidos. Este ficheiro de teste menciona
+// `projecoes` e `avaliarTexto` nas próprias expressões regulares, e um
+// teste que se apanha a si próprio não verifica nada.
+describe('o núcleo não fala com as projeções', () => {
+  function producaoEm(raiz: string): string[] {
+    return readdirSync(raiz, { withFileTypes: true }).flatMap((e) => {
+      const caminho = join(raiz, e.name);
+      if (e.isDirectory()) return producaoEm(caminho);
+      if (!/\.tsx?$/.test(e.name)) return [];
+      return e.name.includes('.test.') ? [] : [caminho];
+    });
+  }
+
+  // O `cwd` do vitest é a raiz do projecto, que é onde a npm correu o
+  // comando. `import.meta.url` não serve: depois da transformação do
+  // vitest deixa de ser um URL `file:` e `fileURLToPath` rebenta — o que
+  // é um bom motivo para um teste de caminho de ficheiro não confiar em
+  // magia de bundler.
+  const NUCLEO = join(process.cwd(), 'src', 'nucleo');
+
+  it('nenhum ficheiro de produção menciona uma projeção ou chama o leitor de texto', () => {
+    const ficheiros = producaoEm(NUCLEO);
+    expect(ficheiros.length).toBeGreaterThan(0);
+    for (const f of ficheiros) {
+      // Os comentários saem antes do casamento. Um ficheiro do núcleo vai
+      // ter uma linha a explicar *porquê* que não chama `emitir` — e um
+      // teste que proíbe a palavra transformava a documenting do
+      // invariante numa razão para o invariante desaparecer. O que se
+      // proíbe é a chamada, não a lembrança dela.
+      const codigo = readFileSync(f, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1');
+      expect(codigo, f).not.toMatch(/projecoes/);
+      expect(codigo, f).not.toMatch(/avaliarTexto|\.ler\(|\bemitir\b/);
+    }
   });
 });
 ```
@@ -1270,9 +1526,9 @@ export const TIPO_DE_BLOCO: Record<string, Tipo> = {
 ```typescript
 import { construir } from './trace';
 import type { TraceBuilder } from './trace';
-import { E, RANGE_INTEIROS, restricao } from './tipos';
+import { E, EXPLICACAO_VAZIA, RANGE_INTEIROS, restricao } from './tipos';
 import type { Erro, FalhaRuntime, Origem, Tipo, Valor } from './tipos';
-import { identificador, TIPO_DE_BLOCO } from './blocos';
+import { identificador } from './blocos';
 
 export interface CampoLeigo {
   valor: unknown;
@@ -1292,7 +1548,7 @@ export interface BlocoLeigo {
 export const MAX_ITERACOES = 10_000;
 
 /** Contrato para persistir valores entre avaliações. O `passo` é explícito
- *  porque o mesmo objecto é partilhado por vários avaliadores. */
+ *  porque o mesmo objeto é partilhado por vários avaliadores. */
 export interface Regra {
   inicializa(passo: number): void;
   obtém(nome: string, passo: number): Valor | null;
@@ -1310,8 +1566,15 @@ export function regraDeLinhas(): Regra {
       return linhas.get(passo)?.get(nome) ?? null;
     },
     define(nome, passo, v) {
-      const linha = linhas.get(passo);
-      if (linha) linha.set(nome, v);
+      // Atribuir **cria** a linha se ela não existir. A versão anterior
+      // ignorava a atribuição quando `inicializa` não tinha corrido, e isso
+      // tornava `avaliar('guardar', …)` avulso um no-op silencioso: o bloco
+      // "guardava" e nada ficava guardado, sem erro nenhum. Atribuir cria e
+      // ler o que não foi atribuído falha — que é a regra de toda a vida, e
+      // é a regra que o `executor` implementa chamando `inicializa` por linha.
+      const linha = linhas.get(passo) ?? new Map<string, Valor>();
+      linha.set(nome, v);
+      linhas.set(passo, linha);
     },
     existe(nome, passo) {
       return linhas.get(passo)?.has(nome) ?? false;
@@ -1328,36 +1591,34 @@ export interface Entradas {
   CORPO?: BlocoLeigo[];
 }
 
-const PY_FALHA =
-  'Python descobre isto aqui, mas só quando o programa chega a esta linha. A linha que escreveu o valor mau pode estar muito acima.';
-const JAVA_FALHA =
-  'Java nunca chega aqui: o compilador recusa o programa antes de o arranque.';
-const PY_RECUSA =
-  'Python guarda o valor sem dizer nada. O problema só aparece mais tarde, noutra linha.';
-const JAVA_RECUSA =
-  'Java não te deixa guardar um texto numa variável que declaraste como número.';
-
 function origemDe(bloco: string, ranhura: number, passo: number): Origem {
   return { bloco, ranhura, passo };
 }
 
-function valorDe(tipo: Tipo, valor: unknown, bloco: string, ranhura: number, passo: number): Valor {
+/** O valor mais cru que existe: um tipo, um `unknown` e nada mais. O nome
+ *  acaba em `Cru` porque `valorDe` é também o nome do método que resolve um
+ *  valor de entrada; dois nomes e um método com o mesmo nome obrigam quem lê
+ *  a parar em cada chamada para ver qual dos dois é que está a correr. */
+function valorCru(tipo: Tipo, valor: unknown, bloco: string, ranhura: number, passo: number): Valor {
   return {
     tipo,
     valor,
-    explicacao: { porque: '', python: '', java: '' },
+    explicacao: EXPLICACAO_VAZIA,
     origem: origemDe(bloco, ranhura, passo),
     recusado: false,
   };
 }
 
-function falhar(passo: number, porque: string, bloco: string): FalhaRuntime {
+/** Um erro do motor. `remedio` é obrigatório e não pode ser vazio: a
+ *  linguagem que explica *quando* este programa rebenta é escrita pela
+ *  projeção, e o núcleo só diz o que fazer — porque o núcleo não conhece
+ *  nenhuma linguagem. */
+function falhar(passo: number, porque: string, remedio: string, bloco: string): FalhaRuntime {
   return {
     classe: 'FalhaRuntime',
     porque,
     passo,
-    python: PY_FALHA,
-    java: JAVA_FALHA,
+    remedio,
     origem: origemDe(bloco, 0, passo),
   };
 }
@@ -1429,10 +1690,11 @@ class AvaliadorImpl implements Avaliador {
           falhar(
             passo,
             `O bloco "${tipo}" ainda não faz nada. A lição 1 só usa "guardar" e "repetir".`,
+            `Usa um bloco que esta lição ensinou, ou espera pela lição que traz o bloco "${tipo}".`,
             tipo,
           ),
         );
-        return { ...valorDe('número', undefined, tipo, 0, passo), recusado: true };
+        return { ...valorCru('número', undefined, tipo, 0, passo), recusado: true };
     }
   }
 
@@ -1440,34 +1702,61 @@ class AvaliadorImpl implements Avaliador {
   private valorDe(bruto: unknown, passo: number, bloco: string, ranhura: number): Valor {
     const origem = origemDe(bloco, ranhura, passo);
     if (bruto === null || bruto === undefined) {
-      this.trace.falha(falhar(passo, 'Falta o valor deste sítio.', bloco));
-      return { ...valorDe('número', undefined, bloco, ranhura, passo), recusado: true };
+      this.trace.falha(
+        falhar(
+          passo,
+          'Falta o valor deste sítio.',
+          'Arrasta um valor para dentro deste sítio, ou escreve o número directamente no sítio.',
+          bloco,
+        ),
+      );
+      return { ...valorCru('número', undefined, bloco, ranhura, passo), recusado: true };
     }
     if (typeof bruto === 'number') {
       if (Number.isFinite(bruto) && Math.abs(bruto) <= RANGE_INTEIROS) {
-        return valorDe('número', bruto, bloco, ranhura, passo);
+        return valorCru('número', bruto, bloco, ranhura, passo);
       }
-      const v: Valor = { ...valorDe('número', bruto, bloco, ranhura, passo), recusado: true };
-      this.trace.recusa({ ...E(restricao('número', 'o número'), v), origem });
+      const v: Valor = { ...valorCru('número', bruto, bloco, ranhura, passo), recusado: true };
+      this.trace.recusa({
+        ...E(restricao('número', 'o número'), v),
+        origem,
+        // O `remedio` do `E` é escrito a partir do par (esperado, obtido), e
+        // aqui os dois são `número`: "guarda lá um número em vez de número" não
+        // é um consolo, é uma frase sem sentido. O problema não é o tipo, é o
+        // tamanho, e o consolo tem de falar do tamanho.
+        remedio: `Este sítio só trabalha com números de ${RANGE_INTEIROS} para baixo, em qualquer sentido. Arranca o número para um valor mais pequeno, ou deixa de usar números tão grandes.`,
+      });
       return v;
     }
     if (typeof bruto === 'boolean') {
-      return valorDe('lógico', bruto, bloco, ranhura, passo);
+      return valorCru('lógico', bruto, bloco, ranhura, passo);
     }
     if (typeof bruto === 'object') {
       const o = bruto as { txt?: unknown; ref?: unknown; bloco?: BlocoLeigo };
-      if (typeof o.txt === 'string') return valorDe('texto', o.txt, bloco, ranhura, passo);
+      if (typeof o.txt === 'string') return valorCru('texto', o.txt, bloco, ranhura, passo);
       if (typeof o.ref === 'string') {
         const chave = identificador(o.ref);
         const v = this.regra.obtém(chave, passo);
         if (v) return { ...v, origem };
-        this.trace.falha(falhar(passo, `A variável "${o.ref}" ainda não tem valor nesta linha.`, bloco));
-        return { ...valorDe('número', undefined, bloco, ranhura, passo), recusado: true };
+        this.trace.falha(
+          falhar(
+            passo,
+            `A variável "${o.ref}" ainda não tem valor nesta linha.`,
+            `Guarda o valor de "${o.ref}" numa linha **antes** desta, ou escreve o valor directamente aqui em vez do nome.`,
+            bloco,
+          ),
+        );
+        return { ...valorCru('número', undefined, bloco, ranhura, passo), recusado: true };
       }
       if (o.bloco) return this.avaliar(o.bloco.type, entradasDe(o.bloco), passo);
     }
-    const v: Valor = { ...valorDe('número', bruto, bloco, ranhura, passo), recusado: true };
-    this.trace.recusa({ ...E(restricao('número', 'o valor'), v), origem });
+    const v: Valor = { ...valorCru('número', bruto, bloco, ranhura, passo), recusado: true };
+    this.trace.recusa({
+      ...E(restricao('número', 'o valor'), v),
+      origem,
+      remedio:
+        'O que chegou a este sítio não é um número, nem uma palavra, nem o nome de uma variável que já tenha valor.',
+    });
     return v;
   }
 
@@ -1475,9 +1764,14 @@ class AvaliadorImpl implements Avaliador {
     const bruto = String(e.nome ?? '').trim();
     if (bruto.length === 0) {
       this.trace.falha(
-        falhar(passo, 'A tua variável não tem nome. O nome é o que te permite voltar a ela depois.', 'guardar'),
+        falhar(
+          passo,
+          'A tua variável não tem nome. O nome é o que te permite voltar a ela depois.',
+          'Escreve um nome para a tua variável. Um nome só, sem espaços, e que diga o que lá está guardado.',
+          'guardar',
+        ),
       );
-      return { ...valorDe('número', undefined, 'guardar', 0, passo), recusado: true };
+      return { ...valorCru('número', undefined, 'guardar', 0, passo), recusado: true };
     }
     const nome = identificador(bruto);
     const recebido = this.valorDe(e.VALOR, passo, 'guardar', 0);
@@ -1489,8 +1783,7 @@ class AvaliadorImpl implements Avaliador {
       this.trace.recusa({
         ...E(restricao('número', 'o que guardas'), recebido),
         origem: origemDe('guardar', 0, passo),
-        python: PY_RECUSA,
-        java: JAVA_RECUSA,
+        remedio: `Uma variável que guarda um número não pode receber a palavra "${String(recebido.valor)}". Ou guardas um número, ou mudas o valor que entra — e uma palavra é uma palavra escrita entre aspas, não um número.`,
       });
       const guardado: Valor = { ...recebido, recusado: true };
       this.regra.define(nome, passo, guardado);
@@ -1510,26 +1803,50 @@ class AvaliadorImpl implements Avaliador {
     return final;
   }
 
+  /** O que decide se um número pode contar repetições: inteiro, não
+   *  negativo, e dentro de `MAX_ITERACOES`. */
+  private cabeComoContagem(n: number): boolean {
+    return Number.isInteger(n) && n >= 0 && n <= MAX_ITERACOES;
+  }
+
+  private repeticoesInvalidas(passo: number): FalhaRuntime {
+    return falhar(
+      passo,
+      `O número de repetições tem de ser um número inteiro de 0 a ${MAX_ITERACOES}.`,
+      'Escreve neste sítio um número redondo. Um número de repetições conta vezes inteiras: 3 ou 5, nunca 1,5 — ninguém repete uma coisa uma vez e meio.',
+      'repetir',
+    );
+  }
+
   private repetir(e: Entradas, passo: number): Valor {
-    const bruto = this.valorDe(e.PASSOS, passo, 'repetir', 0);
-    const vezes = bruto.valor;
-    if (
-      bruto.recusado ||
-      bruto.tipo !== 'número' ||
-      typeof vezes !== 'number' ||
-      !Number.isInteger(vezes) ||
-      vezes < 0 ||
-      vezes > MAX_ITERACOES
-    ) {
-      this.trace.falha(
-        falhar(
-          passo,
-          `O número de repetições tem de ser um número inteiro de 0 a ${MAX_ITERACOES}.`,
-          'repetir',
-        ),
-      );
-      return { ...valorDe('lógico', undefined, 'repetir', 0, passo), recusado: true };
+    const bruto = e.PASSOS;
+
+    // A contagem de repetições é o único sítio do motor que olha para o
+    // número **antes** de o converter, e a razão não é performance: são dois
+    // limites diferentes. `RANGE_INTEIROS` diz que nenhum número acima de
+    // 1000 existe; `MAX_ITERACOES` diz que um laço não repete mais de 10000
+    // vezes. Se a decisão passasse por `valorDe`, quem escrevesse
+    // `repetir(10001)` lia "este número é grande demais" e nunca ficava a
+    // saber que o problema era o número de repetições. Cada limite tem a sua
+    // frase, e a do laço é a que ensina alguma coisa.
+    if (typeof bruto === 'number' && !this.cabeComoContagem(bruto)) {
+      this.trace.falha(this.repeticoesInvalidas(passo));
+      return { ...valorCru('lógico', undefined, 'repetir', 0, passo), recusado: true };
     }
+
+    const valor = this.valorDe(bruto, passo, 'repetir', 0);
+    if (valor.recusado) {
+      // O `valorDe` já escreveu no `trace` a razão pela qual o valor não
+      // serve. Escrever um segundo erro para o mesmo número seria mostrar
+      // à mesma pessoa duas queixas sobre uma coisa só.
+      return { ...valorCru('lógico', undefined, 'repetir', 0, passo), recusado: true };
+    }
+    if (valor.tipo !== 'número' || typeof valor.valor !== 'number' || !this.cabeComoContagem(valor.valor)) {
+      this.trace.falha(this.repeticoesInvalidas(passo));
+      return { ...valorCru('lógico', undefined, 'repetir', 0, passo), recusado: true };
+    }
+    const vezes = valor.valor;
+
     const corpo = e.CORPO ?? [];
     for (let i = 0; i < vezes; i += 1) {
       for (const filho of corpo) {
@@ -1538,11 +1855,11 @@ class AvaliadorImpl implements Avaliador {
         this.trace.passo(passoInterno, filho.type);
         this.avaliar(filho.type, entradasDe(filho), passoInterno);
         if (this.trace.erros.length > 0) {
-          return valorDe('lógico', true, 'repetir', 0, passo);
+          return valorCru('lógico', true, 'repetir', 0, passo);
         }
       }
     }
-    return valorDe('lógico', true, 'repetir', 0, passo);
+    return valorCru('lógico', true, 'repetir', 0, passo);
   }
 
   private dizer(e: Entradas, passo: number): Valor {
@@ -1551,10 +1868,9 @@ class AvaliadorImpl implements Avaliador {
       this.trace.recusa({
         ...E(restricao('texto', 'o que dizes'), recebido),
         origem: origemDe('dizer', 0, passo),
-        python: PY_RECUSA,
-        java: 'Java não te deixa passar um número a um método que só recebe texto. O compilador apanha-o.',
+        remedio: `O que dizes tem de ser uma palavra. Se tens um número e queres dizê-lo, escreve-o entre aspas — é assim que se escreve uma palavra que tem algarismos dentro.`,
       });
-      return { ...valorDe('número', undefined, 'dizer', 0, passo), recusado: true };
+      return { ...recebido, recusado: true };
     }
     this.trace.registar(passo, recebido);
     return recebido;
@@ -1569,10 +1885,10 @@ class AvaliadorImpl implements Avaliador {
   private pressionar(e: Entradas, passo: number): Valor {
     const ator = typeof e.ATOR === 'string' && e.ATOR.length > 0 ? e.ATOR : 'coelho';
     const nome = typeof e.NOME === 'string' && e.NOME.length > 0 ? e.NOME : 'executar';
-    const v = valorDe('actor', ator, 'pressionar', 0, passo);
+    const v = valorCru('actor', ator, 'pressionar', 0, passo);
     return {
       ...v,
-      explicacao: { porque: `O ${ator} vai ${nome}.`, python: '', java: '' },
+      explicacao: { porque: `O ${ator} vai ${nome}.`, remedio: '' },
     };
   }
 }
@@ -1607,19 +1923,86 @@ git commit -m "feat: avaliador de blocos — guardar, repetir, dizer, log, press
 
 - [ ] **Step 9: Confirmar que o motor não conhece linguagens**
 
-O `avaliador.ts` produz `Trace` a partir de `BlocoLeigo` e nunca olha para texto. Acrescente esta asserção ao fim do ficheiro de teste:
-
-```typescript
-it('o motor não importa nada de projeções nem de texto', async () => {
-  const fonte = await import('node:fs').then((fs) =>
-    fs.readFileSync('src/nucleo/avaliador.ts', 'utf8'),
-  );
-  expect(fonte).not.toMatch(/projecoes|\.ler\(|avaliarTexto/);
-});
-```
+O `avaliador.ts` produz `Trace` a partir de `BlocoLeigo` e nunca olha para texto. `npm run arvore` já garante a metade das *importações*; o `describe('o núcleo não fala com as projeções')`, no fim do ficheiro de teste, garante a outra metade — que nenhum ficheiro de produção **chame** o leitor de texto de uma projeção, e que nenhum dos onze sítios onde o motor decide falhar escreva o nome de uma linguagem. Ambos os testes já estão no `src/nucleo/avaliador.test.ts` do Step 2; este passo é o que os corre.
 
 Run: `npx vitest run src/nucleo/avaliador.test.ts && npm run arvore`
 Expected: PASS. E `npm run arvore` continua a dizer `núcleo limpo`.
+
+---
+
+> ### O que esta tarefa custou a achar, e o que ficou escrito no código
+>
+> **O `avaliador.ts` do plano estava escrito contra a `Explicacao` de antes
+> da spec §6.4.** Trazia `PY_FALHA`, `JAVA_FALHA`, `PY_RECUSA` e
+> `JAVA_RECUSA` — texto de sistema por linguagem, no núcleo. A Task 1 tinha
+> acabado de remover os campos `python`/`java` e de instalar `remedio`, e a
+> Task 1 também tinha escrito o teste que falha se um nome de linguagem
+> aparecer no núcleo. As duas tarefas discordavam, e a segunda estava certa.
+> Os quatro textos desapareceram e cada sítio onde o motor decide falhar
+> passou a escrever o seu `remedio` — que é a única coisa que o núcleo pode
+> dizer, porque o núcleo não conhece nenhuma linguagem. **A diferença
+>de ensino entre "isto rebenta aqui" e "isto rebenta mais tarde" é a projeção que a
+> escreve**, e é essa a costura que a Task 4 prova.
+>
+> **`falhar` passou a exigir `remedio`.** Um `FalhaRuntime` sem remédio
+> obriga o aluno a adivinhar, e o produto existe para trocar adivinhação por
+> razão. Tê-lo como argumento opcional seria o caminho mais curto para um
+> `remedio: ''` que ninguém escreve.
+>
+> **`E(restricao(...), v)` produz um `remedio` sem sentido em dois sítios.**
+> O texto é escrito a partir do par (esperado, obtido), e nos dois sítios os
+> dois são o mesmo: "guarda lá um número em vez de número", quando o número
+> é grande demais, e quando o que chegou nem sequer era um valor. O
+> `remedio` é sobreposto em ambos, porque o problema em cada um deles não é
+> o tipo.
+>
+> **`Regra.define` passou a abrir uma linha que ninguém inicializou.** Com
+> `inicializa` a correr só dentro de `executar`, um `avaliar('guardar', …)`
+> avulso guardava o valor para lado nenhum: o bloco "guardava" e não ficava
+> nada, sem erro nenhum. Vários testes faziam exatamente isso e passavam.
+> Atribuir cria e ler o que não foi atribuído falha — que é a regra de toda a
+> vida, e é o que `executar` implementa chamando `inicializa` por linha.
+>
+> **`MAX_ITERACOES` era inalcançável.** `RANGE_INTEIROS` é 1000, e nenhum
+> número acima de 1000 existe, logo `MAX_ITERACOES = 10000` não podia ser
+> ultrapassado por nenhum valor — e o ramo que o verificava era código morto.
+> Não o apagámos: são fatos diferentes. `MAX_ITERACOES` diz que um laço não
+> repete mais de 10000 vezes; `RANGE_INTEIROS` diz que não há números grandes.
+> Por isso o `repetir` olha para o número **cru** antes de o converter, e
+> quem escreve `repetir(10001)` lê "o número de repetições tem de ser um
+> número inteiro de 0 a 10000" em vez de "este número é grande demais". Há
+> um teste para cada mensagem.
+>
+> **O `TraceBuilder` tinha o método `valor()` e este ficheiro chamava
+> `trace.registar()`** — quinze `is not a function` numa execução. O método
+> passou a chamar-se `registar`, que é o nome que a lista `Produces` da Task 1
+> já usava, e que fica com o `registar` de módulo: um substantivo entre
+> verbos era a ambiguidade que causou a falha. O método chama o `registar`
+> livre, para que o evento de valor seja construído num sítio só.
+>
+> **Três testes do plano estavam errados, e a implementação estava certa:**
+>
+> 1. `executar(pilha(guardar('total', 1), log({ref:'total'}), dizer(5), …))`
+>    esperava que o erro fosse no `dizer`. O `log({ref:'total'})` está na
+>    linha 2 e `total` foi guardada na linha 1, e o próprio plano diz duas
+>    linhas abaixo que uma variável não atravessa linhas — logo o `log` é
+>    que falha primeiro. O teste contradizia-se a si próprio.
+> 2. "dois avaliadores com a mesma `Regra` veem as mesmas linhas" escrevia a
+>    linha com dois `avaliar` e jurava que os dois avaliadores a partilhavam.
+>    Sem `inicializa`, a linha nunca era aberta, e o teste passava a provar
+>    que a `Regra` não partilha nada. Passa a escrever a linha com um
+>    `executar`.
+> 3. "recusa um valor que já tinha sido recusado a chegar a dizer" lia
+>    `erros[0]`, que é o erro do `guardar` — e passava mesmo que o `dizer`
+>    aceitasse o valor. Lê o último, e confirma que são dois.
+>
+> **E um teste que escrevi ao contrário antes de o motor existir:** o par
+> `guardar` / `guardarTexto` estava invertido, jurando que `guardarTexto`
+> dava um número. `guardarTexto` embrulha em `{txt: '5'}`, e `'5'` é uma
+> palavra. O `5` que a pessoa escreveu e o `5` que o robô disse não são o
+> mesmo valor, e é essa diferença — não um erro qualquer — que a lição da
+> variável precisa de mostrar. O `vitest` apanhou-o; o correto é que só o
+> `vitest` o apanhava, porque nenhum tipo diz nada sobre isto.
 
 ---
 
@@ -2368,7 +2751,7 @@ export interface Projection {
   blocos: string[];
   /** Blocos → texto. */
   emit(programa: BlocoLeigo): Gerado;
-  /** Texto desta linguagem → factos tipados. */
+  /** Texto desta linguagem → fatos tipados. */
   ler(texto: string): LerResultado;
 }
 ```
@@ -2829,7 +3212,7 @@ Expected: PASS, `núcleo limpo`, e o typecheck mudo.
 git add -A
 git commit -m "feat: interface Projection, registo, e a projecao Python
 
-emit e ler vivem no mesmo objecto de proposito: quem escreve total = 5
+emit e ler vivem no mesmo objeto de proposito: quem escreve total = 5
 e quem le total = 5 e a mesma pessoa, e se divergirem a licao mente.
 
 ler() rejeita texto que nao e Python (o ponto-e-vigula e a marca) com um
@@ -4261,7 +4644,7 @@ function lista(v: unknown, caminho: string): unknown[] {
   return v;
 }
 
-function objecto(v: unknown, caminho: string): Record<string, unknown> {
+function objeto(v: unknown, caminho: string): Record<string, unknown> {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) {
     throw new ErroDeAutoria('esperava-se um mapa.', caminho);
   }
@@ -4303,7 +4686,7 @@ function validarForma(prova: Record<string, unknown>, caminho: string, projecao:
 }
 
 function validarSonda(bruto: unknown, caminho: string, projecao: Projection): Licao['sondas'][number] {
-  const o = objecto(bruto, caminho);
+  const o = objeto(bruto, caminho);
   const nome = texto(o.nome, `${caminho}.nome`, 'a sonda precisa de nome em minúsculas');
   if (!/^[a-z0-9-]+$/.test(nome)) {
     throw new ErroDeAutoria(
@@ -4313,9 +4696,9 @@ function validarSonda(bruto: unknown, caminho: string, projecao: Projection): Li
   }
   const pergunta = texto(o.pergunta, `${caminho}.pergunta`, 'a sonda precisa da pergunta que se faz ao aluno');
   const porque = texto(o.porque, `${caminho}.porque`, 'a sonda precisa de um porque escrito à mão');
-  const prova = objecto(o.prova, `${caminho}.prova`);
+  const prova = objeto(o.prova, `${caminho}.prova`);
   validarForma(prova, `${caminho}.prova`, projecao);
-  const esperado = objecto(o.esperado, `${caminho}.esperado`);
+  const esperado = objeto(o.esperado, `${caminho}.esperado`);
   const classe = texto(esperado.classe, `${caminho}.esperado.classe`, 'a classe esperada é obrigatória');
   if (!CLASSES.includes(classe as ClassesObservadas)) {
     throw new ErroDeAutoria(
@@ -4350,7 +4733,7 @@ export function CARREGAR(textoYaml: string, linguagem: Language): Licao {
       `${linguagem}/variavel.yml`,
     );
   }
-  const o = objecto(bruto, `${linguagem}/variavel.yml`);
+  const o = objeto(bruto, `${linguagem}/variavel.yml`);
   const declarada = texto(o.linguagem, 'linguagem', 'o ficheiro tem de declarar a sua linguagem');
   if (declarada !== linguagem) {
     throw new ErroDeAutoria(
@@ -4361,7 +4744,7 @@ export function CARREGAR(textoYaml: string, linguagem: Language): Licao {
   }
   const projecao = obter(linguagem);
 
-  const blocos = lista(o.blocos, 'blocos').map((b, i) => objecto(b, `blocos[${i}]`));
+  const blocos = lista(o.blocos, 'blocos').map((b, i) => objeto(b, `blocos[${i}]`));
   const sondas = lista(o.sondas, 'sondas').map((s, i) => validarSonda(s, `sondas[${i}]`, projecao));
   const nomes = new Set(sondas.map((s) => s.nome));
   if (nomes.size !== sondas.length) {
@@ -4370,7 +4753,7 @@ export function CARREGAR(textoYaml: string, linguagem: Language): Licao {
 
   const passos = lista(o.passos, 'passos').map((brutoPasso, i) => {
     const caminho = `passos[${i}]`;
-    const p = objecto(brutoPasso, caminho);
+    const p = objeto(brutoPasso, caminho);
     const fase = texto(p.fase, `${caminho}.fase`, 'a fase é obrigatória');
     if (!(FASES as readonly string[]).includes(fase)) {
       throw new ErroDeAutoria(`a fase "${fase}" não existe. São: ${FASES.join(', ')}.`, `${caminho}.fase`);
@@ -4384,7 +4767,7 @@ export function CARREGAR(textoYaml: string, linguagem: Language): Licao {
     }
     const momentos = lista(p.momentos ?? [], `${caminho}.momentos`).map((brutoMomento, m) => {
       const mCaminho = `${caminho}.momentos[${m}]`;
-      const mo = objecto(brutoMomento, mCaminho);
+      const mo = objeto(brutoMomento, mCaminho);
       const fonte = texto(mo.fonte, `${mCaminho}.fonte`, 'o momento tem de dizer de onde vem a resposta');
       if (!(['blocos', 'texto', 'leitura'] as const).includes(fonte as 'blocos')) {
         throw new ErroDeAutoria(
@@ -4429,12 +4812,12 @@ export function CARREGAR(textoYaml: string, linguagem: Language): Licao {
       fase: fase as (typeof FASES)[number],
       porque: texto(p.porque, `${caminho}.porque`, 'o passo precisa de um porque'),
       ...(p.nomear === undefined ? {} : { nomear: texto(p.nomear, `${caminho}.nomear`, 'a palavra nomeada não pode ser vazia') }),
-      bloco: objecto(p.bloco, `${caminho}.bloco`),
+      bloco: objeto(p.bloco, `${caminho}.bloco`),
       sonda,
       momentos,
       ...(p.referencia === undefined
         ? {}
-        : { referencia: { nome: texto(objecto(p.referencia, `${caminho}.referencia`).nome, `${caminho}.referencia.nome`, 'a referência precisa de um nome') } }),
+        : { referencia: { nome: texto(objeto(p.referencia, `${caminho}.referencia`).nome, `${caminho}.referencia.nome`, 'a referência precisa de um nome') } }),
     };
   });
 
@@ -5810,7 +6193,7 @@ git commit -m "feat: blocos Blockly com traducao para BlocoLeigo"
 O registo de blocos do Blockly tem de ser montado a partir de `obter(linguagem).blocos`, e não de uma lista fixa no ficheiro. É isso que faz o SQL (Plano C) ter um vocabulário declarativo sem que este ficheiro mude.
 
 ```typescript
-it('o registo do Blockly tem exactamente os blocos da projecão', () => {
+it('o registo do Blockly tem exatamente os blocos da projecão', () => {
   const ids = Object.keys(registarBlocos(obter('python')));
   expect(ids).toEqual(obter('python').blocos);
 });
@@ -7778,7 +8161,7 @@ describe('a costura é real, ou era só uma promessa', () => {
   });
 
   it('toda projeção tem `emit` e `ler` que não são a mesma função', () => {
-    // Se `emit` e `ler` forem o mesmo objecto, a projeção não sabe
+    // Se `emit` e `ler` forem o mesmo objeto, a projeção não sabe
     // escrever a linguagem que lê — e a lição fica a mentir por omissão.
     for (const nome of LINGUAGENS_COM_PROJECAO) {
       const p = obter(nome);

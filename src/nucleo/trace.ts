@@ -28,7 +28,13 @@ export class TraceBuilder {
     this.eventos.push({ tipo: 'passo', passo, bloco });
   }
 
-  valor(passo: number, v: Valor): void {
+  /** Chama o `registar` de módulo em vez de repetir o literal: o evento de
+   *  valor é construído num sítio só, e o `registar` livre é a coisa que os
+   *  testes importam. Chamá-lo por um nome diferente do que tem aqui — era
+   *  `valor`, um substantivo entre verbos — é a razão pela qual o
+   *  `avaliador.ts` da T2, escrito contra este ficheiro, chamava
+   *  `trace.registar` e recebia `is not a function` em quinze sítios. */
+  registar(passo: number, v: Valor): void {
     this.valores.push(v);
     this.eventos.push(registar(passo, v));
   }

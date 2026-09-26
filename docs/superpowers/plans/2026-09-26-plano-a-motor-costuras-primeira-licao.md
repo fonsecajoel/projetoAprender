@@ -8,7 +8,7 @@ A **lição de Java não é deste plano.** A segunda linguagem entra pela proje�
 
 **Architecture:** Há três camadas, e separá-las é o ponto do desenho. (1) O **núcleo semântico** (`src/nucleo/`) não sabe o que é uma linguagem: produz `Valor` tipados, decide o que é uma violação de tipo, e emite as três classes de `Erro`. (2) O **motor de blocos** (`src/nucleo/avaliador.ts`) avalia uma árvore de blocos e produz um `Trace`, sem saber que existe texto. (3) As **projeções** (`src/projecoes/`) são a única camada que conhece sintaxe, e há uma por linguagem: `emit()` escreve um programa em blocos para texto, e `ler()` lê texto dessa linguagem para os mesmos eventos tipados. O texto que o utilizador escreve é lido pela projeção da linguagem que ele escolheu e julgado pelo núcleo — por isso Python nunca recusa um tipo errado e Java recusa, sem que isso esteja escrito duas vezes.
 
-**Tech Stack:** TypeScript `strict`, Vite + React 18, `@blockly/blockly` (versão anotada no commit da Task 1), `vitest` + `@testing-library/react` + `jsdom`, `js-yaml`, `tsx`. Node ≥ 20, npm ≥ 10. Zero dependências de runtime para além destas.
+**Tech Stack:** TypeScript `strict`, Vite + React 18, `blockly` (versão anotada no commit da Task 1), `vitest` + `@testing-library/react` + `jsdom`, `js-yaml`, `tsx`. Node ≥ 20, npm ≥ 10. Zero dependências de runtime para além destas.
 
 **Spec:** `docs/superpowers/specs/2026-09-26-ponte-seis-linguagens-design.md`
 
@@ -187,8 +187,18 @@ describe('LINGUAGENS e NOMES', () => {
     expect(Object.keys(NOMES).sort()).toEqual([...LINGUAGENS].sort());
   });
 
-  it('nenhum nome é o identificador interno em maiúsculas', () => {
-    for (const l of LINGUAGENS) expect(NOMES[l]).not.toBe(l.toUpperCase());
+  it('nenhum nome é o identificador a gritar, excepto onde tem de ser', () => {
+    // A regra é "o nome é o que uma pessoa escreveria, não a chave em
+    // maiúsculas". `SQL` é a excepção que confirma a regra: é um acrónimo,
+    // escreve-se em maiúsculas em todo o lado, e `SQL` seria uma
+    // falsificação se a forcássemos para dentro do padrão das outras cinco.
+    for (const l of LINGUAGENS) {
+      if (l === 'sql') {
+        expect(NOMES.sql).toBe('SQL');
+        continue;
+      }
+      expect(NOMES[l]).not.toBe(l.toUpperCase());
+    }
   });
 });
 
@@ -203,11 +213,19 @@ describe('Explicacao', () => {
   });
 
   it('o núcleo diz isto com as suas próprias palavras', () => {
-    // O `E` é o único sítio onde o texto de sistema vive. Uma projeção
-    // escreve o seu, porque o seu utilizador precisa da sintaxe dele — e
-    // é a única coisa que uma projeção faz a mais.
-    expect(E.porque).not.toMatch(/Python|Java|Go|TypeScript|JavaScript|SQL/);
-    expect(E.remedio).not.toMatch(/Python|Java|Go|TypeScript|JavaScript|SQL/);
+    // `E` é uma função: recebe a restrição que falhou e o valor que chegou,
+    // e escreve a recusa. O texto de sistema vive aqui e em mais lado
+    // nenhum do núcleo. Uma projeção escreve o seu, porque o seu utilizador
+    // precisa da sintaxe dele — e é a única coisa que uma projeção faz a
+    // mais. Por isso o teste chama-a em vez de a ler.
+    const nomes = /Python|Java|Go|TypeScript|JavaScript|SQL/;
+    const r1 = E(restricao('número', 'total'), txt('olá'));
+    expect(r1.porque).not.toMatch(nomes);
+    expect(r1.remedio).not.toMatch(nomes);
+
+    const r2 = E(restricao('lista', 'numeros'), num(3));
+    expect(r2.porque).not.toMatch(nomes);
+    expect(r2.remedio).not.toMatch(nomes);
   });
 });
 
@@ -293,11 +311,11 @@ Expected: FAIL — `NOMES`, `RANGE_INTEIROS` e `E` ainda não estão todos expor
 ```bash
 cd "/home/joel/Área de Trabalho/Ideia"
 npm init -y
-npm i react react-dom @blockly/blockly js-yaml
+npm i react react-dom blockly js-yaml
 npm i -D typescript vite @vitejs/plugin-react vitest jsdom tsx \
   @testing-library/react @testing-library/jest-dom @testing-library/user-event \
   @types/react @types/react-dom @types/js-yaml @types/node
-node -p "'blockly=' + require('./node_modules/@blockly/blockly/package.json').version"
+node -p "'blockly=' + require('./node_modules/blockly/package.json').version"
 ```
 
 Guarde o número impresso — vai para o `package.json` no Step 4.
@@ -343,7 +361,7 @@ Guarde o número impresso — vai para o `package.json` no Step 4.
 
 `vite.config.ts`:
 ```typescript
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -382,8 +400,19 @@ if (!('ResizeObserver' in globalThis)) {
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ObservadorFalso;
 }
 
-if (typeof SVGElement !== 'undefined' && !SVGElement.prototype.getBBox) {
-  SVGElement.prototype.getBBox = function getBBox() {
+// O Blockly chama `getBBox` para medir o texto de um bloco. O jsdom nao o
+// implementa -- e a lib `DOM` do TypeScript tambem nao o poe em `SVGElement`,
+// poe-no em `SVGGraphicsElement`. Por isso o guarda tem de procurar o
+// prototipo em runtime e o tipo tem de ser declarado a mao: nenhuma das duas
+// coisas se resolve sozinha.
+type Medivel = { getBBox?: () => DOMRect };
+
+const prototipoSVG = (typeof SVGGraphicsElement !== 'undefined'
+  ? SVGGraphicsElement.prototype
+  : SVGElement.prototype) as unknown as Medivel;
+
+if (typeof SVGElement !== 'undefined' && !prototipoSVG.getBBox) {
+  prototipoSVG.getBBox = function getBBox() {
     return { x: 0, y: 0, width: 100, height: 20 } as DOMRect;
   };
 }
@@ -409,14 +438,27 @@ function ficheiros(raiz: string): string[] {
   });
 }
 
-const violacoes = ficheiros(NUCLEO).filter((f) => PROIBIDO.test(readFileSync(f, 'utf8')));
+const todos = ficheiros(NUCLEO);
+// Os testes contam para o invariante tanto como o resto: um teste que importa
+// uma projecao para poder escrever o resultado esperado nao esta a testar o
+// nucleo, esta a depender dele. A contagem e que os separa, para que o numero
+// que este script imprime diga quantos ficheiros *de producao* o nucleo tem.
+const deTeste = todos.filter((f) => f.includes('.test.'));
+
+const violacoes = todos.filter((f) => PROIBIDO.test(readFileSync(f, 'utf8')));
 
 if (violacoes.length > 0) {
   console.error('O núcleo semântico não pode importar projeções:');
   for (const v of violacoes) console.error('  ' + v);
   process.exit(1);
 }
-console.log('núcleo limpo: ' + ficheiros(NUCLEO).length + ' ficheiros, zero importações de projeções');
+console.log(
+  'núcleo limpo: ' +
+    (todos.length - deTeste.length) +
+    ' ficheiros de produção + ' +
+    deTeste.length +
+    ' de teste, zero importações de projeções',
+);
 ```
 
 Acrescente ao `scripts` do `package.json`: `"arvore": "tsx scripts/verificar-arvore.ts"`.
@@ -459,7 +501,7 @@ isso tem script próprio.
 import { describe, expect, it } from 'vitest';
 import { construir, registar } from './trace';
 import { E, EXPLICACAO_VAZIA, LINGUAGENS, restricao, val } from './tipos';
-import type { Recusa, Valor } from './tipos';
+import type { Recusa, RestricaoDeTipo, Valor } from './tipos';
 
 const O = { bloco: 'guardar', ranhura: 0, passo: 1 };
 
@@ -515,26 +557,31 @@ describe('registar', () => {
 });
 
 describe('cabeEm', () => {
-  const casos: Array<[string, Valor, boolean]> = [
-    ['número em número', numero(3), true],
-    ['texto em número', palavra('olá'), false],
-    ['número em texto', numero(3), false],
-    ['lógico em número', logico(true), false],
-    ['lógico em texto', logico(false), false],
-    ['actor em número', val('actor', 'coelho', EXPLICACAO_VAZIA, O), false],
-    ['lista em número', val('lista', [1], EXPLICACAO_VAZIA, O), false],
-    ['função em número', val('função', () => 1, EXPLICACAO_VAZIA, O), false],
-    ['undefined em número', val('número', undefined, EXPLICACAO_VAZIA, O), false],
-    ['null em número', val('número', null, EXPLICACAO_VAZIA, O), false],
-    ['NaN em número', val('número', NaN, EXPLICACAO_VAZIA, O), false],
-    ['Infinity em número', val('número', Infinity, EXPLICACAO_VAZIA, O), false],
-    ['acima de RANGE_INTEIROS em número', numero(1e9), false],
-    ['recusado em número', { ...numero(1), recusado: true }, false],
-    ['recusado do mesmo tipo em número', { ...numero(1), recusado: true }, false],
+  // A restrição é uma coluna da tabela, e não um `restricao('número')` fixo no
+  // laço. Com ela fixa, uma linha que diz "número em texto" tinha de passar
+  // um número e de ser julgada por um sítio de número — e o nome da linha
+  // passava a ser mentira. `número em texto` só é falso se o sítio for de
+  // texto, e é por isso que o sítio viaja na linha.
+  const casos: Array<[string, RestricaoDeTipo, Valor, boolean]> = [
+    ['número em número', restricao('número'), numero(3), true],
+    ['texto em número', restricao('número'), palavra('olá'), false],
+    ['número em texto', restricao('texto'), numero(3), false],
+    ['lógico em número', restricao('número'), logico(true), false],
+    ['lógico em texto', restricao('texto'), logico(false), false],
+    ['actor em número', restricao('número'), val('actor', 'coelho', EXPLICACAO_VAZIA, O), false],
+    ['lista em número', restricao('número'), val('lista', [1], EXPLICACAO_VAZIA, O), false],
+    ['função em número', restricao('número'), val('função', () => 1, EXPLICACAO_VAZIA, O), false],
+    ['undefined em número', restricao('número'), val('número', undefined, EXPLICACAO_VAZIA, O), false],
+    ['null em número', restricao('número'), val('número', null, EXPLICACAO_VAZIA, O), false],
+    ['NaN em número', restricao('número'), val('número', NaN, EXPLICACAO_VAZIA, O), false],
+    ['Infinity em número', restricao('número'), val('número', Infinity, EXPLICACAO_VAZIA, O), false],
+    ['acima de RANGE_INTEIROS em número', restricao('número'), numero(1e9), false],
+    ['número recusado em número', restricao('número'), { ...numero(1), recusado: true }, false],
+    ['número recusado em texto', restricao('texto'), { ...numero(1), recusado: true }, false],
   ];
-  for (const [nome, v, esperado] of casos) {
+  for (const [nome, raio, v, esperado] of casos) {
     it(`${nome} é ${esperado}`, () => {
-      expect(restricao('número').cabeEm(v)).toBe(esperado);
+      expect(raio.cabeEm(v)).toBe(esperado);
     });
   }
 
@@ -656,7 +703,12 @@ export interface QuebraEquivalencia {
 
 export type Erro = Recusa | FalhaRuntime | QuebraEquivalencia;
 
-export function restricao(tipo: Tipo, nome = tipo): RestricaoDeTipo {
+// `nome: string = tipo` e nao `nome = tipo`. Sem a anotacao, o TypeScript
+// infere o tipo do parametro a partir do valor por omissao -- e o valor por
+// omissao e um `Tipo`, portanto `restricao('numero', 'total')` deixava de
+// compilar. O nome de um sitio e uma `string` que o suele ser `Tipo`; nao e
+// um `Tipo` que as vezes seja uma frase.
+export function restricao(tipo: Tipo, nome: string = tipo): RestricaoDeTipo {
   return {
     tipo,
     nome,
@@ -703,7 +755,7 @@ export function E(raio: RestricaoDeTipo, v: Valor): Recusa {
 - [ ] **Step 9: Escrever `src/nucleo/trace.ts`**
 
 ```typescript
-import type { Erro, Origem, QuebraEquivalencia, Recusa, Valor, FalhaRuntime } from './tipos';
+import type { Erro, QuebraEquivalencia, Recusa, Valor, FalhaRuntime } from './tipos';
 
 export type Evento =
   | { tipo: 'passo'; passo: number; bloco: string }
@@ -798,7 +850,18 @@ createRoot(raiz).render(
 - [ ] **Step 11: Correr tudo e confirmar que passa**
 
 Run: `npx vitest run src/nucleo/trace.test.ts && npm run arvore && npx tsc --noEmit`
-Expected: testes PASS, `arvore` imprime `núcleo limpo: 3 ficheiros, zero importações de projeções`, e o typecheck não diz nada.
+Expected: testes PASS, `arvore` imprime `núcleo limpo: 2 ficheiros de produção + 2 de teste, zero importações de projeções`, e o typecheck não diz nada.
+
+> **Os quatro correcções que esta tarefa custou a achar.** O `tsc --noEmit` faz
+> parte do Step 11 desde o início, e o código do plano não passava nele:
+> `restricao(tipo, nome = tipo)` inferia `nome` como `Tipo`; o `import type`
+> de `trace.ts` trazia `Origem` sem o usar, e `noUnusedLocals` está ligado;
+> `test:` no `defineConfig` de `vite` não existe em `UserConfigExport`; e
+> `SVGElement.prototype.getBBox` não existe em `SVGElement` na lib `DOM`.
+> Nenhum dos quatro aparece num teste, porque `vitest` não verifica tipos —
+> aparecem no `build`. **Um plano cujo código não compila é um plano que
+> manda escrever código que não compila**, e o próximo executor paga a mesma
+> factura sem saber de onde veio.
 
 - [ ] **Step 12: Commitar**
 
@@ -5442,7 +5505,7 @@ Expected: FAIL com erro de resolução de `./blocos`.
 - [ ] **Step 3: Escrever `src/ui/blocos.tsx`**
 
 ```typescript
-import * as Blockly from '@blockly/blockly';
+import * as Blockly from 'blockly';
 import type { BlocoLeigo, CampoLeigo, EntradaLeiga } from '../nucleo/avaliador';
 import { BLOCOS, CORES } from '../nucleo/blocos';
 
@@ -5641,13 +5704,13 @@ export function registarBlocos(): void {
 - [ ] **Step 4: Correr e ver passar**
 
 Run: `npx vitest run src/ui/blocos.test.ts`
-Expected: PASS. Se o import do Blockly rebentar em Node, acrescenta a esta tarefa, em `src/ui/blocos.tsx`, o corte do DOM antes do import do Blockly — **não** o faças: o `@blockly/blockly` é importável em Node e o teste passa sem DOM. Se não passar, o problema é o polyfill do `preparacao.ts`, e o `jsdom` já está no ambiente.
+Expected: PASS. Se o import do Blockly rebentar em Node, acrescenta a esta tarefa, em `src/ui/blocos.tsx`, o corte do DOM antes do import do Blockly — **não** o faças: o `blockly` é importável em Node e o teste passa sem DOM. Se não passar, o problema é o polyfill do `preparacao.ts`, e o `jsdom` já está no ambiente.
 
 - [ ] **Step 5: Escrever `src/ui/painel-blocos.tsx`**
 
 ```typescript
 import { useEffect, useRef } from 'react';
-import * as Blockly from '@blockly/blockly';
+import * as Blockly from 'blockly';
 import type { BlocoLeigo } from '../nucleo/avaliador';
 import { criarToolbox, paraBlocoLeigo, registarBlocos } from './blocos';
 

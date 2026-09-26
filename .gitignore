@@ -3,3 +3,10 @@
 # primeiro `git add -A` que correr num momento de distração leva o build
 # inteiro para dentro de um commit de documentação.
 .worktrees/
+
+# Dependências e artefactos de build. `.worktrees/` acima é para o worktree;
+# isto é para o que o `npm i` e o `tsc` de cada tarefa largam no worktree.
+node_modules/
+dist/
+*.tsbuildinfo
+.superpowers/

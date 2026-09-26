@@ -32,7 +32,7 @@
 
 **Architecture:** O motor é uma função pura que avalia uma árvore de blocos e produz um `Trace` de `Valor` tipados. Blocos, YAML e o editor Blockly falam **o mesmo formato** (`BlocoLeigo`), o que elimina qualquer camada de tradução. Cada momento da lição aponta para uma **sonda**: um programa de referência com uma observação esperada. O utilizador corre o programa dele; o sistema compara a classe da observação com a da sonda. É isto que traduz a regra da spec "um passo está feito quando o utilizador viu, não quando acertou" para código.
 
-**Tech Stack:** TypeScript `strict`, Vite + React 18, `@blockly/blockly` (versão exacta fixada no commit da Task 1; API `Blockly.serialization.blocks.save/load`), `vitest` + `@testing-library/react` + `jsdom`, `js-yaml`, `tsx`. Node ≥ 20, npm ≥ 10. Zero dependências de runtime para além destas.
+**Tech Stack:** TypeScript `strict`, Vite + React 18, `blockly` (versão exacta fixada no commit da Task 1; API `Blockly.serialization.blocks.save/load`), `vitest` + `@testing-library/react` + `jsdom`, `js-yaml`, `tsx`. Node ≥ 20, npm ≥ 10. Zero dependências de runtime para além destas.
 
 **Spec:** `docs/superpowers/specs/2026-09-26-ponte-blocos-para-leitura-design.md`
 
@@ -126,11 +126,11 @@ Três decisões que o mapa fixa e que as tarefas mantêm:
 ```bash
 cd "/home/joel/Área de Trabalho/Ideia"
 npm init -y
-npm i react react-dom @blockly/blockly js-yaml
+npm i react react-dom blockly js-yaml
 npm i -D typescript vite @vitejs/plugin-react vitest jsdom tsx \
   @testing-library/react @testing-library/jest-dom @testing-library/user-event \
   @types/react @types/react-dom @types/js-yaml @types/node
-node -p "'blockly=' + require('./node_modules/@blockly/blockly/package.json').version"
+node -p "'blockly=' + require('./node_modules/blockly/package.json').version"
 ```
 
 Guarde o número impresso — vai para o `package.json` no Step 3.
@@ -3157,7 +3157,7 @@ Expected: FAIL com erro de resolução de `./blocos`.
 - [ ] **Step 3: Escrever `src/ui/blocos.tsx`**
 
 ```typescript
-import * as Blockly from '@blockly/blockly';
+import * as Blockly from 'blockly';
 import type { BlocoLeigo, CampoLeigo, EntradaLeiga } from '../motor/avaliador';
 import { BLOCOS, CORES } from '../motor/blocos';
 
@@ -3356,13 +3356,13 @@ export function registarBlocos(): void {
 - [ ] **Step 4: Correr e ver passar**
 
 Run: `npx vitest run src/ui/blocos.test.ts`
-Expected: PASS. Se o import do Blockly rebentar em Node, acrescenta a esta tarefa, em `src/ui/blocos.tsx`, o corte do DOM antes do import do Blockly — **não** o faças: o `@blockly/blockly` é importável em Node e o teste passa sem DOM. Se não passar, o problema é o polyfill do `preparacao.ts`, e o `jsdom` já está no ambiente.
+Expected: PASS. Se o import do Blockly rebentar em Node, acrescenta a esta tarefa, em `src/ui/blocos.tsx`, o corte do DOM antes do import do Blockly — **não** o faças: o `blockly` é importável em Node e o teste passa sem DOM. Se não passar, o problema é o polyfill do `preparacao.ts`, e o `jsdom` já está no ambiente.
 
 - [ ] **Step 5: Escrever `src/ui/painel-blocos.tsx`**
 
 ```typescript
 import { useEffect, useRef } from 'react';
-import * as Blockly from '@blockly/blockly';
+import * as Blockly from 'blockly';
 import type { BlocoLeigo } from '../motor/avaliador';
 import { criarToolbox, paraBlocoLeigo, registarBlocos } from './blocos';
 

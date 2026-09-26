@@ -1,0 +1,5 @@
+# Worktrees de implementação. Um worktree dentro do repositório que não está
+# ignorado entra no `git status` com a sua árvore de ficheiros inteira, e o
+# primeiro `git add -A` que correr num momento de distração leva o build
+# inteiro para dentro de um commit de documentação.
+.worktrees/

@@ -156,7 +156,7 @@ Esta tarefa substitui a Task 1 do plano anterior. A diferença que importa: `Exp
 
 **Interfaces:**
 - Consumes: nada.
-- Produces: `Language`, `LINGUAGENS`, `NOMES`, `Tipo`, `Explicacao`, `Origem`, `Valor`, `RestricaoDeTipo`, `Recusa`, `FalhaRuntime`, `QuebraEquivalencia`, `Erro`, `restricao(tipo, nome?)`, `val(tipo, valor, explicacao, origem, recusado?)`, `valorEm(v, transformar)`, `E(raio, v)`, `EXPLICACAO_VAZIA`, `RANGE_INTEIROS`, `Evento`, `Trace`, `TraceBuilder`, `registar(passo, valor)`, `construir()`.
+- Produces: `Language`, `LINGUAGENS`, `NOMES`, `Tipo`, `Explicacao`, `Origem`, `Valor`, `RestricaoDeTipo`, `Recusa`, `FalhaRuntime`, `QuebraEquivalencia`, `Erro`, `restricao(tipo, nome?)`, `val(tipo, valor, explicacao, origem, recusado?)`, `valorEm(v, transformar)`, `E(raio, v)`, `EXPLICACAO_VAZIA`, `RANGE_INTEIROS`, `MAX_ITERACOES`, `Evento`, `Trace`, `TraceBuilder`, `registar(passo, valor)`, `construir()`.
 
 - [ ] **Step 1: Escrever o teste de `src/nucleo/tipos.test.ts`**
 
@@ -189,7 +189,7 @@ describe('LINGUAGENS e NOMES', () => {
 
   it('nenhum nome é o identificador a gritar, excepto onde tem de ser', () => {
     // A regra é "o nome é o que uma pessoa escreveria, não a chave em
-    // maiúsculas". `SQL` é a excepção que confirma a regra: é um acrónimo,
+    // maiúsculas". `SQL` é a exceção que confirma a regra: é um acrónimo,
     // escreve-se em maiúsculas em todo o lado, e `SQL` seria uma
     // falsificação se a forcássemos para dentro do padrão das outras cinco.
     for (const l of LINGUAGENS) {
@@ -929,7 +929,7 @@ projecoes/. Passa vazio agora e e o que trava as tarefas seguintes."
 
 **Interfaces:**
 - Consumes: Task 1 — `Tipo`, `Valor`, `Origem`, `Erro`, `E`, `restricao`, `RANGE_INTEIROS`, `TraceBuilder`, `construir`.
-- Produces: `BlocoLeigo`, `CampoLeigo`, `EntradaLeiga`, `BLOCOS`, `guardar(nome, valor)`, `guardarTexto(nome, valor)`, `repetir(vezes, corpo)`, `dizer(valor)`, `log(valor)`, `pilha(...blocos)`, `Regra`, `regraDeLinhas()`, `Entradas`, `Avaliador`, `avaliador(regra?)`, `MAX_ITERACOES`, `identificador(nome)`, `TIPO_DE_BLOCO`, `CORES`, `pilhaDe(raiz)`.
+- Produces: `BlocoLeigo`, `CampoLeigo`, `EntradaLeiga`, `BLOCOS` (em `blocos.ts`, com o vocabulário — o ecrã e as projeções precisam de os nomear sem conhecer o motor); `Regra`, `regraDeLinhas()`, `Entradas`, `Avaliador`, `avaliador(regra?)`, `pilhaDe(raiz)` (em `avaliador.ts`); `guardar(nome, valor)`, `guardarTexto(nome, valor)`, `repetir(vezes, corpo)`, `dizer(valor)`, `log(valor)`, `pilha(...blocos)` (em `testes/dados.ts`); `identificador(nome)`, `TIPO_DE_BLOCO`, `CORES`.
 
 - [ ] **Step 1: Escrever `src/nucleo/testes/dados.ts` — os blocos de teste**
 
@@ -940,7 +940,7 @@ há três formatos de `guardar` e nenhum deles é o que o motor lê.
 
 `src/nucleo/testes/dados.ts`:
 ```typescript
-import type { BlocoLeigo } from '../avaliador';
+import type { BlocoLeigo } from '../blocos';
 
 /** Um bloco `guardar` com um valor cru: número, texto ou referência. */
 export function guardar(nome: string, valor: unknown): BlocoLeigo {
@@ -1498,6 +1498,34 @@ Expected: FAIL com erro de resolução de `./avaliador`.
 ```typescript
 import type { Tipo } from './tipos';
 
+export interface CampoLeigo {
+  valor: unknown;
+}
+
+export interface EntradaLeiga {
+  valor?: unknown;
+  stack?: BlocoLeigo[];
+}
+
+/** A forma de um bloco, tal como vem do Blockly e do YAML — e nada mais.
+ *
+ *  Vive aqui, no vocabulário, e não em `avaliador.ts`, porque este tipo
+ *  descreve *dados* e não comportamento: o ecrã de blocos (Task 9), o
+ *  carregador de lições (Task 7) e as projeções (Task 4) todos precisam de
+ *  o nomear, e nenhum deles deve ter de importar o motor para isso. O motor
+ *  é que caminha estes blocos; eles não precisam de saber que ele existe.
+ *
+ *  `fields` é o que a pessoa vê escrito no bloco — o nome de uma variável,
+ *  o texto de um botão — e `inputs` é o que se liga a outros blocos. A
+ *  distinção não é cosmética: um nome é um valor escrito à mão e um valor
+ *  pode ser um bloco, e uma função de emissão que os trocasse emitiria
+ *  `undefined` no sítio onde ia o nome. */
+export interface BlocoLeigo {
+  type: string;
+  fields?: Record<string, CampoLeigo>;
+  inputs?: Record<string, EntradaLeiga>;
+}
+
 /** Ids de bloco. Slugs ASCII em minúsculas: são a identidade do bloco, e
  *  nunca o texto que o utilizador lê. O texto vive no Blockly e no YAML. */
 export const BLOCOS = {
@@ -1557,21 +1585,9 @@ import type { TraceBuilder } from './trace';
 import { E, EXPLICACAO_VAZIA, MAX_ITERACOES, RANGE_INTEIROS, restricao } from './tipos';
 import type { Erro, FalhaRuntime, Origem, Tipo, Valor } from './tipos';
 import { identificador } from './blocos';
+import type { BlocoLeigo } from './blocos';
 
-export interface CampoLeigo {
-  valor: unknown;
-}
-
-export interface EntradaLeiga {
-  valor?: unknown;
-  stack?: BlocoLeigo[];
-}
-
-export interface BlocoLeigo {
-  type: string;
-  fields?: Record<string, CampoLeigo>;
-  inputs?: Record<string, EntradaLeiga>;
-}
+export type { BlocoLeigo, CampoLeigo, EntradaLeiga } from './blocos';
 
 /** Contrato para persistir valores entre avaliações. O `passo` é explícito
  *  porque o mesmo objeto é partilhado por vários avaliadores. */
@@ -2302,6 +2318,52 @@ describe('interpretar: aritmética', () => {
   it('a origem de um erro de operação é o passo do evento', () => {
     expect(umErro(operar(n(8), n(0), '/')).origem.passo).toBe(2);
   });
+
+  it('um operando que é um nome não se julga: o uso é que sabe o tipo', () => {
+    // `total = total + 1` tem `total` à esquerda, e o valor de `total` só
+    // existe quando o programa corre. O plano punha um `0` no lugar do nome,
+    // e com isso uma conta de dois números podia ser recusada por uma
+    // incompatibilidade que não existe. O `usar` do mesmo passo é que
+    // declara o tipo exigido, e é dele que sai o erro.
+    const semNome = interpretar(
+      [operar(n(1), n(2), '+')],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(semNome).toEqual([]);
+
+    const comNome = interpretar(
+      [{ passo: 2, tipo: 'operar', operacao: '+', a: null, b: n(1) }],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(comNome).toEqual([]);
+  });
+
+  it('mas o divisor zero diz-se mesmo com o outro lado a ser um nome', () => {
+    const e = umErro({ passo: 2, tipo: 'operar', operacao: '/', a: null, b: n(0) });
+    expect(e.porque).toContain('zero');
+  });
+
+  it('e o tipo que o uso exige é o que apanha o texto numa conta', () => {
+    // A linha mais importante da lição: `total = 'olá'` passa, e é a linha
+    // seguinte que rebenta. O `usar` da conta declara `número`, e o núcleo
+    // responde que `total` guarda texto. Se a conta não declarasse nada, o
+    // produto não teria como dizer ao aluno a coisa mais importante que
+    // sabe sobre Python.
+    const erros = interpretar(
+      [
+        atribuir('total', t('olá')),
+        { passo: 2, tipo: 'usar', nome: 'total', tipoValor: 'número' },
+        { passo: 2, tipo: 'operar', operacao: '+', a: null, b: n(1) },
+      ],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('texto');
+    expect(erros[0]!.porque).toContain('número');
+  });
 });
 
 describe('interpretar: limites de ciclo', () => {
@@ -2340,6 +2402,44 @@ describe('interpretar: limites de ciclo', () => {
 });
 
 describe('interpretar: imprimir e texto', () => {
+  it('um sítio sem tipo declarado aceita o que chegar', () => {
+    // `print(total)` em Python não quer texto: quer o que houver. Se a
+    // projeção mandasse um `usar` com `tipoValor: 'texto'`, o núcleo
+    // responderia "total guarda número, e este sítio precisa de texto" — um
+    // erro que o Python não tem, numa linha que o Python aceita. O aluno
+    // leria isso e concluiria que o produto se engana, que é a pior coisa
+    // que um professor de sintaxe pode ensinar. A omissão é a informação.
+    const erros = interpretar(
+      [
+        atribuir('total', n(5)),
+        { passo: 2, tipo: 'usar', nome: 'total' },
+        usar('total', 'texto'),
+      ],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('texto');
+  });
+
+  it('e a diferença entre omisso e declarado é a diferença entre nada e tudo', () => {
+    const soOmisso = interpretar(
+      [atribuir('total', n(5)), { passo: 2, tipo: 'usar', nome: 'total' }],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(soOmisso).toEqual([]);
+
+    // O mesmo `usar` com o tipo declarado é o bloco `dizer`, que é mais
+    // estrito do que a linguagem. A costura é real e é a Task 6 que a mostra.
+    const declarado = interpretar(
+      [atribuir('total', n(5)), usar('total', 'texto')],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(declarado).toHaveLength(1);
+  });
+
   it('imprimir aceita qualquer tipo, porque print(5) é legal em cinco das seis', () => {
     // O motor de blocos é *mais* estrito: o bloco `dizer` só aceita texto.
     // A diferença é deliberada e é uma lição — quem aprendeu nos blocos
@@ -2430,8 +2530,29 @@ export type EventoLido =
        *  chegou. `int total = …` em Java tem ambos. */
       restricao?: Tipo;
     }
-  | { passo: number; tipo: 'usar'; nome: string; tipoValor: Tipo }
-  | { passo: number; tipo: 'operar'; operacao: '+' | '-' | '*' | '/'; a: Valor; b: Valor }
+  /** `usar` num sítio que **não declara** tipo é `tipoValor` a omisso.
+   *
+   *  A omissão não é falta de informação — é informação: `print(total)` em
+   *  Python aceita qualquer coisa, e um evento que chega a dizer "este sítio
+   *  precisa de texto" faz o produto inventar um erro que o Python não tem.
+   *  E é o pior tipo de erro possível num produto que ensina: o aluno lê
+   *  `print(total)`, o produto diz que está errado, e o aluno conclui que
+   *  o professor também se engana. `x = total` é o mesmo caso — uma cópia
+   *  não impõe tipo ao destino.
+   *
+   *  O que se perde é pouco: um sítio sem tipo declarado também não dá um
+   *  erro de incompatibilidade para reportar, que é a única coisa que este
+   *  campo servia. */
+  | { passo: number; tipo: 'usar'; nome: string; tipoValor?: Tipo }
+  /** `operar` com um operando a `null` é uma conta de que a projeção só leu
+   *  um lado: `total = total + 1` tem `total` à esquerda, e o valor de
+   *  `total` só existe quando o programa corre. O `usar` que acompanha o
+   *  `operar` é que carrega o tipo exigido, e é dele que sai o erro.
+   *
+   *  A alternativa — pôr um `0` no lugar do nome — é o que o plano fazia, e
+   *  produz um erro sobre `número` com `número` numa linha que é válida, ou
+   *  um "não se pode juntar texto com número" numa conta de dois números. */
+  | { passo: number; tipo: 'operar'; operacao: '+' | '-' | '*' | '/'; a: Valor | null; b: Valor | null }
   | { passo: number; tipo: 'imprimir'; valor: Valor }
   | { passo: number; tipo: 'ciclo'; iteracoes: number }
   | { passo: number; tipo: 'texto'; texto: string };
@@ -2521,7 +2642,11 @@ export function interpretar(
           );
           break;
         }
-        if (!coerencia(ev.tipoValor, guardado.tipo)) {
+        // `tipoValor` a omisso é um sítio que não declara tipo: `print(total)`,
+        // `x = total`. Não há o que comparar, e comparar na mesma confrontaria
+        // `undefined` com o tipo guardado — que nunca são iguais, e o produto
+        // passaria a recusar Python válido.
+        if (ev.tipoValor !== undefined && !coerencia(ev.tipoValor, guardado.tipo)) {
           erros.push(
             erroDePasso(
               ev.passo,
@@ -2535,7 +2660,11 @@ export function interpretar(
       }
 
       case 'operar': {
-        if (!coerencia(ev.a.tipo, ev.b.tipo)) {
+        // Só se julga o que se sabe. Se um dos lados é um nome, o `usar` que
+        // vem antes no mesmo passo é que sabe que tipo esse nome tinha, e
+        // é dele que sai o erro. Julgar aqui seria julgar um `null` como se
+        // fosse um tipo, e `null` não é um tipo que ninguém guardou.
+        if (ev.a !== null && ev.b !== null && !coerencia(ev.a.tipo, ev.b.tipo)) {
           erros.push(
             erroDePasso(
               ev.passo,
@@ -2546,7 +2675,11 @@ export function interpretar(
           );
           break;
         }
-        if (ev.operacao === '/' && ev.b.valor === 0) {
+        // A divisão por zero só precisa do divisor, e o divisor é um número
+        // escrito na linha. Logo dá para dizer, mesmo que o outro lado da
+        // conta seja um nome — que é o caso de `total = total / 0`, a linha
+        // que a lição precisa de conseguir dizer que está errada.
+        if (ev.operacao === '/' && ev.b !== null && ev.b.valor === 0) {
           erros.push(
             erroDePasso(
               ev.passo,
@@ -2758,10 +2891,22 @@ O `BlocoLeigo` que entra em `emit` é o da Task 2, e o seu shape é este — sem
 ```typescript
 interface BlocoLeigo {
   type: string;
-  fields: Record<string, { valor: unknown }>;              // ex.: { nome: { valor: 'total' } }
-  inputs: Record<string, { valor: unknown } | { stack: BlocoLeigo[] }>;
+  // `fields` é o que a pessoa escreve no bloco; `inputs` é o que se liga a
+  // outros blocos. Os dois são opcionais porque um bloco pode ter só um
+  // deles — e o `guardar` tem-nos aos dois.
+  fields?: Record<string, { valor: unknown }>;            // ex.: { nome: { valor: 'total' } }
+  inputs?: Record<string, { valor: unknown } | { stack: BlocoLeigo[] }>;
 }
 ```
+
+> **A distinção entre `fields` e `inputs` é o que separa um nome de um
+> valor, e o plano emendava os dois.** O código desta tarefa lia o nome de um
+> `guardar` de `inputs.NOME` — que não existe — e emitia `undefined = 5` para
+> o bloco mais básico do produto. Nenhum teste apanhava, porque o teste
+> verificava o *tipo* e não o texto, que é o que o aluno lê. O esboço acima é
+> a correcção: o nome do bloco vive em `fields.nome.valor` em `dados.ts`, no
+> Blockly da Task 9 e no YAML da Task 7 — a mesma forma nos três sítios, sem
+> exceção.
 
 Blocos do primeiro conceito: `guardar`, `repetir`, `dizer`, `log`, `pilha`. **`dizer` é o que escreve no ecrã** (`print`) e **`log` emite `log(...)`**, uma função que ainda não existe — é o passo que mostra a Python a falhar a correr. Não existe bloco `media`, e não há `vazio`: um bloco que não produz nada é `vazio` no YAML e não chega ao `emit`.
 
@@ -2779,7 +2924,26 @@ Blocos do primeiro conceito: `guardar`, `repetir`, `dizer`, `log`, `pilha`. **`d
 ```typescript
 import { describe, expect, it } from 'vitest';
 import { python } from './python';
+import { interpretar } from '../nucleo/semantica';
+import type { Erro } from '../nucleo/tipos';
 import { dizer, guardar, guardarTexto, log, pilha, repetir } from '../nucleo/testes/dados';
+
+/** O que `emit` aceita. `ReturnType<typeof python.emit>` seria o `Gerado` que
+ *  ele devolve — e o que se quer escrever aqui é o bloco que se lhe dá. */
+type Programa = Parameters<typeof python.emit>[0];
+
+/** Ler e depois julgar — o que a Task 6 chama `avaliarTexto`, feito à mão
+ *  porque o atalho ainda não existe. */
+function avaliar(texto: string): Erro[] {
+  const lido = python.ler(texto);
+  return lido.erros.length > 0
+    ? lido.erros
+    : interpretar(lido.eventos, python.policy, (p) => ({ bloco: 'texto', ranhura: 0, passo: p }));
+}
+
+function linhasDe(texto: string): string[] {
+  return texto.replace(/\n$/, '').split('\n');
+}
 
 describe('emit: teste dourado', () => {
   it('guardar número produz uma atribuição simples', () => {
@@ -2788,7 +2952,7 @@ describe('emit: teste dourado', () => {
 
   it('o texto() do robô obriga a texto: mesmo um 5 sai entre aspas', () => {
     // Este é o ponto do produto, e é fácil tê-lo errado. A palavra que o
-    // robô entrega é uma palavra, mesmo que o utilizador tenha escrito um
+    // robô entrega é uma palavra, mesmo que a pessoa tenha escrito um
     // número. Por isso `guardarTexto('total', 5)` produz `total = '5'` e
     // não `total = 5` — e é essa diferença que torna a conversa sobre
     // tipos necessária em vez de decorativa.
@@ -2805,11 +2969,27 @@ describe('emit: teste dourado', () => {
     expect([comoNumero, comoPalavra]).toEqual(['total = 5\n', "total = '5'\n"]);
   });
 
+  it('o nome de um guardar está nos fields, e não nos inputs', () => {
+    // O `BlocoLeigo` separa o que a pessoa escreve no bloco (fields) do que
+    // se liga a outros blocos (inputs). O plano lia o nome de `inputs.NOME`,
+    // que não existe, e emitia `undefined = 5` para o bloco mais básico do
+    // produto. A forma do bloco é a mesma em `dados.ts`, no Blockly e no
+    // YAML; o que se lê é um sítio, e o sítio é o `fields`.
+    const b = guardar('total', 5);
+    expect(b.fields?.nome?.valor).toBe('total');
+    expect(b.inputs?.['NOME']).toBeUndefined();
+  });
+
   it('dizer produz print', () => {
     expect(python.emit(pilha(dizer({ txt: 'olá' }))).texto).toBe("print('olá')\n");
   });
 
-  it('dizer de um número escreve o número como está, sem str', () => {
+  it('dizer de um número escreve o número como está, sem aspas', () => {
+    // O motor de blocos recusa `dizer(5)` — o bloco `dizer` só aceita
+    // texto. O `emit` é uma função total sobre `BlocoLeigo` e escreve o
+    // número na mesma, e isso é deliberado: `print(5)` é Python válido, e um
+    // emissor que se recusasse a escrever isto teria de inventar um erro
+    // para o mesmo-programa consoante o caminho.
     expect(python.emit(pilha(dizer(5))).texto).toBe('print(5)\n');
   });
 
@@ -2818,22 +2998,33 @@ describe('emit: teste dourado', () => {
   });
 
   it('repetir produz for com range e indentação de 4 espaços', () => {
-    expect(python.emit(pilha(repetir(3, [guardar('x', 1)]))).texto)
-      .toBe('for _ in range(3):\n    x = 1\n');
+    expect(python.emit(pilha(repetir(3, [guardar('x', 1)]))).texto).toBe(
+      'for _ in range(3):\n    x = 1\n',
+    );
   });
 
   it('repetir aninhado aumenta a indentação', () => {
-    expect(python.emit(pilha(repetir(2, [repetir(2, [guardar('x', 1)])]))).texto)
-      .toBe('for _ in range(2):\n    for _ in range(2):\n        x = 1\n');
+    expect(python.emit(pilha(repetir(2, [repetir(2, [guardar('x', 1)])]))).texto).toBe(
+      'for _ in range(2):\n    for _ in range(2):\n        x = 1\n',
+    );
   });
 
-  it('repetir sem corpo produz só a linha do for', () => {
-    expect(python.emit(pilha(repetir(3, []))).texto).toBe('for _ in range(3):\n');
+  it('repetir sem corpo emite um pass, porque um for vazio não é Python', () => {
+    // Verificado contra o Python: `for _ in range(3):` sozinho é
+    // `expected an indented block after 'for' statement`, e um corpo feito
+    // só de um comentário dá o mesmo erro. O único corpo válido que não
+    // diz nada é `pass`. Emitir o `for` sozinho era emitir Python que não
+    // corre, e o produto existe para nunca mostrar ao aluno uma linha que
+    // está errada sem dizer que está errada.
+    const g = python.emit(pilha(repetir(3, [])));
+    expect(g.texto).toBe('for _ in range(3):\n    pass\n');
+    expect(() => new Function('x', '')).not.toThrow();
   });
 
   it('uma pilha gera todas as linhas por ordem', () => {
-    expect(python.emit(pilha(guardar('total', 5), log({ ref: 'total' }))).texto)
-      .toBe('total = 5\nlog(total)\n');
+    expect(python.emit(pilha(guardar('total', 5), log({ ref: 'total' }))).texto).toBe(
+      'total = 5\nlog(total)\n',
+    );
   });
 
   it('normaliza um nome com acentos para identificador Python', () => {
@@ -2850,10 +3041,19 @@ describe('emit: teste dourado', () => {
     expect(g.anotacoes).toEqual([]);
   });
 
-  it('toda linha gerada tem anotação com porque não vazio e linha certa', () => {
+  it('toda linha gerada tem anotação, com o número de linha certo', () => {
     const g = python.emit(pilha(repetir(2, [guardar('x', 1), log({ ref: 'x' })]), dizer({ txt: 'olá' })));
-    const linhas = g.texto.trimEnd().split('\n');
-    expect(linhas).toHaveLength(4);
+    // Quatro linhas: o `for`, o `guardar` do corpo, o `log` do corpo, o
+    // `dizer`. A primeira versão deste teste dizia seis, porque contava o
+    // `for` duas vezes — uma por volta. Um `repetir(2)` escreve o `for` uma
+    // vez e o corpo uma vez; quem lê o texto sabe disto, e quem escreve o
+    // número sem contar erra o mesmo que o `Anotacao.tipo` do plano.
+    expect(linhasDe(g.texto)).toEqual([
+      'for _ in range(2):',
+      '    x = 1',
+      '    log(x)',
+      "print('olá')",
+    ]);
     expect(g.anotacoes).toHaveLength(4);
     for (let i = 0; i < g.anotacoes.length; i += 1) {
       expect(g.anotacoes[i]!.linha).toBe(i + 1);
@@ -2861,16 +3061,108 @@ describe('emit: teste dourado', () => {
     }
   });
 
+  it('o for também é anotado, e a anotação do corpo conta a partir dele', () => {
+    // O plano emitia a linha do `for` direto para a lista, sem anotação, e o
+    // emissor aninhado contava as suas linhas a partir de 1. O resultado
+    // eram anotações que apontavam para a linha errada — a do `x = 1` dizia
+    // linha 1, e a linha 1 é o `for`. O `porque` de cada linha é o que o
+    // aluno lê ao lado do código, e uma anotação na linha errada é pior do
+    // que nenhuma: ensina a explicação errada com a confiança certa.
+    const g = python.emit(pilha(repetir(2, [guardar('x', 1), log({ ref: 'x' })]), dizer({ txt: 'olá' })));
+    const porLinha = new Map(g.anotacoes.map((a) => [a.linha, a.porque]));
+    expect(g.anotacoes.every((a) => a.porque.length > 0)).toBe(true);
+    expect(porLinha.get(1)).toContain('2 vezes');
+    expect(porLinha.get(2)).toContain('Guarda x');
+    expect(porLinha.get(3)).toContain('log');
+    expect(porLinha.get(4)).toContain('Mostra');
+  });
+
   it('nenhuma anotação menciona outra linguagem', () => {
-    const g = python.emit(pilha(guardar('total', 5), log({ ref: 'total' })));
+    const g = python.emit(pilha(guardar('total', 5), log({ ref: 'total' }), dizer({ txt: 'olá' })));
     for (const a of g.anotacoes) {
       expect(a.porque).not.toMatch(/Java|Go|TypeScript|SQL|JavaScript/);
     }
   });
 
+  it('nenhuma anotação afirma um tipo que não sabe', () => {
+    // O `Anotacao` do plano tinha um `tipo: Tipo`, e o `emit` preenchia-o
+    // com `número` sempre que a entrada era uma referência — porque não há
+    // outro tipo para pôr. `log(total)` passava a ser uma linha sobre um
+    // número, e o `Tipo` foi-se do interface: um campo que uma em cada
+    // cinco linhas não consegue preencher honestamente é um campo que vai
+    // ser preenchido a mentir, e o ecrã vai mostrar a mentira.
+    const g = python.emit(pilha(log({ ref: 'total' })));
+    expect(JSON.stringify(g.anotacoes)).not.toMatch(/"tipo"/);
+  });
+
   it('um bloco desconhecido gera um comentário, nunca uma linha de código inválida', () => {
     const g = python.emit({ type: 'condicao', inputs: { VALOR: { valor: 1 } } });
     expect(g.texto).toBe('# bloco do v2: condicao\n');
+  });
+});
+
+describe('emit: o texto gerado é Python que corre', () => {
+  /** Os catorze programas que esta tarefa produz. Todos compilam no Python
+   *  3.14 — verificado à mão, um a um, e o resultado anotado no plano.
+   *
+   *  O que fica em teste é a *forma* do texto, e não a sua validade: um
+   *  teste que precisa de um interpretador externo não corre em todo o lado,
+   *  e um teste que nem sempre corre deixa de ser um teste no dia em que o
+   *  ambiente muda. A forma apanha o que-interesta — um bloco sem corpo, uma
+   *  indentação errada, um sinal de outra linguagem — e é o que se despistou
+   *  sozinho. */
+  const PROGRAMAS: Programa[] = [
+    pilha(guardar('total', 5)),
+    pilha(guardarTexto('total', 5)),
+    pilha(guardar('pronto', true)),
+    pilha(dizer({ txt: 'olá' })),
+    pilha(dizer(5)),
+    pilha(log({ ref: 'total' })),
+    pilha(repetir(3, [guardar('x', 1)])),
+    pilha(repetir(3, [])),
+    pilha(repetir(2, [repetir(2, [guardar('x', 1)])])),
+    pilha(repetir(2, [guardar('x', 1), log({ ref: 'x' })]), dizer({ txt: 'olá' })),
+    pilha(dizer({ txt: "it's" })),
+    pilha(guardar('música', 1)),
+    { type: 'condicao', inputs: { VALOR: { valor: 1 } } },
+    null,
+  ];
+
+  it('nenhuma linha que abre um bloco fica sem corpo', () => {
+    // A regra estrutural que o Python exige: uma linha acabada em `:` tem de
+    // ser seguida por uma linha mais indentada. Emitir um `for` sozinho era
+    // mostrar ao aluno uma linha que não corre, e o produto existe para nunca
+    // mostrar uma linha errada sem dizer que está errada.
+    for (const programa of PROGRAMAS) {
+      const l = linhasDe(python.emit(programa).texto);
+      for (let i = 0; i < l.length; i += 1) {
+        if (!l[i]!.trimEnd().endsWith(':')) continue;
+        const recuo = l[i]!.length - l[i]!.trimStart().length;
+        const seguinte = l[i + 1];
+        expect(seguinte, `linha ${i + 1} abre um bloco sem corpo`).toBeDefined();
+        expect(seguinte!.length - seguinte!.trimStart().length).toBeGreaterThan(recuo);
+      }
+    }
+  });
+
+  it('nenhum programa gerado traz um sinal de outra linguagem', () => {
+    // O `;`, o `{` e as palavras de Java e de JavaScript são as marcas que a
+    // pessoa traz de outra linguagem. A projeção recusa-as ao ler, e o `emit`
+    // nunca as escreve — as duas metades da mesma frase.
+    for (const programa of PROGRAMAS) {
+      const t = python.emit(programa).texto;
+      expect(t, t).not.toMatch(/[;{}]/);
+      expect(t, t).not.toMatch(/^\s*(function|const|let|var|public|class)\b/m);
+    }
+  });
+
+  it('e a indentação é sempre múltipla de quatro', () => {
+    for (const programa of PROGRAMAS) {
+      for (const linha of linhasDe(python.emit(programa).texto)) {
+        const recuo = linha.length - linha.trimStart().length;
+        expect(recuo % 4, linha).toBe(0);
+      }
+    }
   });
 });
 
@@ -2885,6 +3177,23 @@ describe('ler: o que o Python aceita', () => {
     expect(python.ler("nome = 'olá'\n").erros).toEqual([]);
   });
 
+  it('aspas duplas também são Python, e o produto não pode dizer que não', () => {
+    // Verificado contra o Python: `x = "ola"` compila. Recusar uma linha
+    // válida é o pior erro que um produto de ensino pode cometer, porque o
+    // aluno conclui que o produto está errado — e a lição passa a ser
+    // "não confies no que o ecrã diz". A casa continua a ser aspas simples;
+    // o que muda é o que se aceita.
+    expect(python.ler('nome = "olá"\n').erros).toEqual([]);
+  });
+
+  it('um número com casas decimais é um número', () => {
+    expect(python.ler('preco = 1.5\n').erros).toEqual([]);
+    const ev = python.ler('preco = 1.5\n').eventos[0]!;
+    if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
+    expect(ev.tipoValor).toBe('número');
+    expect(ev.valor.valor).toBe(1.5);
+  });
+
   it('lógica, e True é o que o Python escreve', () => {
     expect(python.ler('pronto = True\n').erros).toEqual([]);
     expect(python.ler('pronto = False\n').erros).toEqual([]);
@@ -2892,6 +3201,18 @@ describe('ler: o que o Python aceita', () => {
 
   it('print conta como evento sem erro', () => {
     expect(python.ler('print(total)\n').erros).toEqual([]);
+  });
+
+  it('print de uma variável não é um erro, porque Python não impõe tipo ao print', () => {
+    // O plano emitia `usar` com `tipoValor: 'texto'` para o que está dentro
+    // do `print`, e o núcleo respondia "total guarda número, e este sítio
+    // precisa de texto". O Python não diz nada disso. Um `usar` sem
+    // `tipoValor` é um sítio que não declara tipo — que é o que o `print` é.
+    expect(avaliar('total = 5\nprint(total)\n')).toEqual([]);
+  });
+
+  it('uma cópia também não impõe tipo: x = total', () => {
+    expect(avaliar('total = 5\nx = total\n')).toEqual([]);
   });
 
   it('linhas em branco, espaços e comentários são ignorados', () => {
@@ -2912,6 +3233,15 @@ describe('ler: o que o Python recusa', () => {
     expect(r.erros[0]!.porque).toContain(';');
   });
 
+  it('um ponto-e-vírgula dentro de um texto é perfeitamente válido', () => {
+    // Verificado contra o Python: `x = 'a;b'` compila. O plano procurava o
+    // `;` na linha toda e recusava antes de tentar ler, por isso contava um
+    // sinal dentro de uma palavra como se fosse o vício do Java. A regra
+    // passou a ser: primeiro tenta ler; só se não conseguir, e se a linha
+    // acabar em `;`, é que o `;` é o culpado.
+    expect(python.ler("x = 'a;b'\n").erros).toEqual([]);
+  });
+
   it('o erro de sintaxe tem porque e remedio, nunca um código nu', () => {
     const r = python.ler('isto não é código\n');
     expect(r.erros).toHaveLength(1);
@@ -2923,13 +3253,24 @@ describe('ler: o que o Python recusa', () => {
   it('o passo do erro é a linha certa', () => {
     const r = python.ler('total = 5\nx = 1;\n');
     expect(r.erros).toHaveLength(1);
-    expect(r.erros[0]!.passo).toBe(2);
+    expect(r.erros[0]!.origem.passo).toBe(2);
+  });
+
+  it('dois sinais de igual são comparação, e o erro diz isso', () => {
+    // A regra do plano casava `x == 1` como atribuição e dizia "Python não
+    // sabe o que fazer com "= 1"". É verdade e não ajuda nada: o aluno
+    // escreveu o sinal certo para comparar e o errado para atribuir, e é
+    // exatamente isso que a mensagem tem de dizer.
+    const r = python.ler('total == 5\n');
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.porque).toContain('==');
+    expect(r.erros[0]!.remedio).toContain('=');
   });
 
   it('log é uma função que ainda não existe, e o erro diz isso', () => {
     // O bloco `log` emite `log(...)` de propósito. Em Python isso rebenta a
-    // correr, e o recusa-ao-usar de Java rebenta antes. A lição está no
-    // quando, e o `porque` tem de dizer a verdade sobre a Python.
+    // correr, e o recusa-ao-usar de Java recusa antes. A lição está no
+    // quando, e o `porque` tem de dizer a verdade sobre o Python.
     const r = python.ler('log(total)\n');
     expect(r.erros).toHaveLength(1);
     expect(r.erros[0]!.porque).toContain('log');
@@ -2938,7 +3279,7 @@ describe('ler: o que o Python recusa', () => {
   });
 });
 
-describe('ler: a política de Python', () => {
+describe('ler: a política do Python', () => {
   it("total = 'olá' passa — quem recusa é o uso", () => {
     expect(python.ler("total = 'olá'\n").erros).toEqual([]);
   });
@@ -2954,6 +3295,139 @@ describe('ler: a política de Python', () => {
   it('atribuir sem ponto-e-vírgula é o caminho feliz, e a semicolon é o teste', () => {
     expect(python.ler('total = 5\n').erros).toHaveLength(0);
     expect(python.ler('int total = 5\n').erros).toHaveLength(1);
+  });
+});
+
+describe('ler: expressões', () => {
+  it('total = total + 1 produz um uso e uma operação, e nenhum erro', () => {
+    const r = python.ler('total = 5\ntotal = total + 1\n');
+    expect(r.erros).toEqual([]);
+    expect(r.eventos.map((e) => e.tipo)).toEqual(['atribuir', 'usar', 'operar']);
+  });
+
+  it('o uso vem antes da operação, que é o que faz o erro cair no sítio certo', () => {
+    const r = python.ler('total = total + 1\n');
+    expect(r.eventos[0]!.tipo).toBe('usar');
+  });
+
+  it('somar texto a número é erro de execução, e é em Python também', () => {
+    const erros = avaliar("total = 'olá'\ntotal = total + 1\n");
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('texto');
+  });
+
+  it('as quatro operações entram', () => {
+    for (const op of ['+', '-', '*', '/']) {
+      expect(python.ler(`total = total ${op} 1\n`).erros).toEqual([]);
+    }
+  });
+
+  it('dividir por zero é o que a conta dá, e quem diz é o núcleo', () => {
+    const erros = avaliar('total = 8\ntotal = total / 0\n');
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('zero');
+  });
+
+  it('uma conta de três termos não é adivinhada: ou se lê, ou se diz que não se lê', () => {
+    // `1 - 2 - 3` casa a expressão como `1 - (2 - 3)`, e o termo da direita
+    // não é um número nem um texto. O plano transformava-o num `0` sem
+    // dizer nada, e o aluno lia `a = 1 - 0` como se fosse o que escreveu. Um
+    // limite declarado é ensino; um limite escondido é mentira.
+    const r = python.ler('a = 1 - 2 - 3\n');
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.porque).toContain('2 - 3');
+    expect(r.erros[0]!.remedio).toContain('número');
+  });
+});
+
+describe('ler: o for', () => {
+  it('conta as voltas', () => {
+    const r = python.ler('for _ in range(3):\n    total = total + 1\n');
+    expect(r.erros).toEqual([]);
+    const c = r.eventos.find((e) => e.tipo === 'ciclo');
+    if (!c || c.tipo !== 'ciclo') throw new Error('esperava um ciclo');
+    expect(c.iteracoes).toBe(3);
+  });
+
+  it('a indentação não é lida como erro: o `ler` lê linha a linha', () => {
+    expect(python.ler('    total = 5\n').erros).toEqual([]);
+  });
+
+  it('o for de duas voltas também', () => {
+    const c = python.ler('for _ in range(2):\n    x = 1\n').eventos[0]!;
+    if (c.tipo !== 'ciclo') throw new Error('esperava um ciclo');
+    expect(c.iteracoes).toBe(2);
+  });
+
+  it('range com mais de 10000 voltas é recusado pelo núcleo, não pelo leitor', () => {
+    const erros = avaliar('for _ in range(10001):\n    x = 1\n');
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('10000');
+  });
+});
+
+describe('ler: os erros são sempre FalhaRuntime, e isso está no tipo', () => {
+  it('o tipo de LerResultado.errors é FalhaRuntime[], não Erro[]', () => {
+    // Se `erros` fosse `Erro[]`, `r.erros[0].passo` não compilaria — e o
+    // plano acessava-o em três sítios, sobre uma união em que só a
+    // `FalhaRuntime` tem `passo`. Declarar o tipo narrowed não é um truque
+    // para o compilador calar-se: é a afirmação de que um erro de leitura é
+    // sempre uma falha a correr, e que a projeção não produz recusas de
+    // tipo — quem recusa o tipo é o núcleo.
+    const r: { erros: Array<{ classe: 'FalhaRuntime'; passo: number }> } = python.ler('isto não é\n');
+    expect(r.erros[0]!.classe).toBe('FalhaRuntime');
+    expect(r.erros[0]!.passo).toBe(1);
+  });
+
+  it('nenhum erro de leitura diz que o tipo está errado', () => {
+    for (const linha of ['int total = 5', 'log(total)', 'total == 5', "x = 'a;b';"]) {
+      for (const e of python.ler(linha + '\n').erros) {
+        expect(e.classe).toBe('FalhaRuntime');
+      }
+    }
+  });
+});
+
+describe('a projeção e a sua política', () => {
+  it('a política é a de Python, e vem do núcleo', () => {
+    expect(python.policy).toEqual({ recusaNoTipo: false, quando: 'ao usar' });
+  });
+
+  it('emit e ler são o mesmo objeto, e é para isso que serve', () => {
+    // Escrever `total = 5` e ler `total = 5` é a mesma pessoa. Se `emit` e
+    // `ler` fossem dois objectos separados, cada um com as suas ideias
+    // sobre o que é Python, a lição ensinaria duas linguagens diferentes
+    // com o mesmo nome.
+    const escrito = python.emit(pilha(guardar('total', 5))).texto;
+    const lido = python.ler(escrito);
+    expect(lido.erros).toEqual([]);
+    const ev = lido.eventos[0]!;
+    if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
+    expect(ev.nome).toBe('total');
+    expect(ev.tipoValor).toBe('número');
+  });
+
+  it('ida e volta de cada bloco da lição, sem erros de leitura', () => {
+    const programas: Array<[string, Programa]> = [
+      ['guardar número', pilha(guardar('total', 5))],
+      ['guardar texto', pilha(guardar('nome', { txt: 'olá' }))],
+      ['dizer', pilha(dizer({ txt: 'olá' }))],
+      ['log', pilha(log({ ref: 'total' }))],
+      ['repetir', pilha(repetir(3, [guardar('x', 1)]))],
+    ];
+    for (const [nome, programa] of programas) {
+      const g = python.emit(programa);
+      const r = python.ler(g.texto);
+      // O `log` é a única linha que o Python recusa, e é recusada de
+      // propósito: é o bloco que mostra a diferença entre "recusa antes" e
+      // "recusa quando corre". Qualquer outra linha que o `ler` não consiga
+      // ler é o `emit` a escrever Python que não é Python.
+      if (nome === 'log') {
+        expect(r.erros, nome).toHaveLength(1);
+      } else {
+        expect(r.erros, nome).toEqual([]);
+      }
+    }
   });
 });
 ```
@@ -2982,8 +3456,18 @@ describe('o registo', () => {
 
   it('a exceção nomeia a linguagem em minúsculas, como a usar em código', () => {
     let mensagem = '';
-    try { obter('sql'); } catch (e) { mensagem = (e as Error).message; }
+    try {
+      obter('sql');
+    } catch (e) {
+      mensagem = (e as Error).message;
+    }
     expect(mensagem).toContain('sql');
+  });
+
+  it('a exceção diz o que está disponível, e não só o que falta', () => {
+    // Um erro que só diz "não há" obriga quem o lê a ir procurar a lista.
+    // Um erro que diz "não há java; há python" diz também o próximo passo.
+    expect(() => obter('go')).toThrow(/python/);
   });
 
   it('a família de Python é imperativa', () => {
@@ -2994,8 +3478,17 @@ describe('o registo', () => {
     expect(BLOCOS_IMPERATIVOS).toEqual(['guardar', 'repetir', 'dizer', 'log']);
   });
 
-  it('a projecão declara o mesmo vocabulário que exporta', () => {
+  it('a projeção declara o mesmo vocabulário que exporta', () => {
     expect(obter('python').blocos).toEqual(BLOCOS_IMPERATIVOS);
+  });
+
+  it('temProjecao é falso para as cinco que faltam, e verdadeiro para a uma que há', () => {
+    const comProjecao = LINGUAGENS_COM_PROJECAO;
+    expect(comProjecao).toHaveLength(1);
+    expect(temProjecao('python')).toBe(true);
+    for (const l of ['go', 'java', 'javascript', 'sql', 'typescript'] as const) {
+      expect(temProjecao(l), l).toBe(false);
+    }
   });
 });
 ```
@@ -3010,15 +3503,23 @@ Expected: FAIL com erro de resolução de `./python` e `./registo`.
 ```typescript
 import type { BlocoLeigo } from '../nucleo/blocos';
 import type { EventoLido, Policy } from '../nucleo/semantica';
-import type { Erro, Language, Tipo } from '../nucleo/tipos';
+import type { FalhaRuntime, Language } from '../nucleo/tipos';
 
 export type Familia = 'imperativa' | 'declarativa';
 
 export interface Anotacao {
   linha: number;
-  tipo: Tipo;
   /** Porque é que esta linha existe, nos termos desta linguagem. Nunca
-   *  menciona outra linguagem — a spec §0 removeu as referências cruzadas. */
+   *  menciona outra linguagem — a spec §0 removeu as referências cruzadas.
+   *
+   *  Não há um `tipo` aqui, e a ausência é uma decisão. A anotação é lida ao
+   *  lado de uma linha gerada, e o tipo dessa linha nem sempre é conhecido:
+   *  `log(total)` fala de uma variável cujo tipo só existe quando o programa
+   *  corre. Um campo que uma em cada cinco linhas não consegue preencher
+   *  honestamente acaba preenchido a mentir, e o ecrã mostra a mentira com
+   *  a mesma confiança com que mostra o `porque`. O `Tipo` de uma linha
+   *  gerada, quando for preciso, lê-se do `EventoLido` do caminho do
+   *  `ler` — que é onde o tipo é um fato e não uma previsão. */
   porque: string;
 }
 
@@ -3029,9 +3530,15 @@ export interface Gerado {
 
 export interface LerResultado {
   eventos: EventoLido[];
-  /** Erros de leitura: texto que não é desta linguagem. Sempre um
-   *  `FalhaRuntime` com `porque`, nunca um código de erro nu. */
-  erros: Erro[];
+  /** Erros de leitura: texto que não é desta linguagem.
+   *
+   *  O tipo é `FalhaRuntime[]` e não `Erro[]` por uma razão que vale mais do
+   *  que o compilador: uma falha de leitura é sempre uma falha a correr,
+   *  nunca uma recusa de tipo. Quem recusa o tipo é o núcleo, e um `ler` que
+   *  devolvesse uma `Recusa` estaria a decidir uma coisa que não é sua — e a
+   *  dizer ao aluno que Java recusa antes de correr e Python não, quando a
+   *  diferença entre as duas está na `Policy` e em mais lado nenhum. */
+  erros: FalhaRuntime[];
 }
 
 export interface Projection {
@@ -3041,8 +3548,9 @@ export interface Projection {
   /** Vocabulário de blocos desta linguagem. As cinco imperativas declaram o
    *  mesmo conjunto; o SQL declara o seu. */
   blocos: string[];
-  /** Blocos → texto. */
-  emit(programa: BlocoLeigo): Gerado;
+  /** Blocos → texto. Aceita `null` porque um programa vazio é um programa,
+   *  e `pilhaDe(null)` é a forma de dizer isso sem inventar um bloco. */
+  emit(programa: BlocoLeigo | null): Gerado;
   /** Texto desta linguagem → fatos tipados. */
   ler(texto: string): LerResultado;
 }
@@ -3068,9 +3576,13 @@ export function temProjecao(linguagem: Language): boolean {
 export function obter(linguagem: Language): Projection {
   const p = REGISTO[linguagem];
   if (p === undefined) {
+    // A mensagem nomeia a linguagem em minúsculas, como se escreve em
+    // código, e diz também o que existe. Um erro que só diz o que falta
+    // obriga quem o lê a ir procurar a lista; um erro que diz a lista
+    // transforma-se no próximo passo.
     throw new Error(
       `A projecao para ${linguagem} ainda nao foi construida. ` +
-      `As linguagens com projecao sao: ${LINGUAGENS_COM_PROJECAO.join(', ')}.`,
+        `As linguagens com projecao sao: ${LINGUAGENS_COM_PROJECAO.join(', ')}.`,
     );
   }
   return p;
@@ -3081,148 +3593,167 @@ export function obter(linguagem: Language): Projection {
 
 ```typescript
 import type { BlocoLeigo } from '../nucleo/blocos';
-import { identificador, pilhaDe } from '../nucleo/blocos';
+import { identificador } from '../nucleo/blocos';
+import { pilhaDe } from '../nucleo/avaliador';
 import { AMOSTRA, POLITICAS } from '../nucleo/semantica';
 import type { EventoLido } from '../nucleo/semantica';
 import { val } from '../nucleo/tipos';
-import type { Erro, Tipo, Valor } from '../nucleo/tipos';
+import type { FalhaRuntime, Valor } from '../nucleo/tipos';
 import type { Anotacao, Gerado, LerResultado, Projection } from './tipos';
 
 export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
 
-/** O que o Python chama a cada tipo. Uma lista é um texto entre parênteses
- *  rectos, porque no primeiro conceito não há nada a correr. */
-const NOME_DE: Record<Tipo, string> = {
-  número: 'texto',
-  texto: 'texto',
-  lógico: 'texto',
-  lista: 'texto',
-  função: 'texto',
-  actor: 'texto',
-};
+// ---------------------------------------------------------------------------
+// Escrever: blocos → Python
+// ---------------------------------------------------------------------------
 
-function tipoDeEntrada(entrada: unknown): Tipo {
-  if (typeof entrada === 'number') return 'número';
-  if (typeof entrada === 'boolean') return 'lógico';
-  if (entrada && typeof entrada === 'object' && 'ref' in entrada) return 'número';
-  return 'texto';
+function entradaDe(b: BlocoLeigo, chave: string): unknown {
+  const i = b.inputs?.[chave];
+  return i && 'valor' in i ? i.valor : undefined;
 }
 
-function valorDeEntrada(entrada: unknown, passo: number): Valor {
-  const origem = { bloco: 'texto', ranhura: 0, passo };
-  if (typeof entrada === 'number') return val('número', entrada, AMOSTRA, origem);
-  if (typeof entrada === 'boolean') return val('lógico', entrada, AMOSTRA, origem);
-  if (entrada && typeof entrada === 'object' && 'ref' in entrada) {
-    return val('número', 0, AMOSTRA, origem);
-  }
-  if (entrada && typeof entrada === 'object' && 'txt' in entrada) {
-    return val('texto', String((entrada as { txt: unknown }).txt), AMOSTRA, origem);
-  }
-  return val('texto', String(entrada), AMOSTRA, origem);
+/** O nome de um `guardar` está nos `fields`, não nos `inputs`.
+ *
+ *  O `BlocoLeigo` separa o que a pessoa escreve no bloco do que se liga a
+ *  outros blocos, e o nome de uma variável é a primeira coisa. Ler o nome de
+ *  `inputs.NOME` — que não existe — produz `undefined = 5` para o bloco mais
+ *  básico do produto, e esse é o tipo de bug que só aparece quando se vê o
+ *  texto gerado, nunca num teste que só verifique tipos. */
+function campoDe(b: BlocoLeigo, chave: string): unknown {
+  return b.fields?.[chave]?.valor;
 }
 
-function literal(entrada: unknown, passo: number): string {
-  if (typeof entrada === 'number') return String(entrada);
-  if (typeof entrada === 'boolean') return entrada ? 'True' : 'False';
-  if (entrada && typeof entrada === 'object' && 'ref' in entrada) {
-    return String((entrada as { ref: unknown }).ref);
-  }
-  if (entrada && typeof entrada === 'object' && 'txt' in entrada) {
-    return `'${fugar(String((entrada as { txt: unknown }).txt))}'`;
-  }
-  return `'${fugar(String(entrada))}'`;
+/** O corpo de um `repetir`, e não `pilhaDe(b)`.
+ *
+ *  `pilhaDe` abre uma pilha e, se não for uma pilha, devolve o próprio bloco
+ *  — que é o que se quer no topo e é uma recursão infinita no corpo de um
+ *  laço. O corpo vive em `inputs.CORPO.stack`, e confundir os dois `CORPO`
+ *  — o da pilha e o do laço — produz `for _ in range(3):` repetido até a
+ *  pilha estourar. */
+function corpoDe(b: BlocoLeigo): BlocoLeigo[] {
+  return b.inputs?.CORPO?.stack ?? [];
 }
 
 function fugar(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-function entradaDe(b: BlocoLeigo, chave: string): unknown {
-  const i = b.inputs[chave];
-  return i && 'valor' in i ? i.valor : undefined;
+function literal(entrada: unknown): string {
+  if (typeof entrada === 'number') return String(entrada);
+  if (typeof entrada === 'boolean') return entrada ? 'True' : 'False';
+  if (entrada !== null && typeof entrada === 'object' && 'ref' in entrada) {
+    return String((entrada as { ref: unknown }).ref);
+  }
+  if (entrada !== null && typeof entrada === 'object' && 'txt' in entrada) {
+    return `'${fugar(String((entrada as { txt: unknown }).txt))}'`;
+  }
+  return `'${fugar(String(entrada))}'`;
 }
 
+/** Acumula linhas e anotações, sabendo em que linha do programa está.
+ *
+ *  O `base` é o número de linhas que o pai já emitiu. Sem ele, o emissor de
+ *  um corpo de laço contaria a partir de 1 e a anotação do `x = 1` diria
+ *  "linha 1" — sendo que a linha 1 é o `for`. Uma anotação que aponta para
+ *  a linha errada é pior do que nenhuma: o aluno lê a explicação ao lado
+ *  da linha errada e aprende a explicação errada. */
 class Emissor {
   readonly linhas: string[] = [];
   readonly anotacoes: Anotacao[] = [];
 
-  constructor(private nivel = 0) {}
+  constructor(
+    private nivel = 0,
+    private base = 0,
+  ) {}
 
-  recuo(): void {
-    this.linhas.push('    '.repeat(this.nivel));
+  recuo(): string {
+    return '    '.repeat(this.nivel);
   }
 
-  linha(texto: string, tipo: Tipo, porque: string): void {
-    this.recuo();
-    this.linhas.push(texto);
-    this.anotacoes.push({ linha: this.linhas.length, tipo, porque });
+  linha(texto: string, porque: string): void {
+    this.linhas.push(this.recuo() + texto);
+    this.anotacoes.push({ linha: this.base + this.linhas.length, porque });
   }
 
+  /** As linhas do `for` já contadas: o corpo começa a seguir. */
   entrar(): Emissor {
-    return new Emissor(this.nivel + 1);
+    return new Emissor(this.nivel + 1, this.base + this.linhas.length);
   }
 }
 
 function emitir(b: BlocoLeigo, e: Emissor): void {
-  const passo = e.anotacoes.length + 1;
   switch (b.type) {
     case 'pilha':
       for (const filho of pilhaDe(b)) emitir(filho, e);
       return;
 
     case 'guardar': {
-      const nome = identificador(String(entradaDe(b, 'NOME')));
-      const entrada = entradaDe(b, 'VALOR');
-      e.linha(
-        `${nome} = ${literal(entrada, passo)}`,
-        tipoDeEntrada(entrada),
-        `Guarda ${nome} para o usar mais tarde.`,
-      );
+      const nome = identificador(String(campoDe(b, 'nome')));
+      e.linha(`${nome} = ${literal(entradaDe(b, 'VALOR'))}`, `Guarda ${nome} para o usar mais tarde.`);
       return;
     }
 
     case 'dizer': {
-      const entrada = entradaDe(b, 'VALOR');
-      e.linha(
-        `print(${literal(entrada, passo)})`,
-        tipoDeEntrada(entrada),
-        'Mostra o valor no ecrã.',
-      );
+      e.linha(`print(${literal(entradaDe(b, 'VALOR'))})`, 'Mostra o valor no ecrã.');
       return;
     }
 
     case 'log': {
-      const entrada = entradaDe(b, 'VALOR');
       e.linha(
-        `log(${literal(entrada, passo)})`,
-        tipoDeEntrada(entrada),
-        'Chama uma função que ainda não escreveste. Em Python isto só falha quando corre.',
+        `log(${literal(entradaDe(b, 'VALOR'))})`,
+        'Chama `log`, uma função que ainda não escreveste. Em Python isto só falha quando o código corre.',
       );
       return;
     }
 
     case 'repetir': {
-      const vezes = entradaDe(b, 'PASSOS');
-      e.recuo();
-      e.linhas.push(`for _ in range(${String(vezes)}):`);
+      const vezes = String(entradaDe(b, 'PASSOS'));
+      e.linha(`for _ in range(${vezes}):`, `Repete o que está indentado ${vezes} vezes.`);
       const dentro = e.entrar();
-      for (const filho of pilhaDe(b)) emitir(filho, dentro);
+      const corpo = corpoDe(b);
+      if (corpo.length === 0) {
+        // Um `for` sem corpo não é Python. Verificado: `for _ in range(3):`
+        // sozinho dá `expected an indented block`, e um corpo de um só
+        // comentário dá o mesmo erro. A única coisa que diz "nada" e é
+        // Python é `pass`. Emitir o `for` sozinho era mostrar ao aluno uma
+        // linha que não corre, e o produto existe para nunca mostrar uma
+        // linha errada sem dizer que está errada.
+        dentro.linha('pass', 'Não há nada dentro do laço, e um laço vazio não é Python.');
+      } else {
+        for (const filho of corpo) emitir(filho, dentro);
+      }
       e.linhas.push(...dentro.linhas);
       e.anotacoes.push(...dentro.anotacoes);
       return;
     }
 
     default:
-      e.linha(`# bloco do v2: ${b.type}`, 'texto', 'Este bloco ainda não está nesta lição.');
+      e.linha(`# bloco do v2: ${b.type}`, 'Este bloco ainda não está nesta lição.');
   }
 }
 
+// ---------------------------------------------------------------------------
+// Ler: Python → fatos
+// ---------------------------------------------------------------------------
+
 const ATRIBUIR = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/;
 const IMPRIMIR = /^print\(\s*(.+?)\s*\)$/;
-const NUMERO = /^[-+]?\d+$/;
-const TEXTO = /^'((?:[^'\\]|\\.)*)'$/;
+const CICLO = /^for\s+_\s+in\s+range\(\s*(\d+)\s*\)\s*:$/;
+// Um inteiro, ou um inteiro com casas decimais. `x = 1.5` é Python e
+// compila; recusá-lo é dizer ao aluno que está a escrever uma coisa que não
+// é Python, e ele acredita.
+const NUMERO = /^[-+]?\d+(\.\d+)?$/;
+// Texto entre aspas simples **ou duplas** — e nada mais. A casa é a das
+// simples; o que se aceita são as duas. Recusar `x = "olá"` seria ensinar o
+// aluno a desconfiar do produto, que é o pior que um professor de sintaxe
+// pode fazer. E a barra-crua ficou de fora *de propósito*: verifyi contra o
+// Python que `x = \`olá\`` é erro de sintaxe, e aceitar aqui seria trocar um
+// erro que o aluno cometia por um que o produto inventava.
+const TEXTO = /^(['"])([\s\S]*?)\1$/;
+const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 
-function erro(passo: number, porque: string, remedio: string): Erro {
+function erro(passo: number, porque: string, remedio: string): FalhaRuntime {
   return {
     classe: 'FalhaRuntime',
     porque,
@@ -3233,87 +3764,212 @@ function erro(passo: number, porque: string, remedio: string): Erro {
 }
 
 function desescapar(s: string): string {
-  return s.replace(/\\(['\\])/g, '$1');
+  return s.replace(/\\([\\'"nrt])/g, (_m, c: string) =>
+    c === 'n' ? '\n' : c === 'r' ? '\r' : c === 't' ? '\t' : c,
+  );
 }
 
-function lerLinha(texto: string, passo: number): LerResultado {
-  const t = texto.trim();
+function valorDe(termo: string, passo: number): Valor | null {
+  const origem = { bloco: 'texto', ranhura: 0, passo };
+  if (NUMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
+  const txt = TEXTO.exec(termo);
+  if (txt) return val('texto', desescapar(txt[2]!), AMOSTRA, origem);
+  if (termo === 'True') return val('lógico', true, AMOSTRA, origem);
+  if (termo === 'False') return val('lógico', false, AMOSTRA, origem);
+  return null;
+}
+
+/** O que uma linha diz, ou o que tem de errar. */
+function lerLinha(bruta: string, passo: number): LerResultado {
+  const t = bruta.trim();
   if (t.length === 0 || t.startsWith('#')) return { eventos: [], erros: [] };
 
-  const iPonto = t.indexOf(';');
-  if (iPonto >= 0) {
-    return {
-      eventos: [],
-      erros: [erro(
-        passo,
-        `Esta linha não é Python: há um ";" na posição ${iPonto + 1}, e Python não os usa.`,
-        'Apaga o ponto-e-vírgula.',
-      )],
-    };
-  }
+  const r = tentarLer(t, passo);
+  if (r.erros.length === 0) return r;
 
-  if (t.startsWith('log(')) {
-    return {
-      eventos: [],
-      erros: [erro(
-        passo,
-        'Em Python não existe nada que se chame log. A função não existe, e isso só se descobre quando o código corre.',
-        'Escreve a função log antes de a chamares, ou usa print.',
-      )],
-    };
+  // O `;` só é culpado depois de a linha ter falhado por outra razão. A
+  // regra antiga procurava o `;` na linha toda e recusava antes de tentar
+  // ler, por isso contava `x = 'a;b'` — que é Python válido, e compila —
+  // como se fosse o vício do Java. Um sintoma que só aparece dentro de uma
+  // palavra é o sinal de que se está a procurar o sintoma no sítio errado.
+  if (t.endsWith(';')) {
+    const semPonto = tentarLer(t.slice(0, -1).trim(), passo);
+    if (semPonto.erros.length === 0) {
+      return {
+        eventos: [],
+        erros: [
+          erro(
+            passo,
+            'Esta linha não é Python: acaba em ";", e Python não usa ponto-e-vírgula para separar linhas.',
+            'Apaga o ponto-e-vírgula do fim da linha.',
+          ),
+        ],
+      };
+    }
+  }
+  return r;
+}
+
+function tentarLer(t: string, passo: number): LerResultado {
+  const ciclo = CICLO.exec(t);
+  if (ciclo) {
+    return { eventos: [{ passo, tipo: 'ciclo', iteracoes: Number(ciclo[1]) }], erros: [] };
   }
 
   const imp = IMPRIMIR.exec(t);
-  if (imp) {
-    const dentro = imp[1]!;
-    if (NUMERO.test(dentro)) {
-      return { eventos: [{ passo, tipo: 'imprimir', valor: val('número', Number(dentro), AMOSTRA, { bloco: 'texto', ranhura: 0, passo }) }], erros: [] };
-    }
-    const txt = TEXTO.exec(dentro);
-    if (txt) {
-      return { eventos: [{ passo, tipo: 'imprimir', valor: val('texto', desescapar(txt[1]!), AMOSTRA, { bloco: 'texto', ranhura: 0, passo }) }], erros: [] };
-    }
-    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(dentro)) {
-      return { eventos: [{ passo, tipo: 'usar', nome: dentro, tipoValor: 'texto' }], erros: [] };
-    }
-    return { eventos: [], erros: [erro(passo, `Python não sabe o que mostrar: "${dentro}".`, 'Dentro do print só pode estar um nome, um número ou um texto.')] };
-  }
+  if (imp) return lerImprimir(imp[1]!, passo);
 
   const at = ATRIBUIR.exec(t);
-  if (at) {
-    const nome = at[1]!;
-    const resto = at[2]!.trim();
-    const origem = { bloco: 'texto', ranhura: 0, passo };
-    if (NUMERO.test(resto)) {
-      return { eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: 'número', valor: val('número', Number(resto), AMOSTRA, origem) }], erros: [] };
-    }
-    if (resto === 'True' || resto === 'False') {
-      return { eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: 'lógico', valor: val('lógico', resto === 'True', AMOSTRA, origem) }], erros: [] };
-    }
-    const txt = TEXTO.exec(resto);
-    if (txt) {
-      return { eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: 'texto', valor: val('texto', desescapar(txt[1]!), AMOSTRA, origem) }], erros: [] };
-    }
-    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(resto)) {
-      return { eventos: [{ passo, tipo: 'usar', nome: resto, tipoValor: 'texto' }], erros: [] };
-    }
+  if (at) return lerAtribuir(at[1]!, at[2]!.trim(), passo);
+
+  return {
+    eventos: [],
+    erros: [
+      erro(
+        passo,
+        `Esta linha não é Python: "${t}".`,
+        'Uma linha de Python é uma atribuição, um print, um for, ou nada.',
+      ),
+    ],
+  };
+}
+
+function lerImprimir(dentro: string, passo: number): LerResultado {
+  if (NUMERO.test(dentro)) {
+    return {
+      eventos: [{ passo, tipo: 'imprimir', valor: valorDe(dentro, passo)! }],
+      erros: [],
+    };
+  }
+  const txt = TEXTO.exec(dentro);
+  if (txt) {
+    return { eventos: [{ passo, tipo: 'imprimir', valor: valorDe(dentro, passo)! }], erros: [] };
+  }
+  if (NOME.test(dentro)) {
+    // `print(total)` não declara tipo. Emitir aqui um `usar` com
+    // `tipoValor: 'texto'` fazia o núcleo responder "total guarda número, e
+    // este sítio precisa de texto" — um erro que o Python não tem, numa
+    // linha que o Python aceita. A omissão é a informação: este sítio não
+    // impõe tipo a nada.
+    return { eventos: [{ passo, tipo: 'usar', nome: dentro }], erros: [] };
+  }
+  return {
+    eventos: [],
+    erros: [
+      erro(
+        passo,
+        `Python não sabe o que mostrar: "${dentro}".`,
+        'Dentro do print só pode estar um nome, um número ou um texto.',
+      ),
+    ],
+  };
+}
+
+function lerAtribuir(nome: string, resto: string, passo: number): LerResultado {
+  if (resto.startsWith('=')) {
+    // O `ATRIBUIR` casa `total == 5` como atribuição de `= 5`, e dizer
+    // "Python não sabe o que fazer com "= 1"" é verdade e não ajuda nada.
+    // A pessoa escreveu o sinal certo para comparar e o errado para
+    // atribuir, e a mensagem tem de dizer exatamente isso — com os dois
+    // caracteres à vista, porque a diferença entre eles é um traço e é
+    // nisso que a pessoa se enganou.
     return {
       eventos: [],
-      erros: [erro(
+      erros: [
+        erro(
+          passo,
+          'Em Python "==" são dois sinais de igual, e é comparação: serve para perguntar, não põe nada em lado nenhum.',
+          'Para guardar um valor usa um sinal de igual só: "=" em vez de "==".',
+        ),
+      ],
+    };
+  }
+
+  const valor = valorDe(resto, passo);
+  if (valor !== null) {
+    return {
+      eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: valor.tipo, valor }],
+      erros: [],
+    };
+  }
+
+  if (NOME.test(resto)) {
+    // Uma cópia não impõe tipo ao destino. `x = total` é válido com
+    // qualquer coisa em `total`.
+    return { eventos: [{ passo, tipo: 'usar', nome: resto }], erros: [] };
+  }
+
+  const expressao = EXPRESSAO.exec(resto);
+  if (expressao) {
+    const esquerda = expressao[1]!;
+    const direita = expressao[3]!;
+    // Um termo de uma conta é um número, um texto, True/False — ou o nome
+    // de outra variável. Um nome não é um termo inválido: é o termo mais
+    // comum, e é o que faz `total = total + 1` ser a linha da lição. O que
+    // não é um termo é `2 - 3` escrito do lado direito de um `1 -`.
+    const legivel = (t: string): boolean => valorDe(t, passo) !== null || NOME.test(t);
+    if (legivel(esquerda) && legivel(direita)) {
+      const eventos: EventoLido[] = [];
+      // Um nome do lado esquerdo é um uso, e o uso vem **antes** da
+      // operação: `total = total + 1` com `total` por guardar tem de falhar
+      // em `total`, não na soma. A ordem dos eventos é o que decide isso.
+      //
+      // O uso declara `número` porque é isso que o sítio exige: em Python
+      // `+ - * /` são operações numéricas. E é este `tipoValor` que dá a
+      // linha mais importante da lição — `total = 'olá'` passa, e a linha
+      // seguinte é que rebenta com "total guarda texto, e este sítio
+      // precisa de número". Se a conta não declarasse nada, o produto não
+      // teria como dizer ao aluno a coisa mais importante que sabe sobre
+      // Python: que o texto entra em silêncio e rebenta em baixo.
+      for (const t of [esquerda, direita]) {
+        if (NOME.test(t)) eventos.push({ passo, tipo: 'usar', nome: t, tipoValor: 'número' });
+      }
+      eventos.push({
         passo,
-        `Python não sabe o que fazer com "${resto}".`,
-        'À direita do = só pode estar um número, um texto entre aspas, True, False, ou o nome de outra variável.',
-      )],
+        tipo: 'operar',
+        operacao: expressao[2] as '+' | '-' | '*' | '/',
+        a: valorDe(esquerda, passo),
+        b: valorDe(direita, passo),
+      });
+      return { eventos, erros: [] };
+    }
+    // A expressão é válida para o Python e não se sabe ler. Dizer isso é
+    // ensino; transformar o termo em `0` sem dizer nada é fazer o aluno
+    // ler `a = 1 - 0` e pensar que foi o que escreveu.
+    return {
+      eventos: [],
+      erros: [
+        erro(
+          passo,
+          `Esta conta ainda não sei ler: "${resto}". Numa conta, cada lado tem de ser um número, um texto, True/False, ou o nome de outra variável.`,
+          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, True/False, ou o nome de outra variável. O termo "${legivel(esquerda) ? direita : esquerda}" não é nenhum dos quatro.`,
+        ),
+      ],
     };
   }
 
   return {
     eventos: [],
-    erros: [erro(
-      passo,
-      `Esta linha não é Python: "${t}".`,
-      'Uma linha de Python é uma atribuição, um print, ou nada.',
-    )],
+    erros: [
+      erro(
+        passo,
+        `Python não sabe o que fazer com "${resto}".`,
+        'À direita do = só pode estar um número, um texto entre aspas, True, False, o nome de outra variável, ou uma conta.',
+      ),
+    ],
+  };
+}
+
+function lerLog(passo: number): LerResultado {
+  return {
+    eventos: [],
+    erros: [
+      erro(
+        passo,
+        'Em Python não existe nada que se chame log. A função não existe, e isso só se descobre quando o código corre.',
+        'Escreve a função log antes de a chamares, ou usa print.',
+      ),
+    ],
   };
 }
 
@@ -3323,7 +3979,7 @@ export const python: Projection = {
   policy: POLITICAS.python,
   blocos: BLOCOS_IMPERATIVOS,
 
-  emit(programa: BlocoLeigo): Gerado {
+  emit(programa: BlocoLeigo | null): Gerado {
     const e = new Emissor();
     for (const bloco of pilhaDe(programa)) emitir(bloco, e);
     return {
@@ -3334,10 +3990,20 @@ export const python: Projection = {
 
   ler(texto: string): LerResultado {
     const eventos: EventoLido[] = [];
-    const erros: Erro[] = [];
+    const erros: FalhaRuntime[] = [];
     const linhas = texto.split('\n');
     for (let i = 0; i < linhas.length; i += 1) {
-      const r = lerLinha(linhas[i]!, i + 1);
+      const passo = i + 1;
+      const t = linhas[i]!.trim();
+      // O `log` é o bloco que existe para mostrar a diferença entre as duas
+      // epistemologias: em Java é recusado antes de correr, em Python só
+      // quando corre. O `ler` recusa-o, e a mensagem diz que a função não
+      // existe — que é a verdade, e é a altura em que a Python a descobre.
+      if (t.startsWith('log(')) {
+        erros.push(...lerLog(passo).erros);
+        continue;
+      }
+      const r = lerLinha(linhas[i]!, passo);
       eventos.push(...r.eventos);
       erros.push(...r.erros);
     }
@@ -3515,6 +4181,119 @@ log(...) da Recusa-ao-usar de Java de o Python rebentar a correr, e o
 porque diz isso em vez de dizer que a linha e invalida.
 "
 ```
+
+---
+
+> ### O que esta tarefa custou a achar, e o que ficou escrito no código
+>
+> **O plano escrevia `undefined = 5` para o bloco mais básico do produto.**
+> O `emitir` lia o nome de um `guardar` de `inputs.NOME`, e o nome está em
+> `fields.nome.valor` — em `dados.ts`, no Blockly e no YAML. Nenhum teste via
+> isto, porque todos os testes do `emit` verificavam *tipos* e só um verificava
+> texto, e esse um era o do `log`. O esboço de `BlocoLeigo` no *próprio plano*
+> dizia `fields`, e o código dizia `inputs`: o documento e o programa
+> discordavam, e o programa ganhou. **Custo se tivesse passado: o primeiro
+> ecrã da lição mostrava ao aluno `undefined = 5`, e ele não tem como saber
+> que o produto está errado.** Há agora um teste que afirma as duas coisas — que
+> o nome está nos `fields` e que não está nos `inputs` — porque um teste que
+> passa com as duas verdade também passa com as duas falsas.
+>
+> **A projeção dizia quatro coisas falsas sobre Python, e as quatro eram
+> recusar linhas que o Python aceita.** Verifiquei cada uma contra o
+> interpretador antes de a corrigir, e é a verificação que decide: um produto
+> que recusa Python válido ensina a pessoa a desconfiar do produto, e a
+> lição passa a ser "não confies no ecrã". As quatro:
+>
+> | A linha | O que o plano dizia | O que o Python faz |
+> |---|---|---|
+> | `x = "olá"` | não sabe o que fazer | compila |
+> | `x = 1.5` | não sabe o que fazer | compila |
+> | `x = 'a;b'` | há um `;`, que é vício do Java | compila |
+> | `print(total)` com `total = 5` | `total` guarda número, e este sítio precisa de texto | imprime `5` |
+>
+> A quarta é a mais séria, e não era um erro de leitura: era um erro
+> *semântico*. A projeção emitia um `usar` com `tipoValor: 'texto'` para o que
+> está dentro de um `print`, e o núcleo respondia com a incompatibilidade que
+> ele está feito para responder. O Python não impõe tipo ao `print`, e o
+> `x = total` também não — uma cópia não impõe tipo ao destino. A correção
+> está no Task 3, e é uma mudança de interface: **`usar.tipoValor` passou a
+> opcional, e a omissão é informação** — este sítio não declara tipo. O mesmo
+> raciocínio deu `operar.a`/`operar.b` a `Valor | null`, porque `total = total
+> + 1` tem `total` à esquerda e o valor de `total` só existe quando o programa
+> corre. O plano punha um `0` no lugar do nome, e com isso uma conta de dois
+> números podia ser recusada por uma incompatibilidade que não existe. **O
+> núcleo julga o que a projeção conseguiu ler, e não o que ela adivinhou.**
+>
+> **O `for` sem corpo é Python que não corre, e o plano emitia-o.** Verificado:
+> `for _ in range(3):` sozinho dá `expected an indented block`, e um corpo
+> feito só de um comentário dá o mesmo erro — o que elimina a saída óbvia. A
+> única coisa que é Python e não diz nada é `pass`, e é o que a projeção emite
+> com uma anotação que explica. **Verifico cada afirmação sobre uma linguagem
+> contra a linguagem, e não contra o que me lembro dela.** Foi a mesma
+> verificação que apanhou as aspas duplas, os decimais, o `;` dentro de uma
+> palavra e a barra-crua — que o plano aceitava e o Python não.
+>
+> **O `Anotacao` perdeu o campo `tipo`, e a ausência é uma decisão.** O plano
+> preenchia-o com `número` sempre que a entrada era uma referência, porque não
+> havia outro tipo para pôr — e `log(total)` passava a ser uma linha sobre um
+> número, quando o tipo de `total` só existe quando o programa corre. Um
+> campo que uma em cada cinco linhas não consegue preencher honestamente
+> acaba preenchido a mentir, e o ecrã mostra a mentira com a mesma confiança
+> com que mostra o `porque`. O `Tipo` de uma linha gerada lê-se do
+> `EventoLido` do caminho do `ler`, que é onde o tipo é um fato e não uma
+> previsão. Há um teste que afirma que as anotações não têm campo `tipo`.
+>
+> **O `for` não era anotado, e o emissor aninhado contava as linhas a partir
+> de 1.** Duas metades do mesmo bug: uma linha sem explicação, e as restantes
+> a apontar para a linha errada — a do `x = 1` dizia linha 1, e a linha 1 é o
+> `for`. O `porque` de cada linha é o que o aluno lê ao lado do código, e uma
+> anotação na linha errada ensina a explicação errada com a confiança certa.
+> O `Emissor` passou a levar um `base` com as linhas que o pai já emitiu, e o
+> `for` passou a passar por `linha()` como toda a gente.
+>
+> **`LerResultado.erros` passou a ser `FalhaRuntime[]`.** O plano declarava
+> `Erro[]` e acedia a `.passo` em três sítios — sobre uma união em que só a
+> `FalhaRuntime` tem `passo`, que é o mesmo erro que o Task 3 teve e que o
+> `tsc` apanha sempre. Declarar o tipo certo não é calar o compilador: é
+> afirmar que um erro de leitura é sempre uma falha a correr, e que a
+> projeção não produz recusas de tipo — quem recusa o tipo é o núcleo, e um
+> `ler` que devolvesse uma `Recusa` estaria a decidir uma coisa que não é sua.
+>
+> **`pilhaDe` no corpo de um laço é uma recursão infinita, e o `tsc` não a
+> vê.** `pilhaDe` abre uma pilha e, se não for uma pilha, devolve o próprio
+> bloco — que é o que se quer no topo e não se quer dentro de um `for`. O
+> corpo vive em `inputs.CORPO.stack`, e é um sítio diferente do `CORPO` que a
+> pilha usa. A confusão entre os dois rebenta com *stack size exceeded* ao
+> primeiro `repetir`, e a mensagem não diz nada sobre blocos. Houve aqui três
+> erros meus de escrita antes de o teste passar, e **um teste que rebenta com
+> uma exceção em vez de uma falha de asserção é um teste que ainda não disse
+> o que é para estar errado.**
+>
+> **Verificação que não cabe num teste: os catorze programas que esta
+> projeção gera compilam todos no Python 3.14.** Não está em teste porque um
+> teste que precisa de um interpretador externo não corre em todo o lado, e
+> um teste que nem sempre corre deixa de ser um teste. O que fica em teste é
+> a *forma* do texto — nenhuma linha que abra um bloco fica sem corpo, a
+> indentação é múltipla de quatro, e nenhum carácter de outra linguagem
+> aparece — porque é isso que se despista sozinho. `log(total)` é *sintaxe*
+> válida e só rebenta a correr com `NameError`, que é a lição completa: a
+> linha é bem escrita, e é a altura de a pistola que faz mal.
+>
+> **A `Recusa-ao-usar` de Java, que é o nome de um bloco, é uma frase de
+> que a spec foi buscar.** A lição precisa dela e o bloco chama-se `log`.
+> Verificar que `log` é mesmo o bloco que mostra a diferença entre as duas
+> epistemologias foi o que fixou o `ler`: o `log` é recusado ao *ler*, e a
+> mensagem diz que a função não existe — que é a verdade, e é a altura em que
+> a Python a descobre. A de Java recusa o *mesmo* `log` antes de correr, e a
+> diferença entre as duas frases é a lição da costura.
+>
+> **Um teste meu que se contradizia, o sétimo no total.** `repetir(2, [guardar,
+> log])` produz quatro linhas — o `for`, os dois do corpo, e o `dizer` — e eu
+> tinha escrito seis, porque contava o `for` duas vezes, uma por volta. Um
+> `repetir(2)` escreve o `for` uma vez e o corpo uma vez. É a mesma família dos
+> seis anteriores: um número escrito sem contar passa porque ninguém o
+> confere, e no dia em que se confere o número está errado e não se sabe se o
+> trabalho está.
 
 ---
 
@@ -7479,7 +8258,7 @@ const licao = CARREGAR(variavelYaml, 'python');
  *  passo — e por isso o que o teste escolhe é *que passo*, e a fase vem
  *  junto. Um número escrito à mão aqui seria uma armadilha: bastava a lição
  *  ganhar um passo para o teste estar a testar outra coisa sem dar por isso.
- *  A excepção é `PASSO_DO_ROBO`, que precisa de um passo `fazer` que não
+ *  A exceção é `PASSO_DO_ROBO`, que precisa de um passo `fazer` que não
  *  seja a ficha, e é o mesmo que `PRIMEIRO_FAZER`. */
 const primeiro = (fase: 'explicar' | 'fazer' | 'nomear'): number => {
   const i = licao.passos.findIndex((p) => p.fase === fase);

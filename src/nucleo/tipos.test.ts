@@ -19,7 +19,7 @@ describe('LINGUAGENS e NOMES', () => {
 
   it('nenhum nome é o identificador a gritar, excepto onde tem de ser', () => {
     // A regra é "o nome é o que uma pessoa escreveria, não a chave em
-    // maiúsculas". `SQL` é a excepção que confirma a regra: é um acrónimo,
+    // maiúsculas". `SQL` é a exceção que confirma a regra: é um acrónimo,
     // escreve-se em maiúsculas em todo o lado, e `SQL` seria uma
     // falsificação se a forcássemos para dentro do padrão das outras cinco.
     for (const l of LINGUAGENS) {

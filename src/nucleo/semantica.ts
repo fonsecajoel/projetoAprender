@@ -51,8 +51,29 @@ export type EventoLido =
        *  chegou. `int total = …` em Java tem ambos. */
       restricao?: Tipo;
     }
-  | { passo: number; tipo: 'usar'; nome: string; tipoValor: Tipo }
-  | { passo: number; tipo: 'operar'; operacao: '+' | '-' | '*' | '/'; a: Valor; b: Valor }
+  /** `usar` num sítio que **não declara** tipo é `tipoValor` a omisso.
+   *
+   *  A omissão não é falta de informação — é informação: `print(total)` em
+   *  Python aceita qualquer coisa, e um evento que chega a dizer "este sítio
+   *  precisa de texto" faz o produto inventar um erro que o Python não tem.
+   *  E é o pior tipo de erro possível num produto que ensina: o aluno lê
+   *  `print(total)`, o produto diz que está errado, e o aluno conclui que
+   *  o professor também se engana. `x = total` é o mesmo caso — uma cópia
+   *  não impõe tipo ao destino.
+   *
+   *  O que se perde é pouco: um sítio sem tipo declarado também não dá um
+   *  erro de incompatibilidade para reportar, que é a única coisa que este
+   *  campo servia. */
+  | { passo: number; tipo: 'usar'; nome: string; tipoValor?: Tipo }
+  /** `operar` com um operando a `null` é uma conta de que a projeção só leu
+   *  um lado: `total = total + 1` tem `total` à esquerda, e o valor de
+   *  `total` só existe quando o programa corre. O `usar` que acompanha o
+   *  `operar` é que carrega o tipo exigido, e é dele que sai o erro.
+   *
+   *  A alternativa — pôr um `0` no lugar do nome — é o que o plano fazia, e
+   *  produz um erro sobre `número` com `número` numa linha que é válida, ou
+   *  um "não se pode juntar texto com número" numa conta de dois números. */
+  | { passo: number; tipo: 'operar'; operacao: '+' | '-' | '*' | '/'; a: Valor | null; b: Valor | null }
   | { passo: number; tipo: 'imprimir'; valor: Valor }
   | { passo: number; tipo: 'ciclo'; iteracoes: number }
   | { passo: number; tipo: 'texto'; texto: string };
@@ -142,7 +163,11 @@ export function interpretar(
           );
           break;
         }
-        if (!coerencia(ev.tipoValor, guardado.tipo)) {
+        // `tipoValor` a omisso é um sítio que não declara tipo: `print(total)`,
+        // `x = total`. Não há o que comparar, e comparar na mesma confrontaria
+        // `undefined` com o tipo guardado — que nunca são iguais, e o produto
+        // passaria a recusar Python válido.
+        if (ev.tipoValor !== undefined && !coerencia(ev.tipoValor, guardado.tipo)) {
           erros.push(
             erroDePasso(
               ev.passo,
@@ -156,7 +181,11 @@ export function interpretar(
       }
 
       case 'operar': {
-        if (!coerencia(ev.a.tipo, ev.b.tipo)) {
+        // Só se julga o que se sabe. Se um dos lados é um nome, o `usar` que
+        // vem antes no mesmo passo é que sabe que tipo esse nome tinha, e
+        // é dele que sai o erro. Julgar aqui seria julgar um `null` como se
+        // fosse um tipo, e `null` não é um tipo que ninguém guardou.
+        if (ev.a !== null && ev.b !== null && !coerencia(ev.a.tipo, ev.b.tipo)) {
           erros.push(
             erroDePasso(
               ev.passo,
@@ -167,7 +196,11 @@ export function interpretar(
           );
           break;
         }
-        if (ev.operacao === '/' && ev.b.valor === 0) {
+        // A divisão por zero só precisa do divisor, e o divisor é um número
+        // escrito na linha. Logo dá para dizer, mesmo que o outro lado da
+        // conta seja um nome — que é o caso de `total = total / 0`, a linha
+        // que a lição precisa de conseguir dizer que está errada.
+        if (ev.operacao === '/' && ev.b !== null && ev.b.valor === 0) {
           erros.push(
             erroDePasso(
               ev.passo,

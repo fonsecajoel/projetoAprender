@@ -248,6 +248,52 @@ describe('interpretar: aritmética', () => {
   it('a origem de um erro de operação é o passo do evento', () => {
     expect(umErro(operar(n(8), n(0), '/')).origem.passo).toBe(2);
   });
+
+  it('um operando que é um nome não se julga: o uso é que sabe o tipo', () => {
+    // `total = total + 1` tem `total` à esquerda, e o valor de `total` só
+    // existe quando o programa corre. O plano punha um `0` no lugar do nome,
+    // e com isso uma conta de dois números podia ser recusada por uma
+    // incompatibilidade que não existe. O `usar` do mesmo passo é que
+    // declara o tipo exigido, e é dele que sai o erro.
+    const semNome = interpretar(
+      [operar(n(1), n(2), '+')],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(semNome).toEqual([]);
+
+    const comNome = interpretar(
+      [{ passo: 2, tipo: 'operar', operacao: '+', a: null, b: n(1) }],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(comNome).toEqual([]);
+  });
+
+  it('mas o divisor zero diz-se mesmo com o outro lado a ser um nome', () => {
+    const e = umErro({ passo: 2, tipo: 'operar', operacao: '/', a: null, b: n(0) });
+    expect(e.porque).toContain('zero');
+  });
+
+  it('e o tipo que o uso exige é o que apanha o texto numa conta', () => {
+    // A linha mais importante da lição: `total = 'olá'` passa, e é a linha
+    // seguinte que rebenta. O `usar` da conta declara `número`, e o núcleo
+    // responde que `total` guarda texto. Se a conta não declarasse nada, o
+    // produto não teria como dizer ao aluno a coisa mais importante que
+    // sabe sobre Python.
+    const erros = interpretar(
+      [
+        atribuir('total', t('olá')),
+        { passo: 2, tipo: 'usar', nome: 'total', tipoValor: 'número' },
+        { passo: 2, tipo: 'operar', operacao: '+', a: null, b: n(1) },
+      ],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('texto');
+    expect(erros[0]!.porque).toContain('número');
+  });
 });
 
 describe('interpretar: limites de ciclo', () => {
@@ -286,6 +332,44 @@ describe('interpretar: limites de ciclo', () => {
 });
 
 describe('interpretar: imprimir e texto', () => {
+  it('um sítio sem tipo declarado aceita o que chegar', () => {
+    // `print(total)` em Python não quer texto: quer o que houver. Se a
+    // projeção mandasse um `usar` com `tipoValor: 'texto'`, o núcleo
+    // responderia "total guarda número, e este sítio precisa de texto" — um
+    // erro que o Python não tem, numa linha que o Python aceita. O aluno
+    // leria isso e concluiria que o produto se engana, que é a pior coisa
+    // que um professor de sintaxe pode ensinar. A omissão é a informação.
+    const erros = interpretar(
+      [
+        atribuir('total', n(5)),
+        { passo: 2, tipo: 'usar', nome: 'total' },
+        usar('total', 'texto'),
+      ],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toContain('texto');
+  });
+
+  it('e a diferença entre omisso e declarado é a diferença entre nada e tudo', () => {
+    const soOmisso = interpretar(
+      [atribuir('total', n(5)), { passo: 2, tipo: 'usar', nome: 'total' }],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(soOmisso).toEqual([]);
+
+    // O mesmo `usar` com o tipo declarado é o bloco `dizer`, que é mais
+    // estrito do que a linguagem. A costura é real e é a Task 6 que a mostra.
+    const declarado = interpretar(
+      [atribuir('total', n(5)), usar('total', 'texto')],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(declarado).toHaveLength(1);
+  });
+
   it('imprimir aceita qualquer tipo, porque print(5) é legal em cinco das seis', () => {
     // O motor de blocos é *mais* estrito: o bloco `dizer` só aceita texto.
     // A diferença é deliberada e é uma lição — quem aprendeu nos blocos

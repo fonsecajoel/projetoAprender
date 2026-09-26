@@ -3,21 +3,9 @@ import type { TraceBuilder } from './trace';
 import { E, EXPLICACAO_VAZIA, MAX_ITERACOES, RANGE_INTEIROS, restricao } from './tipos';
 import type { Erro, FalhaRuntime, Origem, Tipo, Valor } from './tipos';
 import { identificador } from './blocos';
+import type { BlocoLeigo } from './blocos';
 
-export interface CampoLeigo {
-  valor: unknown;
-}
-
-export interface EntradaLeiga {
-  valor?: unknown;
-  stack?: BlocoLeigo[];
-}
-
-export interface BlocoLeigo {
-  type: string;
-  fields?: Record<string, CampoLeigo>;
-  inputs?: Record<string, EntradaLeiga>;
-}
+export type { BlocoLeigo, CampoLeigo, EntradaLeiga } from './blocos';
 
 /** Contrato para persistir valores entre avaliações. O `passo` é explícito
  *  porque o mesmo objeto é partilhado por vários avaliadores. */

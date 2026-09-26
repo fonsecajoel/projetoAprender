@@ -1,4 +1,4 @@
-import type { BlocoLeigo } from '../avaliador';
+import type { BlocoLeigo } from '../blocos';
 
 /** Um bloco `guardar` com um valor cru: número, texto ou referência. */
 export function guardar(nome: string, valor: unknown): BlocoLeigo {

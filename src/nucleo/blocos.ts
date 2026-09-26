@@ -1,5 +1,33 @@
 import type { Tipo } from './tipos';
 
+export interface CampoLeigo {
+  valor: unknown;
+}
+
+export interface EntradaLeiga {
+  valor?: unknown;
+  stack?: BlocoLeigo[];
+}
+
+/** A forma de um bloco, tal como vem do Blockly e do YAML — e nada mais.
+ *
+ *  Vive aqui, no vocabulário, e não em `avaliador.ts`, porque este tipo
+ *  descreve *dados* e não comportamento: o ecrã de blocos (Task 9), o
+ *  carregador de lições (Task 7) e as projeções (Task 4) todos precisam de
+ *  o nomear, e nenhum deles deve ter de importar o motor para isso. O motor
+ *  é que caminha estes blocos; eles não precisam de saber que ele existe.
+ *
+ *  `fields` é o que a pessoa vê escrito no bloco — o nome de uma variável,
+ *  o texto de um botão — e `inputs` é o que se liga a outros blocos. A
+ *  distinção não é cosmética: um nome é um valor escrito à mão e um valor
+ *  pode ser um bloco, e uma função de emissão que os trocasse emitiria
+ *  `undefined` no sítio onde ia o nome. */
+export interface BlocoLeigo {
+  type: string;
+  fields?: Record<string, CampoLeigo>;
+  inputs?: Record<string, EntradaLeiga>;
+}
+
 /** Ids de bloco. Slugs ASCII em minúsculas: são a identidade do bloco, e
  *  nunca o texto que o utilizador lê. O texto vive no Blockly e no YAML. */
 export const BLOCOS = {

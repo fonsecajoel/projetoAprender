@@ -1,5 +1,31 @@
 # Lição "O que é uma variável" — Implementation Plan
 
+> # SUPERADO — não executar este ficheiro
+>
+> Substituído por **`2026-09-26-plano-a-motor-costuras-primeira-licao.md`**, que
+> escreve contra a spec v2 (`…-ponte-seis-linguagens-design.md`, §6.4 corrigida)
+> e não contra a v1. Fica aqui por histórico, e por causa das partes que ainda
+> servem — mas **executar este plano produz código que não compila contra a
+> spec actual.** Concretamente, o que está errado:
+>
+> | Aqui | No plano que o substitui |
+> |---|---|
+> | `src/motor/` | `src/nucleo/` — o que lá dentro está já não é "o motor" |
+> | `Explicacao.python` / `Explicacao.java` | `Explicacao = { porque, remedio }` (§0 da spec v2) |
+> | uma só projeção, e `emitir()` a gerar | `Projection` com `emit` **e** `ler` no mesmo objeto, uma por linguagem (§6.4) |
+> | `Policy` dentro de `projecoes/tipos.ts` | `Policy` em `nucleo/semantica.ts`: decide *quando*, e não *o quê* |
+> | `LicaoPronto` / `PassoPronto` / `MomentoPronto` | `Licao` / `Passo` / `Momento` — os sufixos `Pronto` nunca existiram |
+> | `Passo` com `objetivo` + `explicar`/`fazer`/`nomear` + `sondas` por passo | `Passo` com `fase` + `porque` + `nomear?` + `momentos` + `referencia?`, e as sondas **na lição** |
+> | `Vista = 'explicar' \| 'fazer' \| 'nomear' \| 'leitura'` | Não existe `Vista`. A vista **é** a fase do passo; o quarto valor era um estado que não se pode preencher |
+> | um `Sonda` sem pergunta ao aluno | `Sonda.pergunta` — é a primeira coisa que o aluno lê |
+> | `npm run sondas` | Não existe. As sondas são `npm test` (a Task 13) |
+>
+> O que deste ficheiro **se mantém**: o formato de `BlocoLeigo`, o `Trace` de
+> `Valor` tipados, `guardar`/`repetir`/`dizer`/`log`/`pilha` como conjunto de
+> blocos, a ideia de a sonda ser um programa de referência cuja classe esperada
+> se compara com a do programa do aluno, e a lição de 15 linhas em si. Quase
+> tudo isso foi reescrito, mas a forma é a mesma.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Entregar a fatia vertical do produto: motor instrumentado, sondas executáveis, projecção Python, painel de texto com verificação de equivalência, robô tipado, e a lição "O que é uma variável" — aceite pelo teste de leitura de um ficheiro desconhecido de 15 linhas.

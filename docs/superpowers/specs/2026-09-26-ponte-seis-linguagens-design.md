@@ -16,12 +16,14 @@ A v2 corrige as duas coisas:
 
 | | v1 | v2 |
 |---|---|---|
-| O que é partilhado | os blocos | o **motor**, o **método** e o **formato** |
-| O que difere | a sintaxe | os **blocos**, o **emit**, a **sequência de conceitos**, a **história de segurança** |
+| O que é partilhado | os blocos | a **semântica**, o **método** e o **formato** |
+| O que difere | a sintaxe | os **blocos**, o **emit**, o **parse**, a **sequência de conceitos**, a **história de segurança** |
 | Escolher linguagem | mudava a sintaxe | muda **o que aprendes** |
 | Quantas | uma (Python) | **seis**, todas no primeiro corte |
 
-**O que se perde, dito com clareza:** a afirmação "um núcleo, N linguagens" enfraquece. O que entregamos são **seis produtos paralelos** que partilham um motor e um método — não um produto projetado seis vezes. É menos elegante e é mais honesto. A versão bonita da tese era falsa.
+**O que se perde, dito com clareza:** a afirmação "um núcleo, N linguagens" enfraquece. O que entregamos são **seis produtos paralelos** que partilham a semântica, o método e o formato — não um produto projetado seis vezes. É menos elegante e é mais honesto. A versão bonita da tese era falsa.
+
+E há um segundo custo, corrigido na §6.4: **seis linguagens são seis front-ends de leitura**, porque uma linguagem é a sua sintaxe. Isso não se elimina com desenho.
 
 ---
 
@@ -105,15 +107,17 @@ As cinco imperativas partilham vocabulário porque partilham estrutura: variáve
 
 ```
 PARTILHADO
-  MOTOR      Valor · Erro (3 classes) · Trace · Regra      nunca vê texto
+  SEMÂNTICA  Valor · Erro (3 classes) · RestriçãoDeTipo · a semântica
+             de uma violação de tipo · Trace        nunca vê texto
   MÉTODO     EXPLICAR → FAZER → NOMEAR · sonda = teste · "feito quando viu"
   FORMATO    lição em YAML no Git · registo de projeções · sondas
 
 POR LINGUAGEM
-  blocos · emit() · sequência de conceitos · história de segurança
+  blocos · emit() · ler() · política · sequência de conceitos
+  história de segurança
 ```
 
-O motor, o método e o formato são tudo o que se partilha. Os blocos não são invariantes — são **partilhados por família**.
+A semântica, o método e o formato é tudo o que se partilha. Os blocos não são invariantes — são **partilhados por família**. E o `ler()` não é partilhado: é onde cada linha é reconhecida, e reconhecer uma linha é o que uma linguagem é. Ver §6.4.
 
 ### 6.3 A interface de projeção
 
@@ -131,18 +135,40 @@ interface Projection {
 
 Acrescentar uma sétima linguagem é um ficheiro e uma suite de testes dourados. É por isso que esta interface existe e por isso é um deliverable do primeiro corte, não uma promessa.
 
-### 6.4 `evaluate` é um só, com política
+### 6.4 O que é partilhado na semântica — e o que não pode ser
 
-A diferença entre as seis não são seis motores de texto. É um campo:
+Isto é a parte que a v2 escreveu mal, e vale a pena ser exato.
+
+Uma linguagem **é** a sua sintaxe. Não há como evitar: para ler `for _ in range(3):` é preciso saber `for _ in range`, e para ler `for i := 0; i < 3; i++` é preciso saber `:=` e `i++`. **São seis maneiras de ler uma linha** — logo são seis front-ends, e isso não é uma opção de desenho, é o que a palavra *linguagem* significa.
+
+O que **é** partilhado, e é substancial:
+
+```
+SEMÂNTICA (partilhada, uma vez)
+  o que é um número, um texto, um lógico
+  o que acontece quando um texto chega a uma ranhura de número
+  as três classes de Erro e o texto que cada uma tem de trazer
+  o motor de blocos, que produz o Trace
+
+PARSE / EMIT (por linguagem, obrigatoriamente)
+  como se lê   uma linha desta linguagem   → eventos tipados
+  como se escreve um programa desta linguagem a partir de blocos
+```
+
+Isto é o invariante verdadeiro, e é mais preciso do que o da v1 (*"os blocos são a linguagem invariante"*) e mais honesto do que o da primeira v2 (*"a diferença entre as seis não são seis motores de texto"* — **isso é falso**).
+
+A `Policy` continua a ser o que faz a lição variar, mas é a **segunda** diferença, não a única:
 
 ```ts
 interface Policy {
-  refusesOnType: boolean;   // java/go/typescript: sim. python/javascript: nunca. sql: sim.
-  when: 'runtime' | 'before-run' | 'when-data-enters';
+  recusaNoTipo: boolean;   // java/go/typescript: sim. python/javascript: nunca. sql: sim.
+  quando: 'corrida' | 'antes de correr' | 'quando o dado entra';
 }
 ```
 
-`emit` é o único sítio onde as linguagens divergem a sério — e é onde *devem* divergir, porque a sintaxe é o que se está a ensinar.
+`recusaNoTipo` + `quando` decidem **quando** a mesma violação de tipo é reportada. O parse decide **o que** a linha diz. São eixos diferentes: pode haver uma linguagem que recusa ao parse-time e outra que recusa ao run-time com a mesma superfície de sintaxe — e a lição é precisamente essa diferença.
+
+**Custo que esta correcção assume, dito com clareza:** seis front-ends, um por linguagem. Cada um é pequeno — no primeiro conceito, uma declaração de variável, um `print`, um `for`, uma soma — mas são seis, e não se eliminam. Somam-se às seis lições, e por isso o custo de conteúdo da §15 é um piso, não uma estimativa.
 
 ### 6.5 A entrada é concreta
 
@@ -165,7 +191,7 @@ Na v1 isto era uma comparação Python/Java. Na v2 é uma pergunta feita **a cad
 | **Go** | o compilador | antes de correr, com o tipo inferido do primeiro uso | pouco — não escribes o tipo, mas ele prende |
 | **TypeScript** | o compilador | antes de correr | a anotação, se a escreveres |
 | **Java** | o compilador | antes de correr | verbosidade: `int total = 0;` |
-| **SQL** | **o próprio dado** | quando o dado entra, e para sempre | nada — e é a única protecção que não se desliga nunca |
+| **SQL** | **o próprio dado** | quando o dado entra, e para sempre | nada — e é a única proteção que não se desliga nunca |
 
 Cada linha é uma resposta completa. Um aluno de Java não precisa de saber o que é Python para aprender que `int` é armadura. Um aluno de SQL não precisa de saber nada de mais para aprender que a limit está *escrita no dado*.
 
@@ -386,7 +412,8 @@ A IA (pilar USAR) e a auditoria (pilar VERIFICAR) ficam de fora, sobre base já 
 
 | Decisão | Custo aceito | Porque |
 |---|---|---|
-| **Seis linguagens no primeiro corte** | **Seis lições para autorar.** Se um passo de sonda levar menos de uma tarde, uma lição é ~1 dia e seis são ~1 semana de escrita | O utilizador escolhe uma vez e fica com ela; entregar uma só seria entregar um produto diferente do que se promete |
+| **Seis linguagens no primeiro corte** | **Seis lições para autorar, mais seis front-ends de leitura.** Se um passo de sonda levar menos de uma tarde, uma lição é ~1 dia e seis são ~1 semana de escrita | O utilizador escolhe uma vez e fica com ela; entregar uma só seria entregar um produto diferente do que se promete |
+| **Seis front-ends, um por linguagem** | Não eliminável com desenho: uma linguagem é a sua sintaxe (§6.4) | Fingir que `Policy` chega seria escrever a spec do que não se constrói. A semântica é que se partilha, e é muito |
 | **O utilizador fica só com uma linguagem** | Perde-se a comparação lado a lado | Uma criança de 10 anos não aguenta seis ecrãs. A comparação foi movida para dentro da lição, nos termos de cada linguagem (§7) |
 | **Sem cross-references entre linguagens** | A tese fica menos elegante: seis produtos paralelos, não um produto projetado | A versão elegante era falsa. SQL não partilha blocos, e forçá-lo mentia |
 | Sondas em vez de prosa | O formato de autoria tem de existir antes do conteúdo | Uma sonda não pode estar errada; um parágrafo pode |

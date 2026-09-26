@@ -1,6 +1,6 @@
 import { construir } from './trace';
 import type { TraceBuilder } from './trace';
-import { E, EXPLICACAO_VAZIA, RANGE_INTEIROS, restricao } from './tipos';
+import { E, EXPLICACAO_VAZIA, MAX_ITERACOES, RANGE_INTEIROS, restricao } from './tipos';
 import type { Erro, FalhaRuntime, Origem, Tipo, Valor } from './tipos';
 import { identificador } from './blocos';
 
@@ -18,8 +18,6 @@ export interface BlocoLeigo {
   fields?: Record<string, CampoLeigo>;
   inputs?: Record<string, EntradaLeiga>;
 }
-
-export const MAX_ITERACOES = 10_000;
 
 /** Contrato para persistir valores entre avaliações. O `passo` é explícito
  *  porque o mesmo objeto é partilhado por vários avaliadores. */

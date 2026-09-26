@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { avaliador, MAX_ITERACOES, pilhaDe, regraDeLinhas } from './avaliador';
-import { RANGE_INTEIROS } from './tipos';
+import { avaliador, pilhaDe, regraDeLinhas } from './avaliador';
+import { MAX_ITERACOES, RANGE_INTEIROS } from './tipos';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Avaliador } from './avaliador';

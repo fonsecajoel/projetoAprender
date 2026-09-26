@@ -1,5 +1,13 @@
 export const RANGE_INTEIROS = 1000;
 
+/** Quantas voltas um laço pode dar. Vive aqui, e não em `avaliador.ts`, porque
+ *  é um fato do produto e não do motor de blocos: o `interpretar` do texto
+ *  tem de respeitar o mesmo limite, e dois limites escritos à mão divergem no
+ *  primeiro dia em que alguém muda um deles. `RANGE_INTEIROS` é o fato
+ *  vizinho — e note-se que `MAX_ITERACOES` é maior, porque um laço de 5000
+ *  voltas repete 5000 valores que vão todos caber no mesmo número. */
+export const MAX_ITERACOES = 10_000;
+
 /** As seis linguagens do produto. O núcleo sabe os *nomes*; não sabe sintaxe. */
 export type Language = 'python' | 'java' | 'go' | 'typescript' | 'javascript' | 'sql';
 

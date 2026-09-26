@@ -429,6 +429,24 @@ import { join } from 'node:path';
 const NUCLEO = 'src/nucleo';
 const PROIBIDO = /from\s+['"][^'"]*projecoes[^'"]*['"]/;
 
+/** Os comentários saem antes do casamento.
+ *
+ *  Um import comentado não é um import, e o ficheiro que documenta a
+ *  tentação tem de poder mostrar a tentação: o `avaliador.test.ts` escreve
+ *  `import { avaliarTexto } from '../projecoes/…'` numa linha de comentário,
+ *  precisamente para dizer "é isto que um dia vai acontecer aqui dentro". Com
+ *  o casamento sobre o texto cru, esse `from` conta como violação — e o
+ *  verificador que existe para proteger o invariante passa a proibir que o
+ *  invariante seja explicado. Foi o que aconteceu na Task 2, e o portão
+ *  reportou verde na mesma.
+ *
+ *  O `(^|[^:])` antes do `//` existe para não partir os `https://` das
+ *  URL em comentários.
+ */
+function semComentarios(fonte: string): string {
+  return fonte.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
 function ficheiros(raiz: string): string[] {
   return readdirSync(raiz).flatMap((nome) => {
     const caminho = join(raiz, nome);
@@ -444,7 +462,9 @@ const todos = ficheiros(NUCLEO);
 // que este script imprime diga quantos ficheiros *de produção* o núcleo tem.
 const deTeste = todos.filter((f) => f.includes('.test.'));
 
-const violacoes = todos.filter((f) => PROIBIDO.test(readFileSync(f, 'utf8')));
+const violacoes = todos.filter((f) =>
+  PROIBIDO.test(semComentarios(readFileSync(f, 'utf8'))),
+);
 
 if (violacoes.length > 0) {
   console.error('O núcleo semântico não pode importar projeções:');
@@ -622,6 +642,14 @@ Expected: FAIL com erro de resolução de `./tipos`.
 
 ```typescript
 export const RANGE_INTEIROS = 1000;
+
+/** Quantas voltas um laço pode dar. Vive aqui, e não em `avaliador.ts`, porque
+ *  é um fato do produto e não do motor de blocos: o `interpretar` do texto
+ *  tem de respeitar o mesmo limite, e dois limites escritos à mão divergem no
+ *  primeiro dia em que alguém muda um deles. `RANGE_INTEIROS` é o fato
+ *  vizinho — e note-se que `MAX_ITERACOES` é maior, porque um laço de 5000
+ *  voltas repete 5000 valores que vão todos caber no mesmo número. */
+export const MAX_ITERACOES = 10_000;
 
 /** As seis linguagens do produto. O núcleo sabe os *nomes*; não sabe sintaxe. */
 export type Language = 'python' | 'java' | 'go' | 'typescript' | 'javascript' | 'sql';
@@ -966,8 +994,8 @@ escreve o par de testes dourados que fecham esta regra.
 `src/nucleo/avaliador.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { avaliador, MAX_ITERACOES, pilhaDe, regraDeLinhas } from './avaliador';
-import { RANGE_INTEIROS } from './tipos';
+import { avaliador, pilhaDe, regraDeLinhas } from './avaliador';
+import { MAX_ITERACOES, RANGE_INTEIROS } from './tipos';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Avaliador } from './avaliador';
@@ -1526,7 +1554,7 @@ export const TIPO_DE_BLOCO: Record<string, Tipo> = {
 ```typescript
 import { construir } from './trace';
 import type { TraceBuilder } from './trace';
-import { E, EXPLICACAO_VAZIA, RANGE_INTEIROS, restricao } from './tipos';
+import { E, EXPLICACAO_VAZIA, MAX_ITERACOES, RANGE_INTEIROS, restricao } from './tipos';
 import type { Erro, FalhaRuntime, Origem, Tipo, Valor } from './tipos';
 import { identificador } from './blocos';
 
@@ -1544,8 +1572,6 @@ export interface BlocoLeigo {
   fields?: Record<string, CampoLeigo>;
   inputs?: Record<string, EntradaLeiga>;
 }
-
-export const MAX_ITERACOES = 10_000;
 
 /** Contrato para persistir valores entre avaliações. O `passo` é explícito
  *  porque o mesmo objeto é partilhado por vários avaliadores. */
@@ -2029,14 +2055,20 @@ A `Policy` entra como parâmetro. É isso que faz Python e Java partilharem o me
 import { describe, expect, it } from 'vitest';
 import { AMOSTRA, POLITICAS, interpretar, interpretarEm } from './semantica';
 import type { EventoLido } from './semantica';
-import { val } from './tipos';
+import { MAX_ITERACOES, val } from './tipos';
 import type { Language, Origem, Valor } from './tipos';
 
 const ORIGEM: Origem = { bloco: 'linha', ranhura: 0, passo: 1 };
 
-function n(v: number): Valor { return val('número', v, AMOSTRA, ORIGEM); }
-function t(v: string): Valor { return val('texto', v, AMOSTRA, ORIGEM); }
-function origemNo(passo: number): Origem { return { ...ORIGEM, passo }; }
+function n(v: number): Valor {
+  return val('número', v, AMOSTRA, ORIGEM);
+}
+function t(v: string): Valor {
+  return val('texto', v, AMOSTRA, ORIGEM);
+}
+function origemNo(passo: number): Origem {
+  return { ...ORIGEM, passo };
+}
 
 const TODAS = Object.keys(POLITICAS) as Language[];
 
@@ -2049,12 +2081,28 @@ function usar(nome: string, tipoValor: 'número' | 'texto'): EventoLido {
 function operar(a: Valor, b: Valor, operacao: '+' | '/'): EventoLido {
   return { passo: 2, tipo: 'operar', operacao, a, b };
 }
+function ciclo(passo: number, iteracoes: number): EventoLido {
+  return { passo, tipo: 'ciclo', iteracoes };
+}
+
+/** Interpreta um evento só e exige que produza um erro — para os testes em
+ *  que a pergunta é *qual* erro, e não *quantos*. */
+function umErro(ev: EventoLido, politica = POLITICAS.python) {
+  const erros = interpretar([ev], politica, origemNo);
+  expect(erros).toHaveLength(1);
+  return erros[0]!;
+}
 
 describe('as seis políticas', () => {
   it('existe uma para cada linguagem, e só uma', () => {
-    expect(Object.keys(POLITICAS).sort()).toEqual(
-      ['go', 'java', 'javascript', 'python', 'sql', 'typescript'],
-    );
+    expect(Object.keys(POLITICAS).sort()).toEqual([
+      'go',
+      'java',
+      'javascript',
+      'python',
+      'sql',
+      'typescript',
+    ]);
   });
 
   it('python e javascript nunca recusam no tipo', () => {
@@ -2087,23 +2135,39 @@ describe('interpretar: o mesmo programa, seis políticas', () => {
   it('python reporta ao usar, e o porque nomeia o texto e a variável', () => {
     const erros = interpretar(
       [atribuir('total', t('olá'), 'número'), usar('total', 'número')],
-      POLITICAS.python, origemNo,
+      POLITICAS.python,
+      origemNo,
     );
     expect(erros).toHaveLength(1);
     expect(erros[0]!.classe).toBe('FalhaRuntime');
     expect(erros[0]!.porque).toContain('texto');
     expect(erros[0]!.porque).toContain('total');
-    expect(erros[0]!.passo).toBe(2);
+    // O passo vive em `origem`, e é lá que vive nos *três* erros. Uma `Recusa`
+    // não tem `passo` no topo — só `origem` — e dar-lhe um `passo` seria pôr
+    // o mesmo fato em dois sítios, para depois divergirem. O `passo` que a
+    // `FalhaRuntime` tem no topo é o que a Task 1 escreveu, e não se mexe.
+    expect(erros[0]!.origem.passo).toBe(2);
   });
 
   it('java recusa logo na atribuição, e o passo é o da atribuição', () => {
     const erros = interpretar(
       [atribuir('total', t('olá'), 'número'), usar('total', 'número')],
-      POLITICAS.java, origemNo,
+      POLITICAS.java,
+      origemNo,
     );
-    expect(erros).toHaveLength(1);
+    // Dois erros, não um — e este é o mesmo programa que o teste "depois de
+    // uma Recusa" usa, que exige dois. A primeira versão deste teste pedia
+    // um, e as duas exigências não podem ser verdade ao mesmo tempo. São
+    // dois: a recusa da linha 1, e o fato de a linha 2 usar um valor
+    // recusado. O segundo não é redundância — é o que impede um programa
+    // recusado de continuar em silêncio e parecer que funciona.
+    expect(erros).toHaveLength(2);
     expect(erros[0]!.classe).toBe('Recusa');
-    expect(erros[0]!.passo).toBe(1);
+    // O passo da atribuição, não o da linha 2 que a usou. É a diferença
+    // entre "a linha 1 está errada" e "a linha 2 está errada" — a mesma
+    // diferença que a spec §7 pede à lição, e que um teste com `.passo`
+    // inexistente nunca ia ver.
+    expect(erros[0]!.origem.passo).toBe(1);
     if (erros[0]!.classe !== 'Recusa') throw new Error('esperava Recusa');
     expect(erros[0]!.esperado).toBe('número');
     expect(erros[0]!.obtido).toBe('texto');
@@ -2120,7 +2184,8 @@ describe('interpretar: o mesmo programa, seis políticas', () => {
     for (const nome of TODAS) {
       const erros = interpretar(
         [atribuir('total', t('olá'), 'número'), usar('total', 'número'), operar(n(1), n(0), '/')],
-        POLITICAS[nome], origemNo,
+        POLITICAS[nome],
+        origemNo,
       );
       expect(erros.length).toBeGreaterThan(0);
       for (const e of erros) {
@@ -2130,14 +2195,25 @@ describe('interpretar: o mesmo programa, seis políticas', () => {
     }
   });
 
-  it('nenhum erro menciona outra linguagem', () => {
+  it('nenhum erro nomeia uma linguagem, em nenhum ramo do interpretador', () => {
+    // A lista cobre os quatro ramos que escrevem texto — atribuir, usar,
+    // operar, ciclo — mais um `imprimir` e um `texto` inocuos, para que a
+    // lista não cresça a cada ramo novo sem ninguém reparar. Um erro que
+    // dissesse "em Python isto rebenta mais tarde" seria útil e seria
+    // exatamente o que este ficheiro proíbe: a prosa por linguagem é da
+    // projeção, e é a Task 4 que a escreve.
     for (const nome of TODAS) {
-      const erros = interpretar(
-        [atribuir('total', t('olá'), 'número'), usar('total', 'número')],
-        POLITICAS[nome], origemNo,
-      );
-      for (const e of erros) {
-        expect(JSON.stringify(e)).not.toMatch(/Python|Java|JavaScript|Go|TypeScript|SQL/);
+      const eventos: EventoLido[] = [
+        atribuir('total', t('olá'), 'número'),
+        usar('total', 'número'),
+        usar('inexistente', 'número'),
+        operar(t('olá'), n(1), '+'),
+        ciclo(3, MAX_ITERACOES + 1),
+        { passo: 4, tipo: 'imprimir', valor: n(5) },
+        { passo: 5, tipo: 'texto', texto: 'olá' },
+      ];
+      for (const e of interpretar(eventos, POLITICAS[nome], origemNo)) {
+        expect(JSON.stringify(e), nome).not.toMatch(/Python|Java|JavaScript|Go|TypeScript|SQL/);
       }
     }
   });
@@ -2147,12 +2223,34 @@ describe('interpretar: uma variável recusada não volta a ser utilizável', () 
   it('depois de uma Recusa, usar o valor é FalhaRuntime e não silêncio', () => {
     const erros = interpretar(
       [atribuir('total', t('olá'), 'número'), usar('total', 'número')],
-      POLITICAS.java, origemNo,
+      POLITICAS.java,
+      origemNo,
     );
     expect(erros).toHaveLength(2);
     expect(erros[0]!.classe).toBe('Recusa');
     expect(erros[1]!.classe).toBe('FalhaRuntime');
     expect(erros[1]!.porque).toContain('recusado');
+  });
+
+  it('mas uma atribuição certa ao mesmo nome cura o nome', () => {
+    // Uma `Recusa` é um erro *daquela linha*, não uma nódoa permanente no
+    // nome. Se corrigir a linha 1 fizesse a 2 passar, e se não fizesse, o
+    // aluno levava a lição errada: que em Java um nome fica podre para
+    // sempre. Não fica. E o teste existe porque a implementação natural —
+    // marcar `recusado` e nunca mais o desmarcar — dá o resultado errado
+    // sem dar erro nenhum.
+    const erros = interpretar(
+      [
+        atribuir('total', t('olá'), 'número'),
+        { passo: 3, tipo: 'atribuir', nome: 'total', tipoValor: 'número', valor: n(5) },
+        usar('total', 'número'),
+      ],
+      POLITICAS.java,
+      origemNo,
+    );
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.classe).toBe('Recusa');
+    expect(erros[0]!.origem.passo).toBe(1);
   });
 });
 
@@ -2163,7 +2261,7 @@ describe('interpretar: variável usada antes de existir', () => {
     expect(erros[0]!.classe).toBe('FalhaRuntime');
     expect(erros[0]!.porque).toContain('total');
     expect(erros[0]!.porque).toContain('antes');
-    expect(erros[0]!.passo).toBe(2);
+    expect(erros[0]!.origem.passo).toBe(2);
   });
 
   it('vale igual em Java, porque o compilador também não adivinha', () => {
@@ -2180,8 +2278,8 @@ describe('interpretar: aritmética', () => {
 
   it('uma operação com tipos diferentes é FalhaRuntime mesmo em Java', () => {
     // Um compilador não avalia aritmética, por isso nunca recusa uma soma de
-    // tipos errados: recusa a correr, não antes. Este teste é o que impede
-    // a política de virar "recusa-e-basta".
+    // tipos errados: recusa a correr, não antes. Este teste é o que impede a
+    // política de virar "recusa-e-basta".
     const erros = interpretar([operar(t('olá'), n(1), '+')], POLITICAS.java, origemNo);
     expect(erros).toHaveLength(1);
     expect(erros[0]!.classe).toBe('FalhaRuntime');
@@ -2202,24 +2300,63 @@ describe('interpretar: aritmética', () => {
   });
 
   it('a origem de um erro de operação é o passo do evento', () => {
-    const erros = interpretar([operar(n(8), n(0), '/')], POLITICAS.python, origemNo);
-    expect(erros[0]!.origem.passo).toBe(2);
+    expect(umErro(operar(n(8), n(0), '/')).origem.passo).toBe(2);
   });
 });
 
 describe('interpretar: limites de ciclo', () => {
-  it('aceita 10000 voltas e recusa 10001, nas seis', () => {
+  it('aceita o limite exato e recusa o limite mais um, nas seis', () => {
     for (const nome of TODAS) {
-      expect(interpretar([{ passo: 1, tipo: 'ciclo', iteracoes: 10000 }], POLITICAS[nome], origemNo)).toEqual([]);
-      const erros = interpretar([{ passo: 1, tipo: 'ciclo', iteracoes: 10001 }], POLITICAS[nome], origemNo);
+      expect(interpretar([ciclo(1, MAX_ITERACOES)], POLITICAS[nome], origemNo)).toEqual([]);
+      const erros = interpretar([ciclo(1, MAX_ITERACOES + 1)], POLITICAS[nome], origemNo);
       expect(erros).toHaveLength(1);
-      expect(erros[0]!.porque).toContain('10000');
+      expect(erros[0]!.porque).toContain(String(MAX_ITERACOES));
     }
   });
 
-  it('recusa um número de voltas fraccionário', () => {
-    const erros = interpretar([{ passo: 1, tipo: 'ciclo', iteracoes: 2.5 }], POLITICAS.python, origemNo);
-    expect(erros).toHaveLength(1);
+  it('o valor do limite é 10000, e o teste acima não o descobre sozinho', () => {
+    // Se alguém baixar `MAX_ITERACOES` para 5, o teste anterior continua a
+    // passar: lê a constante, compara com a constante, e prova que a
+    // comparação existe. O número em si fica preso aqui, à mão, que é o
+    // sítio onde um fato tem de ficar preso para o teste valer alguma coisa.
+    expect(MAX_ITERACOES).toBe(10_000);
+  });
+
+  it('um número de voltas fracionário tem mensagem própria', () => {
+    // Não é o mesmo erro que "a mais". Um laço de duas voltas e meia não
+    // existe, e dizer a quem escreveu 2.5 que o limite são 10000 ensina a
+    // coisa errada: a resposta seria "então 2.5 é menos que 10000, porque foi
+    // recusado?".
+    const e = umErro(ciclo(1, 2.5));
+    expect(e.porque).toContain('inteiro');
+    expect(e.porque).not.toContain('10000');
+  });
+
+  it('um número de voltas negativo tem a sua mensagem, e não é o limite', () => {
+    const e = umErro(ciclo(1, -1));
+    expect(e.porque).toContain('negativo');
+    expect(e.porque).not.toContain('10000');
+  });
+});
+
+describe('interpretar: imprimir e texto', () => {
+  it('imprimir aceita qualquer tipo, porque print(5) é legal em cinco das seis', () => {
+    // O motor de blocos é *mais* estrito: o bloco `dizer` só aceita texto.
+    // A diferença é deliberada e é uma lição — quem aprendeu nos blocos
+    // escreve `print('5')` e depois descobre que a linguagem também aceitava
+    // `print(5)`. É a costura que a Task 6 vai ter de mostrar. O que não pode
+    // é o texto ser julgado por uma regra que o bloco não tem.
+    for (const nome of TODAS) {
+      expect(
+        interpretar([{ passo: 1, tipo: 'imprimir', valor: n(5) }], POLITICAS[nome], origemNo),
+      ).toEqual([]);
+    }
+  });
+
+  it('um texto é texto cru e não se julga: quem o leu foi a projeção', () => {
+    expect(interpretar([{ passo: 1, tipo: 'texto', texto: "'aberta" }], POLITICAS.python, origemNo)).toEqual(
+      [],
+    );
   });
 });
 
@@ -2241,7 +2378,7 @@ Expected: FAIL com erro de resolução de `./semantica`.
 
 ```typescript
 import type { Erro, Language, Origem, Tipo, Valor } from './tipos';
-import { E, restricao } from './tipos';
+import { E, MAX_ITERACOES, restricao } from './tipos';
 
 /** Quando uma violação de tipo é reportada. São três epistemologias
  *  distintas, e a diferença entre elas é a lição. */
@@ -2253,6 +2390,11 @@ export interface Policy {
    *  isto é a única coisa que o avaliador de texto precisa de saber para não
    *  estar a mentir sobre Python. */
   recusaNoTipo: boolean;
+  /** Quando é que a recusa aparece, para a projeção escrever a frase certa.
+   *  `recusaNoTipo` decide *se* há recusa; `quando` decide *como se fala*
+   *  dela. São decisões separadas porque as duas nem sempre coincidem: SQL
+   *  recusa, como as outras quatro, mas a limitação não se resolve quando o
+   *  programa corre — fica escrita no dado. */
   quando: Quando;
 }
 
@@ -2271,7 +2413,12 @@ export const AMOSTRA = {
   remedio: 'mete aqui um valor do tipo certo',
 } as const;
 
-/** O que uma linha diz, depois de lida. A projeção sabe; o núcleo julga. */
+/** O que uma linha diz, depois de lida. A projeção sabe; o núcleo julga.
+ *
+ *  Este é o contrato entre as três camadas e vale a pena ler duas vezes: o
+ *  núcleo nunca vê texto, e a projeção nunca decide se um tipo é aceitável.
+ *  Cada `EventoLido` é um fato já lido — "a linha 2 atribui o nome `total` a um
+ *  texto" — e o núcleo responde "isso é um erro, e a partir de quando". */
 export type EventoLido =
   | {
       passo: number;
@@ -2279,6 +2426,8 @@ export type EventoLido =
       nome: string;
       tipoValor: Tipo;
       valor: Valor;
+      /** O tipo que este sítio aceita, quando é mais estreito do que o que
+       *  chegou. `int total = …` em Java tem ambos. */
       restricao?: Tipo;
     }
   | { passo: number; tipo: 'usar'; nome: string; tipoValor: Tipo }
@@ -2292,16 +2441,20 @@ interface Guardada {
   recusado: boolean;
 }
 
-function ehNumero(t: Tipo): boolean {
-  return t === 'número';
-}
-
+/** Dois tipos juntam-se se forem o mesmo. Não há um segundo tipo numérico a
+ *  absorver aqui: `number` é o único, e uma função que parece que vai tratar
+ *  de dois números que na verdade só trata de um esconde a decisão de que
+ *  `2.0` e `2` são o mesmo número. */
 function coerencia(a: Tipo, b: Tipo): boolean {
-  return a === b || (ehNumero(a) && ehNumero(b));
+  return a === b;
 }
 
 function operacaoDiz(operacao: '+' | '-' | '*' | '/'): string {
   return { '+': 'juntar', '-': 'subtrair', '*': 'multiplicar', '/': 'dividir' }[operacao];
+}
+
+function erroDePasso(passo: number, porque: string, remedio: string, origem: Origem): Erro {
+  return { classe: 'FalhaRuntime', porque, passo, remedio, origem };
 }
 
 export function interpretar(
@@ -2316,6 +2469,11 @@ export function interpretar(
     switch (ev.tipo) {
       case 'atribuir': {
         const alvo = ev.restricao ?? ev.tipoValor;
+        // Grava *antes* de decidir. Numa linguagem que recusa no tipo, o
+        // nome fica reservado e fica recusado — não desaparece. É o que
+        // permite dizer "esta linha foi recusada" quando a linha 2 o usa, em
+        // vez de "não existe nada com esse nome", que seria mentira: em Java
+        // o nome existe no código, o que não existe é o valor.
         guardadas.set(ev.nome, { tipo: ev.tipoValor, recusado: false });
 
         if (politica.recusaNoTipo && !coerencia(alvo, ev.tipoValor)) {
@@ -2324,9 +2482,10 @@ export function interpretar(
           erros.push({
             ...E(restricao(alvo, 'o que guardas'), ev.valor),
             porque: `Um sítio de ${alvo} não guarda ${ev.tipoValor}.`,
-            remedio: politica.quando === 'quando o dado entra'
-              ? `Guarda aqui um ${alvo}. A limitação fica escrita no dado e vale para sempre.`
-              : `Guarda aqui um ${alvo}, que é o que este sítio aceita.`,
+            remedio:
+              politica.quando === 'quando o dado entra'
+                ? `Guarda aqui um ${alvo}. A limitação fica escrita no dado e vale para sempre.`
+                : `Guarda aqui um ${alvo}, que é o que este sítio aceita.`,
             origem: origemDe(ev.passo),
           });
         }
@@ -2336,75 +2495,122 @@ export function interpretar(
       case 'usar': {
         const guardado = guardadas.get(ev.nome);
         if (guardado === undefined) {
-          erros.push({
-            classe: 'FalhaRuntime',
-            porque: `Usaste ${ev.nome} antes de a guardares. Não existe nada guardado com esse nome.`,
-            passo: ev.passo,
-            remedio: `Guarda ${ev.nome} numa linha antes desta.`,
-            origem: origemDe(ev.passo),
-          });
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `Usaste ${ev.nome} antes de a guardares. Não existe nada guardado com esse nome.`,
+              `Guarda ${ev.nome} numa linha antes desta.`,
+              origemDe(ev.passo),
+            ),
+          );
           break;
         }
+        // A recusa vem antes da incompatibilidade. São coisas diferentes: uma
+        // é "esta linha está errada", a outra é "este nome não serve aqui".
+        // Se a incompatibilidade viesse primeiro, quem corrigisse a linha 1
+        // ouviria um erro diferente do que ouviu antes, e não saberia que o
+        // primeiro tinha sido resolvido.
         if (guardado.recusado) {
-          erros.push({
-            classe: 'FalhaRuntime',
-            porque: `${ev.nome} foi recusado, e um valor recusado não pode ser usado.`,
-            passo: ev.passo,
-            remedio: `Corrige a linha onde ${ev.nome} foi guardado.`,
-            origem: origemDe(ev.passo),
-          });
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `${ev.nome} foi recusado, e um valor recusado não pode ser usado.`,
+              `Corrige a linha onde ${ev.nome} foi guardado.`,
+              origemDe(ev.passo),
+            ),
+          );
           break;
         }
         if (!coerencia(ev.tipoValor, guardado.tipo)) {
-          erros.push({
-            classe: 'FalhaRuntime',
-            porque: `${ev.nome} guarda ${guardado.tipo}, e este sítio precisa de ${ev.tipoValor}.`,
-            passo: ev.passo,
-            remedio: `Guarda ${ev.nome} como ${ev.tipoValor}.`,
-            origem: origemDe(ev.passo),
-          });
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `${ev.nome} guarda ${guardado.tipo}, e este sítio precisa de ${ev.tipoValor}.`,
+              `Guarda ${ev.nome} como ${ev.tipoValor}.`,
+              origemDe(ev.passo),
+            ),
+          );
         }
         break;
       }
 
       case 'operar': {
-        if (coerencia(ev.a.tipo, ev.b.tipo)) {
-          if (ev.operacao === '/' && ev.b.valor === 0) {
-            erros.push({
-              classe: 'FalhaRuntime',
-              porque: 'Dividir por zero não dá resultado. Não há número que seja a resposta.',
-              passo: ev.passo,
-              remedio: 'Confirma o divisor antes de dividir.',
-              origem: origemDe(ev.passo),
-            });
-          }
+        if (!coerencia(ev.a.tipo, ev.b.tipo)) {
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `Não se pode ${operacaoDiz(ev.operacao)} ${ev.a.tipo} com ${ev.b.tipo}.`,
+              'Junta coisas do mesmo tipo.',
+              origemDe(ev.passo),
+            ),
+          );
           break;
         }
-        erros.push({
-          classe: 'FalhaRuntime',
-          porque: `Não se pode ${operacaoDiz(ev.operacao)} ${ev.a.tipo} com ${ev.b.tipo}.`,
-          passo: ev.passo,
-          remedio: 'Junta coisas do mesmo tipo.',
-          origem: origemDe(ev.passo),
-        });
+        if (ev.operacao === '/' && ev.b.valor === 0) {
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              'Dividir por zero não dá resultado. Não há número que seja a resposta.',
+              'Confirma o divisor antes de dividir.',
+              origemDe(ev.passo),
+            ),
+          );
+        }
         break;
       }
 
       case 'ciclo': {
-        if (!Number.isInteger(ev.iteracoes) || ev.iteracoes < 0 || ev.iteracoes > 10000) {
-          erros.push({
-            classe: 'FalhaRuntime',
-            porque: `Um ciclo corre ${ev.iteracoes} vezes, e o limite são 10000. O ciclo não entra.`,
-            passo: ev.passo,
-            remedio: 'Mete um número de voltas entre 0 e 10000.',
-            origem: origemDe(ev.passo),
-          });
+        // Três fatos, três frases. Um só "passou do limite" para os três
+        // diria a quem escreveu 2.5 que o problema é a magnitude, e a lição
+        // seria errada: o problema é que 2.5 não é um número de voltas.
+        if (!Number.isInteger(ev.iteracoes)) {
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `Um laço corre um número inteiro de voltas, e ${ev.iteracoes} não é um número inteiro.`,
+              'Mete as voltas inteiras.',
+              origemDe(ev.passo),
+            ),
+          );
+          break;
+        }
+        if (ev.iteracoes < 0) {
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `Um laço não corre um número negativo de voltas, e ${ev.iteracoes} é negativo.`,
+              'Mete um número de voltas de 0 para cima.',
+              origemDe(ev.passo),
+            ),
+          );
+          break;
+        }
+        if (ev.iteracoes > MAX_ITERACOES) {
+          erros.push(
+            erroDePasso(
+              ev.passo,
+              `Um laço corre ${ev.iteracoes} vezes, e o limite são ${MAX_ITERACOES}. O laço não entra.`,
+              `Mete um número de voltas entre 0 e ${MAX_ITERACOES}.`,
+              origemDe(ev.passo),
+            ),
+          );
         }
         break;
       }
 
       case 'imprimir':
+        // `print(5)` é legal em cinco das seis. O motor de blocos é mais
+        // estrito — o bloco `dizer` só aceita texto — e essa diferença é uma
+        // lição, não um defeito: quem aprendeu nos blocos escreve
+        // `print('5')` e depois descobre que a linguagem também aceitava
+        // `print(5)`. Julgar o texto pela regra do bloco faria o produto
+        // mentir sobre a linguagem.
+        break;
+
       case 'texto':
+        // Texto cru, sem `Valor` e sem tipo. Quem o leu foi a projeção, e se
+        // a aspa ficou aberta a projeção é que recusa — o núcleo não tem
+        // nada para julgar aqui, e inventar um erro seria inventar sintaxe.
         break;
     }
   }
@@ -2431,10 +2637,25 @@ export function interpretarEm(
 Run: `npx vitest run src/nucleo/semantica.test.ts`
 Expected: PASS, 26 testes.
 
+> **A primeira versão do plano contava mal e prometia 26.** O ficheiro tem 27
+> `it`, e a conta do plano nunca foi feita — foi escrita como o número que
+> uma pessoa adivinha. A lição de um número adivinhado num plano é a mesma
+> do código adivinhado: passa porque ninguém verifica, e no dia em que se
+> verifica, o número está errado e a pessoa não sabe se o trabalho está.
+
 - [ ] **Step 5: Correr a suite toda e o verificador de árvore**
 
 Run: `npm test && npm run arvore`
 Expected: PASS, e `núcleo limpo: N ficheiros, zero importações de projeções`.
+
+> **E há um portão que o `arvore` não é: correr o `arvore` *depois* da última
+> escrita do ficheiro de teste.** Na Task 2 o verificador reportou verde
+> porque foi corrido antes de o `avaliador.test.ts` ganhar o comentário que
+> documenta a tentação — e esse comentário escreve
+> `import { avaliarTexto } from '../projecoes/…'`, que o verificador, a
+> ler o texto cru, contava como violação. A correção está no
+> `verificar-arvore.ts`: os comentários saem antes do casamento. Um portão
+> verde só vale se correu *depois* da última coisa que escreveste.
 
 - [ ] **Step 6: Commitar**
 
@@ -2454,6 +2675,77 @@ Tres regras que os testes fixam e que se perdem facilmente:
   - nenhum erro menciona outra linguagem
 "
 ```
+
+---
+
+> ### O que esta tarefa custou a achar, e o que ficou escrito no código
+>
+> **`erros[0].passo` não compila, e o `passo` da `Recusa` não existe.** O
+> plano acessava `.passo` em três sítios sobre `Erro[]`, e `Erro` é uma união
+> de três tipos em que só a `FalhaRuntime` tem `passo` — a `Recusa` e a
+> `QuebraEquivalencia` não. O `tsc` apanhou-o na hora; nenhum teste via.
+> Pior: onde o plano queria o passo da atribuição em Java, não havia passo
+> para ler. Dar um `passo` à `Recusa` resolveria o compilador e criaria o
+> mesmo fato em dois sítios, para divergirem. O passo vive em
+> `origem.passo`, e é lá que vive nos três erros — o `passo` no topo da
+> `FalhaRuntime` é o que a Task 1 escreveu e fica como está. **Regra
+> geral: quando um campo existe num membro de uma união e não nos outros,
+> o campo não pertence à união, pertence ao membro, e a pergunta a fazer é
+> porque é que um o tem e os outros não.** Aqui a resposta é que `origem` já
+> o tem nos três.
+>
+> **O `coerencia` tinha uma clause morta.** Era
+> `a === b || (ehNumero(a) && ehNumero(b))`, e com um único tipo numérico a
+> segunda parte está contida na primeira — `ehNumero(a) && ehNumero(b)`
+> implica `a === b`. A função e o auxiliar foram-se. Não era um erro que
+> fizesse o código falhar: era um código que prometia tratar de dois tipos
+> numéricos que não existem, e o próximo a lê-lo ia tratar de `integer`.
+>
+> **`MAX_ITERACOES` passou de `avaliador.ts` para `tipos.ts`.** A Task 3
+> escrevia o limite de 10000 à mão, à segunda vez que o mesmo número
+> aparecia em dois ficheiros. `RANGE_INTEIROS` — o fato vizinho — já vivia
+> em `tipos.ts`, e dois limites escritos à mão divergem no primeiro dia em
+> que alguém muda um deles. Custo se eu tivesse deixado: a Task 6 compara
+> blocos com texto e usa os dois limites; um dos dois numa constante local
+> seria um número que ninguém consegue mudar sem partir o produto. O
+> `avaliador.ts` e o `avaliador.test.ts` passam a importar de `./tipos`.
+>
+> **O `ciclo` tinha uma frase para três fatos.** O plano dizia "um ciclo
+> corre 2.5 vezes, e o limite são 10000" a quem escreveu `2.5`. Isso ensina
+> a coisa errada — a resposta a "então 2.5 é menos que 10000, porque foi
+> recusado?" é que não há resposta. São agora três frases: não é inteiro, é
+> negativo, passou do limite. É a mesma decisão que a Task 2 tomou no
+> `repetir`, e pela mesma razão: são três fatos e uma frase só é uma frase
+> errada para dois deles.
+>
+> **Um teste do plano pedia 1 erro onde o mesmo programa, no teste seguinte,
+> pedia 2.** `[atribuir('total', texto, 'número'), usar('total', 'número')]`
+> em Java, exigido com 1 erro num teste e com 2 noutro. Não podem ser
+> verdade ao mesmo tempo, e os 2 são os certos: a recusa da linha 1, e o
+> fato de a linha 2 usar um valor recusado. O segundo não é ruído — é o que
+> impede um programa recusado de continuar quieto e parecer que funciona. O
+> plano tinha aqui o mesmo defeito que a Task 1 teve três vezes: um teste que
+> se contradiz a si próprio passa porque ninguém compara os dois.
+>
+> **Um teste que o plano não tinha, e que é o que impede uma lição errada:**
+> uma atribuição certa ao mesmo nome **cura** o nome. A implementação
+> natural — marcar `recusado` e nunca mais o desmarcar — dá "o nome ficou
+> podre para sempre", e em Java isso é falso. Se o aluno corrigisse a linha
+> 1 e a linha 2 continuasse a dar erro sem explicação, a lição ensinaria
+> que a linguagem guarda rancor. Não guarda, e agora há um teste a dizê-lo.
+>
+> **`imprimir` aceita qualquer tipo, e o motor de blocos não.** O bloco
+> `dizer` só aceita texto; `print(5)` é legal em cinco das seis. A
+> diferença é deliberada e está escrita nos dois sítios com um teste em
+> cada: quem aprendeu nos blocos escreve `print('5')` e depois descobre que
+> a linguagem também aceitava `print(5)`. **Isto é uma costura que a Task 6
+> vai ter de mostrar**, e a nota está aqui para que a Task 6 não a trate
+> como um defeito quando a encontrar.
+>
+> **`case 'texto'` não julga nada, e isso é uma decisão.** O evento traz
+> texto cru, sem `Valor` e sem tipo. Quem decide se a aspa fechou foi a
+> projeção, e inventar aqui um erro de sintaxe seria o núcleo a fazer
+> exatamente o que a spec §6.4 lhe proíbe.
 
 ---
 
@@ -2478,7 +2770,7 @@ Blocos do primeiro conceito: `guardar`, `repetir`, `dizer`, `log`, `pilha`. **`d
 - Test: `src/projecoes/python.test.ts`, `src/projecoes/registo.test.ts`
 
 **Interfaces:**
-- Consumes: Task 1 — `Language`, `Tipo`, `Valor`, `Erro`, `restricao`; Task 2 — `BlocoLeigo`, `identificador`, `pilhaDe`, `MAX_ITERACOES`; Task 3 — `POLITICAS`, `EventoLido`, `AMOSTRA`.
+- Consumes: Task 1 — `Language`, `Tipo`, `Valor`, `Erro`, `restricao`, `MAX_ITERACOES`; Task 2 — `BlocoLeigo`, `identificador`, `pilhaDe`; Task 3 — `POLITICAS`, `EventoLido`, `AMOSTRA`.
 - Produces: `Familia`, `Projection`, `Gerado`, `Anotacao`, `LerResultado`, `REGISTO`, `obter(linguagem)`, `temProjecao(linguagem)`, `LINGUAGENS_COM_PROJECAO`, `python`, `BLOCOS_IMPERATIVOS`.
 
 - [ ] **Step 1: Escrever o teste falhado — a projecão Python**

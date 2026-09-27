@@ -1551,9 +1551,16 @@ export const BLOCOS = {
   executar: 'executar',
   atribuir: 'atribuir',
   mostrar: 'mostrar',
+  variavel: 'variavel',
 } as const;
 
-export const CORES: Record<string, string> = {
+/** As cores, e a tabela é `as const` por uma razão que o compilador
+ *  impôs e que se provou ser a certa: com `Record<string, string>` e o
+ *  `noUncheckedIndexedAccess` ligado, `CORES.guardar` é `string | undefined`, e
+ *  uma cor em falta passava a ser uma cor qualquer — ou, pior, um `undefined`
+ *  entregue ao Blockly. Uma tabela de cores cujas chaves se podem perder não
+ *  é uma tabela de cores. */
+export const CORES = {
   guardar: '#2563eb',
   repetir: '#7c3aed',
   dizer: '#059669',
@@ -1563,7 +1570,8 @@ export const CORES: Record<string, string> = {
   texto: '#10b981',
   logico: '#f59e0b',
   acts: '#a855f7',
-};
+  variavel: '#0891b2',
+} as const;
 
 const PALAVRAS_PYTHON = new Set([
   'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def',
@@ -1613,6 +1621,18 @@ export function identificadorJava(nome: string): string {
   return identificadorDe(nome, PALAVRAS_JAVA);
 }
 
+/**
+ * O tipo *declarado* de um bloco, e só esse.
+ *
+ *  A palavra «declarado» está no nome por uma razão que a Task 11 vai pagar:
+ *  um bloco que traz o valor dentro de si — um número, um texto, um sim ou
+ *  não, um ator — tem um tipo antes de o programa correr. Uma referência a
+ *  uma variável **não tem**, e por isso `variavel` não está nesta tabela.
+ *
+ *  A ausência não é uma falha de preenchimento: é a resposta certa. O tipo de
+ *  `total` só existe depois da primeira atribuição, e quem a preenchesse com
+ *  «número» estaria a mentir ao aluno sobre a linguagem que ele escolheu.
+ */
 export const TIPO_DE_BLOCO: Record<string, Tipo> = {
   dador_num: 'número',
   texto: 'texto',
@@ -9387,440 +9407,1136 @@ divergência num ficheiro de uma só tarefa também.
 
 **Files:**
 - Create: `src/ui/blocos.tsx`, `src/ui/painel-blocos.tsx`
-- Test: `src/ui/blocos.test.ts`
+- Test: `src/ui/blocos.test.tsx`
+- Modify: `src/nucleo/blocos.ts` (Task 2) — o bloco `variavel` e a tabela de cores
 
 **Interfaces:**
-- Consumes: Task 2 — `BlocoLeigo`, `CampoLeigo`, `EntradaLeiga`; Task 2 — `CORES`, `BLOCOS`; Task 2 — `TIPO_DE_BLOCO`; Task 2 — `identificador`.
-- Produz: `registo` (nome interno de registo dos blocos), `paraBlocoLeigo(estado: unknown): BlocoLeigo | null`, `criarToolbox(): Blockly.ToolboxDefinition`, `BlocosProps`, `PainelBlocos`.
-- Produces: `registarBlocos()`, `paraBlocoLeigo(estado)`, `criarToolbox()`, `Blocos`, `BlocosProps`, `desfazer`, `refazer`.
+- Consumes: Task 2 — `BlocoLeigo`, `CampoLeigo`, `EntradaLeiga`, `corpoDe`, `BLOCOS`, `CORES`; Task 6 — `obter`; Task 7 — `CARREGAR`.
+- Produz: `paraBlocoLeigo(estado: unknown): BlocoLeigo | null`, `deBlocoLeigo(programa: BlocoLeigo | null): BlocoJson[]`, `registarBlocos(linguagem: Language): string[]`, `criarToolbox(linguagem: Language): Caixa`, `caixaComoOBlockly(caixa: Caixa)`, `BlocosProps`, `Blocos`.
+- Produces: `Blocos` — o componente que o `main.tsx` da Task 12 desenha. O resto desta tarefa é usado dentro dela e pelos seus testes, e por isso não entra aqui: um `Produces` que lista o que mais ninguém usa é uma promessa que nada cumpre.
 
-- [ ] **Step 1: Escrever o teste falhado**
+**Nota da execução.** O plano desta tarefa, como estava escrito, tinha nove defeitos e nenhum deles dava um teste vermelho. Vale a pena contá-los, porque todos são da mesma família — **um tradutor testado contra a forma que o tradutor inventou**:
 
-`src/ui/blocos.test.ts`:
-```typescript
-import { describe, expect, it } from 'vitest';
-import { paraBlocoLeigo } from './blocos';
-import { emitir } from '../projecoes/avaliar';
-import { avaliador } from '../nucleo/avaliador';
+- O `emitir` devolve `Gerado { texto, anotacoes }` e não um objeto com uma chave por linguagem. Os três testes diziam `emitir(...).python`.
+- O estado do Blockly é `{ blocks: { languageVersion, blocks: [...] } }` — embrulhado. O plano lia `{ blocks: [...] }`, que dá `undefined`, que dá `null`, que dá **um produto que nunca lê um programa e uma suite toda verde**.
+- Os campos do Blockly são valores crus — `{ "nome": "total" }` — e não `{ "nome": { "valor": "total" } }`. O plano lia a segunda forma, que é a do YAML da lição, e escrevia `undefined = 5` para o aluno.
+- As instruções ligam-se por `next.block`, e nunca por `inputs[chave].stack`, que o plano lia. Um `repetir` com três linhas no corpo savingava uma.
+- O JSON do Blockly **não diz** se uma ranhura leva um valor ou uma pilha. A primeira versão tratava as duas do mesmo jeito, e o `dador_num` ligado ao `VALOR` do `guardar` entrava como pilha: `total = 'undefined'`, a lição inteira sem o número que ela ensina.
+- O `texto` do plano era uma caixa com outra caixa dentro, e o `valorDe` devolvia uma string vazia para ele. O texto da pessoa ia para o lixo e o programa dizia `print('')`.
+- A regra «se tem um campo `NOME`, é uma referência a uma variável» é falsa: o bloco do ator do robô também tem um campo `NOME`, e arrastar um ator para um `dizer` escrevia `print(coelho)`. Passou a ser «é do tipo `variavel`», e o bloco `variavel` é o que a torna verdadeira.
+- O `Blocos` saltava a primeira aplicação do programa com um `primeira` de `ref`, e a lição abria sempre em branco.
+- O `aoMudar` estava no array de dependências do efeito, e cada estado novo — que acontece a cada passo — recriava o ecrã e apagava o programa a meio.
 
-function estado(blocos: unknown[]) {
-  return { blocks: blocos };
-}
+E duas coisas que o `tsc` apanhou e o `vitest` nunca apanharia: o Blockly 13 **tirou `Block.appendField`** (só `Input.appendField` existe), e `serialization.blocks.load` **não existe** — o que existe é `serialization.blocks.append`.
 
-describe('paraBlocoLeigo', () => {
-  it('devolve null para uma área vazia', () => {
-    expect(paraBlocoLeigo(estado([]))).toBeNull();
-    expect(paraBlocoLeigo(null)).toBeNull();
-  });
+Duas conclusões que ficaram escritas no ficheiro, e que valem para as próximas tarefas:
 
-  it('converte um guardar e o gerador consome o resultado', () => {
-    const b = paraBlocoLeigo(
-      estado([
-        {
-          type: 'guardar',
-          fields: { nome: { valor: 'total' } },
-          inputs: { VALOR: { block: { type: 'dador_num', fields: { VALOR: { valor: 5 } } } } },
-        },
-      ]),
-    );
-    expect(emitir('python', b!).python).toBe('total = 5\n');
-  });
+1. **Os testes desta tarefa montam um ecrã do Blockly a sério** e passam ao tradutor a saída que a biblioteca deu. Um teste que alimenta o tradutor com a forma que o tradutor espera não prova que o tradutor funciona — prova que o tradutor é consistente consigo próprio.
+2. **A caixa de ferramentas sai da projeção.** O plano afirmava que a fatia do SQL não tinha de voltar a este ficheiro, e não era verdade: a caixa tinha sete categorias escritas à mão. Agora `criarToolbox(linguagem)` oferece o que `obter(linguagem).blocos` declara, e `registarBlocos` devolve os ids que registou para o teste poder compará-los. Se a projeção declarar um bloco que aqui não existe, o registo **diz qual é** em vez de devolver uma lista a menos.
 
-  it('converte uma referência a variável vira {ref}', () => {
-    const b = paraBlocoLeigo(
-      estado([
-        {
-          type: 'guardar',
-          fields: { nome: { valor: 'total' } },
-          inputs: { VALOR: { block: { type: 'dador_num', fields: { VALOR: { valor: 5 } } } } },
-        },
-        {
-          type: 'log',
-          fields: {},
-          inputs: { VALOR: { block: { type: 'dador_num', fields: { NOME: { valor: 'total' } } } } },
-        },
-      ]),
-    );
-    expect(emitir('python', b!).python).toBe('total = 5\nlog(total)\n');
-  });
+- [ ] **Step 1: As formas do Blockly, e onde cada uma delas se enganava**
 
-  it('converte um campo NOME num literal de texto', () => {
-    const b = paraBlocoLeigo(estado([{ type: 'pressionar', fields: { NOME: { valor: 'mostrar' } }, inputs: {} }]));
-    const leigo = b as { type: string; fields?: Record<string, { valor: unknown }> };
-    expect(leigo.fields?.NOME?.valor).toBe('mostrar');
-  });
+O ficheiro abre com as quatro formas verdadeiras, tiradas da biblioteca, porque três das que o plano escrevia estavam erradas de uma maneira que não dá erro nenhum: devolvem `undefined` ou `null` em silêncio. E uma delas — a que diz que uma ranhura leva um valor ou leva instruções — não está no JSON: está na definição do bloco. Por isso a tabela das ranhuras de instruções é **medida** no registo, num bloco de cabeça sem ecrã, e não escrita à mão. Uma tabela escrita à mão é uma segunda verdade sobre os mesmos blocos, e uma segunda verdade desatualiza-se em silêncio.
 
-  it('agrupa vários blocos de topo numa pilha', () => {
-    const b = paraBlocoLeigo(
-      estado([
-        { type: 'log', fields: {}, inputs: { VALOR: { block: { type: 'dador_num', fields: { VALOR: { valor: 1 } } } } } },
-        { type: 'log', fields: {}, inputs: { VALOR: { block: { type: 'dador_num', fields: { VALOR: { valor: 2 } } } } } },
-      ]),
-    );
-    expect(b!.type).toBe('pilha');
-  });
-
-  it('converte recursivamente o corpo de um repetir', () => {
-    const b = paraBlocoLeigo(
-      estado([
-        {
-          type: 'repetir',
-          fields: {},
-          inputs: {
-            PASSOS: { block: { type: 'dador_num', fields: { VALOR: { valor: 2 } } } },
-            CORPO: { stack: [{ type: 'log', fields: {}, inputs: { VALOR: { block: { type: 'dador_num', fields: { VALOR: { valor: 1 } } } } } }] },
-          },
-        },
-      ]),
-    );
-    expect(emitir('python', b!).texto).toBe('for _ in range(2):\n    log(1)\n');
-  });
-
-  it('o resultado é executável pelo motor', () => {
-    const b = paraBlocoLeigo(
-      estado([
-        {
-          type: 'guardar',
-          fields: { nome: { valor: 'total' } },
-          inputs: { VALOR: { block: { type: 'dador_num', fields: { VALOR: { valor: 5 } } } } },
-        },
-      ]),
-    );
-    const a = avaliador();
-    a.executar(b);
-    expect(a.trace.erros).toEqual([]);
-    expect(a.trace.valores.length).toBe(1);
-  });
-
-  it('um bloco desconhecido passa em vez de rebentar', () => {
-    const b = paraBlocoLeigo(estado([{ type: 'bloco_do_futuro', fields: {}, inputs: {} }]));
-    expect(b!.type).toBe('bloco_do_futuro');
-  });
-});
-```
-
-- [ ] **Step 2: Correr e ver falhar**
-
-Run: `npx vitest run src/ui/blocos.test.ts`
-Expected: FAIL com erro de resolução de `./blocos`.
-
-- [ ] **Step 3: Escrever `src/ui/blocos.tsx`**
-
+`src/ui/blocos.tsx`:
 ```typescript
 import * as Blockly from 'blockly';
 import type { BlocoLeigo, CampoLeigo, EntradaLeiga } from '../nucleo/avaliador';
-import { BLOCOS, CORES } from '../nucleo/blocos';
+import { BLOCOS, CORES, corpoDe } from '../nucleo/blocos';
+import type { Language } from '../nucleo/tipos';
+import { obter } from '../projecoes/registo';
 
-type EstadoJson = { blocks?: unknown[] };
-type BlocoJson = {
-  type?: string;
-  fields?: Record<string, { valor?: unknown }>;
-  inputs?: Record<string, { valor?: unknown; block?: BlocoJson; stack?: BlocoJson[] }>;
-};
+// ---------------------------------------------------------------------------
+// A forma do Blockly, e a forma do motor
+// ---------------------------------------------------------------------------
+//
+// Este ficheiro é a costura entre duas coisas que não se resemblem, e as duas
+// formas têm de estar escritas aqui, uma vez, com o nome de cada campo. O
+// plano desta tarefa escrevia-as no ficheiro e depois escrevia testes com
+// blocos escritos à mão — e o resultado foi um tradutor que passava todos os
+// testes e não lia um único bloco real. As formas verdadeiras foram tiradas
+// do Blockly, não da memória:
+//
+//   `workspaces.save(ws)`  ->  { blocks: { languageVersion, blocks: [...] } }
+//   `fields`               ->  { nome: 'total' }         (o valor, cru)
+//   `inputs[chave].block`  ->  o bloco ligado à ranhura
+//   `next.block`           ->  a instrução seguinte da cadeia
+//
+// Duas dessas quatroifactos que o plano escrevia estavam erradas, e as duas
+// erradas de uma maneira que não dá erro nenhum: devolvem `undefined` ou `null`
+// em silêncio, e o produto fica morto sem uma única falha no ecrã. Por isso
+// cada função abaixo tem um teste que a alimenta com a **saída real** do
+// Blockly, e não com um objeto parecido com ela.
 
-function campoDe(bruto: BlocoJson, nome: string): CampoLeigo | undefined {
-  const v = bruto.fields?.[nome]?.valor;
-  return v === undefined ? undefined : { valor: v };
+/** Um bloco como o Blockly o guarda, e não como o motor o lê.
+ *
+ *  `fields` guarda **valores crus** — `3`, `'olá'`, `'total'` — e não
+ *  `{ valor: … }`. A diferença entre as duas formas é uma linha de código e
+ *  nenhuma diferença no que o aluno vê, que é o que faz uma linha de código
+ *  destas ser perigosa. */
+export interface BlocoJson {
+  type: string;
+  x?: number;
+  y?: number;
+  fields?: Record<string, unknown>;
+  inputs?: Record<string, LigacaoJson>;
+  next?: LigacaoJson;
 }
 
-/** Converte um reporter do Blockly num valor explícito do motor. */
+/** Uma ranhura do Blockly: `block` é o bloco ligado, `shadow` é o valor por
+ *  omissão que o Blockly põe quando a ranhura está vazia. */
+export interface LigacaoJson {
+  block?: BlocoJson;
+  shadow?: BlocoJson;
+}
+
+/** Teto de blocos numa cadeia. Não é um limite real — o Blockly não encadeia
+ *  milhões de blocos — mas um `next` à mão pode ser um laço, e um tradutor
+ *  que nunca acaba é pior do que um que pára. */
+const MAX_BLOCOS = 10_000;
+
+function textoDe(campo: unknown): string {
+  return typeof campo === 'string' ? campo : String(campo ?? '');
+}
+
+// ---------------------------------------------------------------------------
+// Bloco do Blockly -> bloco do motor
+// ---------------------------------------------------------------------------
+
+function camposDe(bruto: BlocoJson): Record<string, CampoLeigo> {
+  const campos: Record<string, CampoLeigo> = {};
+  for (const [nome, valor] of Object.entries(bruto.fields ?? {})) {
+    campos[nome] = { valor };
+  }
+  return campos;
+}
+
+/** Uma referência a uma variável, ou o próprio bloco de valor.
+ *
+ *  O tipo decide, e não a presença de um campo chamado `NOME`. A primeira
+ *  versão desta função dizia «se tem `NOME`, é uma referência», e o bloco do
+ *  robô também tem um campo `NOME` — o nome do ator. Com essa regra, arrastar
+ *  um ator para dentro de um `dizer` gerava `print(coelho)`: uma referência a
+ *  uma variável que ninguém guardou, e um erro que aponta para o sítio
+ *  errado. A regra certa é «é do tipo `variavel`», e o bloco `variavel` é o
+ *  que a faz verdadeira. */
 function valorDe(bruto: BlocoJson | undefined): unknown {
-  if (!bruto) return undefined;
-  const nome = bruto.fields?.NOME?.valor;
-  if (typeof nome === 'string' && nome.length > 0) return { ref: nome };
-  const proprio = bruto.fields?.VALOR?.valor ?? bruto.fields?.NUM?.valor ?? bruto.fields?.TEXTO?.valor;
-  if (proprio !== undefined) return proprio;
-  if (bruto.type === 'texto') return { txt: '' };
+  if (bruto === undefined) return undefined;
+  if (bruto.type === 'variavel') {
+    const nome = textoDe(bruto.fields?.NOME);
+    if (nome.length > 0) return { ref: nome };
+  }
+  if (bruto.type === 'dador_num' || bruto.type === 'texto') {
+    return bruto.fields?.VALOR;
+  }
   return { bloco: converter(bruto) };
 }
 
-function converter(bruto: BlocoJson): BlocoLeigo {
-  const fields: Record<string, CampoLeigo> = {};
-  for (const nome of Object.keys(bruto.fields ?? {})) {
-    const c = campoDe(bruto, nome);
-    if (c) fields[nome] = c;
+/** Uma cadeia de instruções, do primeiro bloco ao último.
+ *
+ *  O Blockly guarda as instruções ligadas umas às outras em `next.block`, e
+ *  não numa lista. A primeira versão lia `inputs[chave].stack`, que o Blockly
+ *  nunca escreve: um `repetir` com três linhas no corpo savingava uma linha,
+ *  e o programa que o aluno via executar não era o programa que ele tinha
+ *  montado. */
+function cadeia(bruto: BlocoJson | undefined): BlocoLeigo[] {
+  const pilha: BlocoLeigo[] = [];
+  let atual = bruto;
+  let n = 0;
+  while (atual !== undefined && n < MAX_BLOCOS) {
+    pilha.push(converter(atual));
+    atual = atual.next?.block;
+    n += 1;
   }
-  const inputs: Record<string, EntradaLeiga> = {};
-  for (const nome of Object.keys(bruto.inputs ?? {})) {
-    const entrada = bruto.inputs![nome]!;
-    if (Array.isArray(entrada.stack) && entrada.stack.length > 0) {
-      inputs[nome] = { stack: entrada.stack.map(converter) };
-    } else {
-      inputs[nome] = { valor: valorDe(entrada.block) };
+  return pilha;
+}
+
+function converter(bruto: BlocoJson): BlocoLeigo {
+  const entradas: Record<string, EntradaLeiga> = {};
+  const tipo = tipoDe(bruto);
+  for (const [chave, ligacao] of Object.entries(bruto.inputs ?? {})) {
+    if (levaInstrucoes(tipo, chave) && ligacao.block !== undefined) {
+      entradas[chave] = { stack: cadeia(ligacao.block) };
+      continue;
+    }
+    // Uma ranhura de valor. A ligada está em `block`, e o valor por omissão
+    // que o Blockly inventa sozinho quando a pessoa não ligou nada está em
+    // `shadow` — e é um bloco como outro: entra pelo mesmo caminho.
+    entradas[chave] = { valor: valorDe(ligacao.block ?? ligacao.shadow) };
+  }
+  // Um dicionário vazio só se escreve quando há alguma coisa lá dentro. Não é
+  // estilo: é o que faz os dois caminhos serem mesmo inversos. A primeira
+  // versão acrescentava `fields: {}` a todos os blocos, e um bloco do
+  // Blockly deixava de ser igual ao bloco do motor que o originou — mesmo
+  // tendo o mesmo conteúdo. Um tradutor que junta uma chave vazia não está a
+  // traduzir: está a dizer que o bloco tinha um campo, e não tinha.
+  const campos = camposDe(bruto);
+  const bloco: BlocoLeigo = { type: tipo };
+  if (Object.keys(campos).length > 0) bloco.fields = campos;
+  if (Object.keys(entradas).length > 0) bloco.inputs = entradas;
+  return bloco;
+}
+
+function tipoDe(bruto: BlocoJson): string {
+  return typeof bruto.type === 'string' && bruto.type.length > 0 ? bruto.type : 'desconhecido';
+}
+
+// ---------------------------------------------------------------------------
+// Que ranhura leva instruções
+// ---------------------------------------------------------------------------
+//
+// O JSON que o Blockly escreve **não diz** se uma ranhura leva um valor ou
+// uma pilha de instruções: nos dois casos a forma é `inputs[chave].block`. A
+// diferença só está na definição do bloco, e perguntar à definição é a única
+// fonte que não pode divergir dela — que é o que acontecia na primeira
+// versão deste ficheiro, que tratava as duas do mesmo jeito. O resultado era
+// `total = 'undefined'`: o `dador_num` ligado ao `VALOR` do `guardar` entrava
+// como pilha, o motor lia `.valor` de uma pilha, e o número sumia sem uma
+// única falha no ecrã. A lição toda dependia desse número.
+//
+// A tabela é medida no registo, num bloco de cabeça sem ecrã, e não escrita à
+// mão: uma tabela escrita à mão é uma segunda verdade sobre os mesmos blocos,
+// e uma segunda verdade desatualiza-se em silêncio.
+const RANHURAS_DE_INSTRUCAO = new Map<string, Set<string>>();
+
+function levaInstrucoes(tipo: string, ranhura: string): boolean {
+  return RANHURAS_DE_INSTRUCAO.get(tipo)?.has(ranhura) ?? false;
+}
+
+function medirRanhuras(tipos: string[]): void {
+  const semEcran = new Blockly.Workspace();
+  for (const id of tipos) {
+    if (Blockly.Blocks[id] === undefined) continue;
+    const bloco = semEcran.newBlock(id);
+    RANHURAS_DE_INSTRUCAO.set(
+      id,
+      new Set(bloco.inputList.filter((i) => i instanceof Blockly.inputs.StatementInput).map((i) => i.name)),
+    );
+    bloco.dispose(false);
+  }
+  semEcran.dispose();
+}
+
+/** Os blocos de topo de um estado do Blockly, seja ele qual for a forma.
+ *
+ *  `workspaces.save` embrulha o estado num `{ blocks: { blocks: [...] } }`, e
+ *  o plano lia `{ blocks: [...] }` — que dá `undefined`, que dá `null`, que
+ *  dá um produto que nunca lê um programa e nenhum teste vermelho. Por isso
+ *  as duas formas são aceites: uma é o que o Blockly escreve e a outra é o
+ *  que o Blockly consome, e uma função que só sabe ler uma das duas é uma
+ *  armadilha com a data de validade escrita. */
+export function blocosDe(estado: unknown): BlocoJson[] {
+  if (estado === null || typeof estado !== 'object') return [];
+  const embrulho = (estado as { blocks?: unknown }).blocks;
+  const lista =
+    Array.isArray(embrulho)
+      ? embrulho
+      : embrulho !== null && typeof embrulho === 'object' && Array.isArray((embrulho as { blocks?: unknown }).blocks)
+        ? ((embrulho as { blocks: unknown[] }).blocks)
+        : [];
+  return lista as BlocoJson[];
+}
+
+/** O estado do Blockly, lido, e o motor a vê-lo como um programa.
+ *
+ *  Vários blocos de topo são uma `pilha` com todos eles no corpo, e é a
+ *  `pilha` que o motor e o emissor já conhecem. Um bloco só é esse bloco. */
+export function paraBlocoLeigo(estado: unknown): BlocoLeigo | null {
+  const pilha = blocosDe(estado).flatMap((b) => cadeia(b));
+  if (pilha.length === 0) return null;
+  if (pilha.length === 1) return pilha[0]!;
+  return { type: 'pilha', inputs: { CORPO: { stack: pilha } } };
+}
+
+// ---------------------------------------------------------------------------
+// Bloco do motor -> bloco do Blockly
+// ---------------------------------------------------------------------------
+
+function ligacaoDe(valor: unknown): LigacaoJson | undefined {
+  if (valor === undefined || valor === null) return undefined;
+  if (typeof valor === 'number') return { block: { type: 'dador_num', fields: { VALOR: valor } } };
+  if (typeof valor === 'string') return { block: { type: 'texto', fields: { VALOR: valor } } };
+  if (typeof valor === 'object') {
+    const v = valor as { ref?: unknown; txt?: unknown; bloco?: BlocoLeigo };
+    if (typeof v.ref === 'string' && v.ref.length > 0) {
+      return { block: { type: 'variavel', fields: { NOME: v.ref } } };
+    }
+    if (typeof v.txt === 'string') return { block: { type: 'texto', fields: { VALOR: v.txt } } };
+    if (v.bloco !== undefined) return { block: blocoDe(v.bloco) };
+  }
+  // Um valor sem forma conhecida não vira bloco nenhum. Deixar a ranhura
+  // vazia é a única resposta honesta: um bloco inventado aqui apareceria no
+  // ecrã do aluno como uma coisa que ele não colocou. O booleano cai aqui
+  // até a Task 11 registar o bloco `logico` — e cai **visível**, que é o
+  // oposto de cair em silêncio.
+  return undefined;
+}
+
+function blocoDe(b: BlocoLeigo): BlocoJson {
+  const campos: Record<string, unknown> = {};
+  for (const [nome, campo] of Object.entries(b.fields ?? {})) campos[nome] = campo.valor;
+  const entradas: Record<string, LigacaoJson> = {};
+  for (const [chave, entrada] of Object.entries(b.inputs ?? {})) {
+    if (entrada.stack !== undefined) {
+      const [cabeca, ...resto] = entrada.stack;
+      if (cabeca === undefined) continue;
+      const ligacao: LigacaoJson = { block: blocoDe(cabeca) };
+      let ultima = ligacao.block!;
+      for (const seguinte of resto) {
+        const proxima: LigacaoJson = { block: blocoDe(seguinte) };
+        ultima.next = proxima;
+        ultima = proxima.block!;
+      }
+      entradas[chave] = ligacao;
+    } else if ('valor' in entrada) {
+      const ligacao = ligacaoDe(entrada.valor);
+      if (ligacao !== undefined) entradas[chave] = ligacao;
     }
   }
-  return { type: bruto.type ?? 'desconhecido', fields, inputs };
+  return { type: b.type, fields: campos, inputs: entradas };
 }
 
-export function paraBlocoLeigo(estado: unknown): BlocoLeigo | null {
-  const blocos = (estado as EstadoJson | null)?.blocks;
-  if (!Array.isArray(blocos) || blocos.length === 0) return null;
-  const convertidos = blocos.map((b) => converter(b as BlocoJson));
-  if (convertidos.length === 1) return convertidos[0]!;
-  return { type: 'pilha', inputs: { CORPO: { stack: convertidos } } };
+/** O programa do motor, escrito como blocos que o Blockly sabe montar.
+ *
+ *  É o caminho inverso de `paraBlocoLeigo` e a razão de existir: sem ele, um
+ *  aluno que sai a meio de um passo volta e encontra o ecrã em branco, e a
+ *  lição perde o trabalho sem nunca dizer que o perdeu. */
+export function deBlocoLeigo(programa: BlocoLeigo | null): BlocoJson[] {
+  if (programa === null) return [];
+  if (programa.type === 'pilha') return corpoDe(programa).flatMap(deBlocoLeigo);
+  return [blocoDe(programa)];
 }
 
-export function criarToolbox(): Blockly.ToolboxDefinition {
+// ---------------------------------------------------------------------------
+// O registo de blocos
+// ---------------------------------------------------------------------------
+
+/** Uma definição de bloco no formato JSON do Blockly.
+ *
+ *  A biblioteca aceita `any` e por isso o compilador não ajuda em nada aqui.
+ *  A interface existe para o ficheiro não passar a vida a escrever `as never`
+ *  — que é o que o plano fazia, e `as never` é o oposto de um tipo: é uma
+ *  way de dizer ao compilador «não me mostres isto». */
+interface DefinicaoBloco {
+  type: string;
+  colour: string;
+  [chave: string]: unknown;
+}
+
+/** Os blocos de valor, que são os mesmos em todas as linguagens.
+ *
+ *  Nenhum deles é uma instrução, e é por isso que vivem aqui e não no
+ *  vocabulário da projeção: `obter('sql').blocos` é a lista do SQL e nenhuma
+ *  das outras, e o SQL não quer um bloco de número no ecrã. */
+const VALORES: DefinicaoBloco[] = [
+  {
+    type: 'dador_num',
+    message0: '%1',
+    args0: [{ type: 'field_number', name: 'VALOR', value: 0 }],
+    colour: CORES.dador_num,
+    output: 'Number',
+  },
+  {
+    // O plano definia o `texto` como um reporter com um `input_value` dentro
+    // — ou seja, uma caixa que leva outra caixa. E o `valorDe` tinha um caso
+    // especial que devolvia `{ txt: '' }` para ele, o que significa que o
+    // texto que a pessoa escrevia no bloco **era deitado fora**: o programa
+    // dizia `print('')`. O texto é um valor escrito à mão, como o número, e
+    // por isso tem um `field_input` e nada mais.
+    type: 'texto',
+    message0: 'texto %1',
+    args0: [{ type: 'field_input', name: 'VALOR', text: '' }],
+    colour: CORES.texto,
+    output: 'String',
+  },
+  {
+    type: 'variavel',
+    message0: '%1',
+    args0: [{ type: 'field_input', name: 'NOME', text: '' }],
+    colour: CORES.variavel,
+    output: null,
+  },
+];
+
+/** As definições das instruções, por id.
+ *
+ *  Duas coisas nesta tabela não são estilo.
+ *
+ *  A ranhura de valor do `guardar` e a do `dizer` **não têm tipo**, e é
+ *  deliberate: a lição guarda um texto em `nome` e mostra um número com
+ *  `dizer`, e uma ranhura `setCheck('Number')` recusa as duas coisas. O aluno
+ *  não conseguiria montar a lição que o produto lhe está a pedir. A ranhura
+ *  do `repetir` é a única com tipo, porque um número de voltas é um número
+ *  em qualquer linguagem.
+ *
+ *  Os rótulos vão por `appendDummyInput`, porque o Blockly 13 **tirou
+ *  `Block.appendField`**: só `Input.appendField` existe. O plano usava
+ *  `this.appendField('guardar')` em quatro blocos, e isso não compila — o que
+ *  o `tsc` apanhou e o `vitest` não apanharia nunca. */
+const INSTRUCOES: Record<string, () => void> = {
+  [BLOCOS.guardar]: function guardar(this: Blockly.Block) {
+    this.appendDummyInput('ROTULO').appendField('guardar');
+    this.appendValueInput('VALOR');
+    this.appendDummyInput('NOME').appendField('em');
+    this.appendDummyInput('CAMPO').appendField(new Blockly.FieldTextInput('total'), 'nome');
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(CORES.guardar);
+  },
+  [BLOCOS.repetir]: function repetir(this: Blockly.Block) {
+    this.appendDummyInput('ROTULO').appendField('repetir');
+    this.appendValueInput('PASSOS').setCheck('Number');
+    this.appendDummyInput('VEZES').appendField('vezes:');
+    this.appendStatementInput('CORPO');
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(CORES.repetir);
+  },
+  [BLOCOS.dizer]: function dizer(this: Blockly.Block) {
+    this.appendDummyInput('ROTULO').appendField('dizer');
+    this.appendValueInput('VALOR');
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(CORES.dizer);
+  },
+  [BLOCOS.log]: function registo(this: Blockly.Block) {
+    this.appendDummyInput('ROTULO').appendField('registar');
+    this.appendValueInput('VALOR');
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(CORES.log);
+  },
+};
+
+/** Regista os blocos e devolve os ids de instrução da linguagem.
+ *
+ *  Devolvê-los é o que torna `criarToolbox` honesta: a caixa de ferramentas
+ *  oferece o que a projeção declara, e o teste que compara as duas coisas só
+ *  existe porque o registo diz o que registou. */
+export function registarBlocos(linguagem: Language): string[] {
+  const declarados = obter(linguagem).blocos;
+  for (const definicao of VALORES) {
+    if (Blockly.Blocks[definicao.type] === undefined) Blockly.defineBlocksWithJsonArray([definicao]);
+  }
+  const registados: string[] = [];
+  for (const id of declarados) {
+    const fazer = INSTRUCOES[id];
+    if (fazer === undefined) {
+      // Um id que a projeção declara e que este ficheiro não sabe fazer. Não
+      // é um erro calado: é a lista do que falta, e é o plano C a bater
+      // nesta porta se o SQL trouxer um bloco novo.
+      throw new Error(
+        `O bloco "${id}" é declarado pela projeção de ${linguagem} e não tem ` +
+          `definição em src/ui/blocos.tsx. Ou a definição entra aqui, ou o ` +
+          `bloco sai de obter(${linguagem}).blocos.`,
+      );
+    }
+    if (Blockly.Blocks[id] === undefined) Blockly.Blocks[id] = { init: fazer };
+    registados.push(id);
+  }
+  // A medição tem de vir **depois** de todos os blocos estarem registados: um
+  // `repetir` que se mede antes de o `guardar` existir mede um ecrã a menos.
+  medirRanhuras(registados);
+  return registados;
+}
+
+/** Uma categoria da caixa de ferramentas. */
+export interface Categoria {
+  kind: 'category';
+  name: string;
+  colour: string;
+  contents: ItemDaVariavel[];
+}
+
+/** Um bloco dentro de uma categoria.
+ *
+ *  O `kind` é obrigatório e a sua falta é um erro de execução, não de
+ *  compilação: o Blockly faz `item.kind.toUpperCase()` e uma entrada sem
+ *  `kind` rebenta-o dentro do `inject`, com uma mensagem que fala de
+ *  `toUpperCase` e não da caixa de ferramentas. */
+export interface ItemDaVariavel {
+  kind: 'block';
+  type: string;
+}
+
+/** A caixa de ferramentas, na forma que este ficheiro escreve.
+ *
+ *  É uma interface nossa e não o tipo do Blockly porque o tipo do Blockly
+ *  (`ToolboxInfo`) não é exportado pela raiz do pacote, e o
+ *  `StaticCategoryInfo` de dentro exige `id`, `categorystyle`, `cssconfig` e
+ *  `hidden` — campos que o Blockly preenche sozinho e que ninguém escreve. */
+export interface Caixa {
+  kind: 'categoryToolbox';
+  contents: Categoria[];
+}
+
+/** A caixa de ferramentas da linguagem, montada a partir da projeção.
+ *
+ *  As categorias são o que a pessoa vê primeiro, e essa decisão não é do
+ *  motor: é som, é cor, é o §18 da spec. Por isso são duas e não sete — uma
+ *  para os valores e uma para as instruções da linguagem escolhida. */
+/** A nossa `Caixa` como o Blockly a quer ver.
+ *
+ *  O tipo do Blockly (`ToolboxInfo`) exige, em cada categoria, campos que o
+ *  Blockly preenche sozinho — `id`, `categorystyle`, `cssconfig` e `hidden`.
+ *  A forma que escrevemos está certa; o tipo descreve também o que acontece
+ *  **depois**. A conversão está escrita uma vez, aqui, para que o
+ *  `as unknown as` não apareça espalhado pelo ficheiro — e para que ele não
+ *  seja um `as never`, que é uma maneira de pedir ao compilador que não veja
+ *  o problema. */
+export function caixaComoOBlockly(caixa: Caixa): Blockly.utils.toolbox.ToolboxInfo {
+  return caixa as Blockly.utils.toolbox.ToolboxInfo;
+}
+
+export function criarToolbox(linguagem: Language): Caixa {
+  const declarados = registarBlocos(linguagem);
   return {
     kind: 'categoryToolbox',
     contents: [
-      { kind: 'category', name: 'Números', colour: CORES.dador_num, contents: [{ type: 'dador_num' }] },
-      { kind: 'category', name: 'Texto', colour: CORES.texto, contents: [{ type: 'texto' }] },
-      { kind: 'category', name: 'Escolhas', colour: CORES.logico, contents: [{ type: 'logico' }] },
-      { kind: 'category', name: 'Atores', colour: CORES.acts, contents: [{ type: 'acts' }] },
-      { kind: 'category', name: 'Variáveis', colour: CORES.guardar, contents: [{ type: 'guardar' }] },
       {
         kind: 'category',
-        name: 'Controlo',
-        colour: CORES.repetir,
-        contents: [{ type: 'repetir' }],
+        name: 'Números e texto',
+        colour: CORES.dador_num,
+        contents: VALORES.map((b) => ({ kind: 'block', type: b.type })),
       },
       {
         kind: 'category',
-        name: 'Ações',
-        colour: CORES.dizer,
-        contents: [{ type: 'dizer' }, { type: 'log' }, { type: 'pressionar' }],
+        name: 'Instruções',
+        colour: CORES.guardar,
+        contents: declarados.map((id) => ({ kind: 'block', type: id })),
       },
     ],
   };
 }
-
-function registar(): void {
-  if (Blockly.Blocks[BLOCOS.guardar]) return;
-
-  Blockly.defineBlocksWithJsonArray([
-    {
-      type: 'dador_num',
-      message0: '%1',
-      args0: [{ type: 'field_number', name: 'VALOR', value: 0 }],
-      colour: CORES.dador_num,
-      output: 'Number',
-    },
-    {
-      type: 'texto',
-      message0: 'texto %1',
-      args0: [{ type: 'input_value', name: 'VALOR' }],
-      colour: CORES.texto,
-      output: 'String',
-    },
-    {
-      type: 'logico',
-      message0: '%1',
-      args0: [{ type: 'field_number', name: 'ESCOLHA', value: 1 }],
-      colour: CORES.logico,
-      output: 'Boolean',
-    },
-    {
-      type: 'acts',
-      message0: 'actor %1',
-      args0: [{ type: 'field_input', name: 'NOME', text: 'coelho' }],
-      colour: CORES.acts,
-      output: 'Actor',
-    },
-    {
-      type: 'logico_txt',
-      message0: 'texto se %1',
-      args0: [{ type: 'input_value', name: 'COND' }],
-      colour: CORES.logico,
-      previousStatement: true,
-      nextStatement: true,
-    },
-    {
-      type: 'logico_num',
-      message0: 'número se %1',
-      args0: [{ type: 'input_value', name: 'COND' }],
-      colour: CORES.logico,
-      previousStatement: true,
-      nextStatement: true,
-    },
-    {
-      type: 'logico_acts',
-      message0: 'actor se %1',
-      args0: [{ type: 'input_value', name: 'COND' }],
-      colour: CORES.logico,
-      previousStatement: true,
-      nextStatement: true,
-    },
-  ]);
-
-  Blockly.Blocks[BLOCOS.repetir] = {
-    init() {
-      this.appendValueInput('PASSOS').setCheck('Number').appendField('repetir');
-      this.appendStatementInput('CORPO').appendField('vezes:');
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setColour(CORES.repetir);
-    },
-  };
-
-  Blockly.Blocks[BLOCOS.guardar] = {
-    init() {
-      this.appendValueInput('VALOR').setCheck('Number').appendField('guardar');
-      this.appendField('em');
-      this.appendField(new Blockly.FieldTextInput('total'), 'nome');
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setColour(CORES.guardar);
-    },
-  };
-
-  Blockly.Blocks[BLOCOS.dizer] = {
-    init() {
-      this.appendValueInput('VALOR').setCheck('String').appendField('dizer');
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setColour(CORES.dizer);
-    },
-  };
-
-  Blockly.Blocks[BLOCOS.log] = {
-    init() {
-      this.appendValueInput('VALOR').appendField('registar');
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setColour(CORES.log);
-    },
-  };
-
-  Blockly.Blocks[BLOCOS.pressionar] = {
-    init() {
-      this.appendDummyInput('ATOR_ROTULO').appendField('o');
-      this.appendField(new Blockly.FieldTextInput('coelho'), 'ATOR');
-      this.appendField(new Blockly.FieldDropdown([
-        [BLOCOS.executar, BLOCOS.executar],
-        [BLOCOS.atribuir, BLOCOS.atribuir],
-        [BLOCOS.mostrar, BLOCOS.mostrar],
-      ]), 'NOME');
-      this.setPreviousStatement(true);
-      this.setNextStatement(true);
-      this.setColour(CORES.pressionar);
-    },
-  };
-}
-
-export function registarBlocos(): void {
-  registar();
-}
 ```
 
-- [ ] **Step 4: Correr e ver passar**
+- [ ] **Step 2: A área de blocos, com a lição a chegar ao ecrã**
 
-Run: `npx vitest run src/ui/blocos.test.ts`
-Expected: PASS. Se o import do Blockly rebentar em Node, acrescenta a esta tarefa, em `src/ui/blocos.tsx`, o corte do DOM antes do import do Blockly — **não** o faças: o `blockly` é importável em Node e o teste passa sem DOM. Se não passar, o problema é o polyfill do `preparacao.ts`, e o `jsdom` já está no ambiente.
+O `aoMudar` vive num `ref` e não no array de dependências, o programa guardado é aplicado também na montagem, e a conversão da caixa para o tipo do Blockly está escrita **uma vez** e com o motivo ao lado — para que o `as unknown as` não apareça espalhado e para que ele não seja um `as never`, que é uma maneira de pedir ao compilador que não veja o problema.
 
-- [ ] **Step 5: Escrever `src/ui/painel-blocos.tsx`**
-
-```typescript
+`src/ui/painel-blocos.tsx`:
+```tsx
 import { useEffect, useRef } from 'react';
 import * as Blockly from 'blockly';
 import type { BlocoLeigo } from '../nucleo/avaliador';
-import { criarToolbox, paraBlocoLeigo, registarBlocos } from './blocos';
+import type { Language } from '../nucleo/tipos';
+import { caixaComoOBlockly, criarToolbox, deBlocoLeigo, paraBlocoLeigo, registarBlocos } from './blocos';
 
-export interface BlocosProps {
-  aoMudar: (programa: BlocoLeigo | null) => void;
-  carregar?: BlocoLeigo | null;
-  chave: string;
+/** Põe um bloco acrescentado no ecrã.
+ *
+ *  `append` é tipado a devolver `Block` porque também serve o modo sem ecrã.
+ *  Numa `WorkspaceSvg` o que sai é sempre um `BlockSvg`, e `initSvg`/`render`
+ *  é o que o faz aparecer. A conversão está escrita uma vez, aqui, e com o
+ *  nome de quem a faz — um `as BlockSvg` repetido em dois sítios é o
+ *  caminho mais curto para um `as never` disfarçado. */
+function noEcran(bloco: Blockly.Block): Blockly.BlockSvg {
+  const svg = bloco as Blockly.BlockSvg;
+  svg.initSvg();
+  svg.render();
+  return svg;
 }
 
-export function Blocos({ aoMudar, carregar, chave }: BlocosProps) {
+export interface BlocosProps {
+  /** Chamado com o programa sempre que o ecrã muda, e com `null` quando fica
+   *  vazio. Um programa vazio é um programa, e dizer isso ao motor é diferente
+   *  de dizer que o aluno não fez nada. */
+  aoMudar: (programa: BlocoLeigo | null) => void;
+  /** O programa a pôr no ecrã quando o passo muda. `null` deixa o ecrã em
+   *  branco. */
+  carregar?: BlocoLeigo | null;
+  /** Muda quando a pessoa entra noutro passo. A chave é o que manda recriar o
+   *  ecrã, e não uma comparação profunda do programa: comparar `{…}` a cada
+   *  quadro recriaria o ecrã a cada quadro, e o aluno perderia o que estava a
+   *  meio de montar. */
+  chave: string;
+  linguagem: Language;
+}
+
+/** A área de blocos.
+ *
+ *  Tudo o que este ficheiro faz de subtil está em duas decisões.
+ *
+ *  A primeira é que `aoMudar` vive num `ref` e não no array de dependências.
+ *  Se estivesse lá, cada vez que o componente que o desenha criasse uma
+ *  função nova — o que acontece em cada estado novo, e um estado novo acontece
+ *  a cada passo — o ecrã era destruído e recriado, e o aluno via o seu
+ *  programa desaparecer sozinho. A dependência é a chave, e nada mais.
+ *
+ *  A segunda é que o programa guardado é aplicado **também na montagem**. A
+ *  primeira versão saltava a primeira aplicação com um `primeira` de `ref`, e
+ *  o resultado era que a lição abria sempre em branco: o passo tinha um bloco
+ *  inicial, o bloco inicial existia no ficheiro, e nunca aparecia no ecrã. */
+export function Blocos({ aoMudar, carregar, chave, linguagem }: BlocosProps) {
   const alvo = useRef<HTMLDivElement | null>(null);
-  const espaco = useRef<Blockly.Workspace | null>(null);
-  const primeira = useRef(true);
+  const espaco = useRef<Blockly.WorkspaceSvg | null>(null);
+  const aoMudarRef = useRef(aoMudar);
+  aoMudarRef.current = aoMudar;
 
   useEffect(() => {
-    if (!alvo.current) return;
-    registarBlocos();
-    const injetado = Blockly.inject(alvo.current, {
-      toolbox: criarToolbox(),
-      trashcan: true,
-    });
+    const elemento = alvo.current;
+    if (elemento === null) return;
+
+    const injetado = Blockly.inject(elemento, { toolbox: caixaComoOBlockly(criarToolbox(linguagem)) });
     espaco.current = injetado;
+    registarBlocos(linguagem);
+
     const aoEvento = (): void => {
-      aoMudar(paraBlocoLeigo(Blockly.serialization.blocks.save(injetado)));
+      aoMudarRef.current(paraBlocoLeigo(Blockly.serialization.workspaces.save(injetado)));
     };
     injetado.addChangeListener(aoEvento);
+
+    if (carregar !== undefined && carregar !== null) {
+      for (const bloco of deBlocoLeigo(carregar)) noEcran(Blockly.serialization.blocks.append(bloco, injetado));
+    }
+    // O primeiro `aoMudar` é imediato e não espera por um evento: um programa
+    // que já veio de fora é um programa que o ecrã já tem, e quem o desenhou
+    // precisa de o saber antes de a pessoa mexer em alguma coisa.
+    aoMudarRef.current(paraBlocoLeigo(Blockly.serialization.workspaces.save(injetado)));
+
     return () => {
       injetado.removeChangeListener(aoEvento);
       injetado.dispose();
       espaco.current = null;
     };
-  }, [chave, aoMudar]);
+    // `linguagem` entra porque mudar de linguagem é mudar de vocabulário, e
+    // o ecrã antigo é de outra linguagem. `carregar` **não** entra: quem
+    // carrega o programa é o efeito de baixo, e depende do valor, não da
+    // identidade.
+  }, [chave, linguagem]);
 
   useEffect(() => {
     const ws = espaco.current;
-    if (!ws) return;
-    if (primeira.current) {
-      primeira.current = false;
-      return;
-    }
+    if (ws === null) return;
+    if (carregar === undefined) return;
     ws.clear();
-    if (carregar) Blockly.serialization.blocks.load(ws, carregar as never);
+    for (const bloco of deBlocoLeigo(carregar)) noEcran(Blockly.serialization.blocks.append(bloco, ws));
+    aoMudarRef.current(paraBlocoLeigo(Blockly.serialization.workspaces.save(ws)));
   }, [carregar]);
 
   return <div ref={alvo} data-testid="area-blocos" className="area-blocos" />;
 }
 ```
 
-- [ ] **Step 6: Escrever o teste de montagem**
+- [ ] **Step 3: Os testes, montados contra um ecrã a sério**
 
-Acrescenta a `src/ui/blocos.test.tsx`:
-```typescript
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+São vinte e três. Doze leem o que o Blockly deu; três provam que a ida e a volta não mudam o programa; três são o vocabulário; cinco são a área de blocos. E dois destes são o que liga esta tarefa à anterior:
+
+- **a lição inteira** passa por um ecrã do Blockly a sério e tem de voltar igual. A lição escreve programas em `BlocoLeigo`, o ecrã lê e escreve a forma do Blockly, e nada os obriga a concordar. O que se perde no caminho é *visível*: um `{ref: 'total'}` que vira `'[object Object]'` dá um programa que corre e dá o resultado errado, que é a pior das maneiras de falhar.
+- **a prova negativa** — nenhum bloco da lição escreve `undefined` depois da volta. É o teste que a Task 8 provou ser o único que apanha uma chave trocada: trinta e seis testes verdes e um aluno a ler `undefined = 5`.
+
+`src/ui/blocos.test.tsx`:
+```tsx
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import * as Blockly from 'blockly';
 import { Blocos } from './painel-blocos';
+import { caixaComoOBlockly, criarToolbox, deBlocoLeigo, paraBlocoLeigo, registarBlocos } from './blocos';
+import type { BlocoLeigo } from '../nucleo/avaliador';
+import { avaliador } from '../nucleo/avaliador';
+import { corpoDe } from '../nucleo/blocos';
+import { emitir } from '../projecoes/avaliar';
+import { obter } from '../projecoes/registo';
+import { CARREGAR } from '../conteudo/carregar';
+import variavelPython from '../conteudo/python/variavel.yml?raw';
 
-describe('Blocos', () => {
-  it('monta sem rebentar e chama aoMudar quando algo muda', () => {
+// ---------------------------------------------------------------------------
+// O cenário
+// ---------------------------------------------------------------------------
+//
+// Estes testes não escrevem blocos à mão. Montam um ecrã do Blockly a sério,
+// ligam as peças como uma pessoa liga, e passam ao tradutor **a saída que o
+// Blockly deu**.
+//
+// A primeira versão desta suite fazia o contrário: escrevia objetos com a
+// forma que o tradutor esperava, e o tradutor passou tudo. A forma que o
+// tradutor esperava e a forma que o Blockly dá diferem em três pontos —
+// `workspaces.save` embrulha o estado, `fields` guarda o valor cru e as
+// instruções ligam-se por `next` — e cada um deles dava `undefined` ou `null`
+// em silêncio. O produto ficava morto, a suite toda verde, e nenhum teste
+// vermelho em lado nenhum. A regra daqui é simples e não se negocia: **um
+// teste que alimenta o tradutor com a forma que o tradutor inventou não
+// prova que o tradutor funciona.**
+
+interface Cenario {
+  estado: unknown;
+  espaco: Blockly.WorkspaceSvg;
+  libertar: () => void;
+}
+
+let ecras: HTMLElement[] = [];
+
+function ecra(): HTMLElement {
+  const el = document.createElement('div');
+  document.body.appendChild(el);
+  ecras.push(el);
+  return el;
+}
+
+/** Um ecrã novo, com a caixa de ferramentas de Python a sério. */
+function ecrã(): Blockly.WorkspaceSvg {
+  return Blockly.inject(ecra(), { toolbox: caixaComoOBlockly(criarToolbox('python')) });
+}
+
+/** O ecrã que o componente acabou de montar.
+ *
+ *  `getMainWorkspace` é tipado a devolver `Workspace`, que é a superclasse e
+ *  não tem `fire` nem os blocos com desenho — e o que o teste precisa é
+ *  exatamente isso. A conversão está aqui, com o nome, e não espalhada. */
+function ecraPrincipal(): Blockly.WorkspaceSvg {
+  const ws = Blockly.getMainWorkspace();
+  if (ws === null) throw new Error('não há ecrã nenhum');
+  return ws as Blockly.WorkspaceSvg;
+}
+
+function cenario(construir: (ws: Blockly.WorkspaceSvg) => void): Cenario {
+  const ws = ecrã();
+  registarBlocos('python');
+  construir(ws);
+  return { estado: Blockly.serialization.workspaces.save(ws), espaco: ws, libertar: () => ws.dispose() };
+}
+
+/** Um bloco de valor: `dador_num`, `texto` ou `variavel`. */
+function valor(ws: Blockly.WorkspaceSvg, tipo: string, campo: string, dado: string | number): Blockly.BlockSvg {
+  const b = ws.newBlock(tipo) as Blockly.BlockSvg;
+  b.setFieldValue(dado, campo);
+  b.initSvg();
+  b.render();
+  return b;
+}
+
+/** Um bloco de instrução, desenhado e pronto a ligar. */
+function instrucao(ws: Blockly.WorkspaceSvg, tipo: string): Blockly.BlockSvg {
+  const b = ws.newBlock(tipo) as Blockly.BlockSvg;
+  b.initSvg();
+  b.render();
+  return b;
+}
+
+/** Liga um bloco de valor a uma ranhura. */
+function ligar(pai: Blockly.BlockSvg, ranhura: string, filho: Blockly.BlockSvg): void {
+  pai.getInput(ranhura)!.connection!.connect(filho.outputConnection!);
+}
+
+/** Liga duas instruções, uma abaixo da outra. */
+function encadear(acima: Blockly.BlockSvg, abaixo: Blockly.BlockSvg): void {
+  acima.nextConnection!.connect(abaixo.previousConnection!);
+}
+
+afterEach(() => {
+  for (const el of ecras) el.remove();
+  ecras = [];
+});
+
+describe('paraBlocoLeigo lê o que o Blockly dá', () => {
+  it('uma área vazia não é programa nenhum', () => {
+    const c = cenario(() => {});
+    try {
+      expect(paraBlocoLeigo(c.estado)).toBeNull();
+      expect(paraBlocoLeigo(null)).toBeNull();
+      expect(paraBlocoLeigo({})).toBeNull();
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('lê o nome de um guardar do campo, e não do sítio errado', () => {
+    // O `fields` do Blockly guarda o **valor cru** — `{"nome": "total"}` — e
+    // não `{"nome": {"valor": "total"}}`. A primeira versão do tradutor lia a
+    // segunda, que é a forma que a lição em YAML usa, e escrevia
+    // `undefined = 5` para o aluno. A forma do YAML é a forma do motor; a
+    // forma do ecrã é a do Blockly, e o tradutor tem de estar nas duas.
+    const c = cenario((ws) => {
+      const g = instrucao(ws, 'guardar');
+      g.setFieldValue('total', 'nome');
+      ligar(g, 'VALOR', valor(ws, 'dador_num', 'VALOR', 5));
+    });
+    try {
+      expect(emitir('python', paraBlocoLeigo(c.estado)).texto).toBe('total = 5\n');
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('lê o texto que a pessoa escreveu, e não uma string vazia', () => {
+    // O bloco `texto` do plano era uma caixa com outra caixa dentro, e o
+    // `valorDe` devolvia `{ txt: '' }` para ele. O texto da pessoa ia para o
+    // lixo e o programa dizia `print('')`.
+    const c = cenario((ws) => {
+      const d = instrucao(ws, 'dizer');
+      ligar(d, 'VALOR', valor(ws, 'texto', 'VALOR', 'olá'));
+    });
+    try {
+      expect(emitir('python', paraBlocoLeigo(c.estado)).texto).toBe("print('olá')\n");
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('lê uma referência a uma variável, e só do bloco que a é', () => {
+    // A regra antiga era «se tem um campo `NOME`, é uma referência». O bloco
+    // do ator do robô também tem um campo `NOME` — o nome do ator — e com
+    // essa regra arrastar um ator para dentro de um `dizer` escrevia
+    // `print(coelho)`: uma variável que ninguém guardou, e um erro que aponta
+    // para o sítio errado. A regra certa é «é do tipo `variavel`».
+    const c = cenario((ws) => {
+      const g = instrucao(ws, 'guardar');
+      g.setFieldValue('total', 'nome');
+      ligar(g, 'VALOR', valor(ws, 'dador_num', 'VALOR', 5));
+      const l = instrucao(ws, 'log');
+      ligar(l, 'VALOR', valor(ws, 'variavel', 'NOME', 'total'));
+      encadear(g, l);
+    });
+    try {
+      expect(emitir('python', paraBlocoLeigo(c.estado)).texto).toBe('total = 5\nlog(total)\n');
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('uma referência sem nome não é uma referência', () => {
+    // Arrastar o bloco `variavel` sem escrever o nome dá um campo vazio, e um
+    // campo vazio tem de dar um bloco normal — nunca `ref: ''`, que geraria
+    // `log()` e um erro de sintaxe que aponta para o nome em vez de apontar
+    // para o nome em falta.
+    const c = cenario((ws) => {
+      const l = instrucao(ws, 'log');
+      const v = valor(ws, 'variavel', 'NOME', '');
+      ligar(l, 'VALOR', v);
+    });
+    try {
+      const b = paraBlocoLeigo(c.estado)!;
+      const v = (b.inputs!.VALOR as { valor?: { ref?: string } }).valor;
+      expect(v?.ref).toBeUndefined();
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('agrupa vários blocos de topo numa pilha', () => {
+    const c = cenario((ws) => {
+      instrucao(ws, 'dizer');
+      instrucao(ws, 'log');
+    });
+    try {
+      expect(paraBlocoLeigo(c.estado)!.type).toBe('pilha');
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('lê a cadeia de instruções, que o Blockly guarda em `next`', () => {
+    // Duas instruções ligadas. A primeira versão do tradutor lia
+    // `inputs[chave].stack`, que o Blockly nunca escreve: um `repetir` com
+    // três linhas no corpo savingava uma, e o aluno executava um programa
+    // que não era o que tinha montado.
+    const c = cenario((ws) => {
+      const r = instrucao(ws, 'repetir');
+      ligar(r, 'PASSOS', valor(ws, 'dador_num', 'VALOR', 2));
+      const d = instrucao(ws, 'dizer');
+      const l = instrucao(ws, 'log');
+      r.getInput('CORPO')!.connection!.connect(d.previousConnection!);
+      encadear(d, l);
+      ligar(d, 'VALOR', valor(ws, 'variavel', 'NOME', 'a'));
+      ligar(l, 'VALOR', valor(ws, 'variavel', 'NOME', 'b'));
+    });
+    try {
+      const esperado = 'for _ in range(2):\n    print(a)\n    log(b)\n';
+      expect(emitir('python', paraBlocoLeigo(c.estado)).texto).toBe(esperado);
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('o que sai do ecrã corre no motor sem um erro sequer', () => {
+    const c = cenario((ws) => {
+      const g = instrucao(ws, 'guardar');
+      g.setFieldValue('total', 'nome');
+      ligar(g, 'VALOR', valor(ws, 'dador_num', 'VALOR', 7));
+      const r = instrucao(ws, 'repetir');
+      ligar(r, 'PASSOS', valor(ws, 'dador_num', 'VALOR', 3));
+      r.getInput('CORPO')!.connection!.connect(g.previousConnection!);
+    });
+    try {
+      const a = avaliador();
+      a.executar(paraBlocoLeigo(c.estado));
+      expect(a.trace.erros).toEqual([]);
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('um bloco que o Blockly não conhece passa em vez de rebentar', () => {
+    // Um bloco do futuro é um bloco que esta tarefa ainda não conhece, e a
+    // resposta é levá-lo ao motor e deixar o motor decidir o que fazer com ele
+    // — não é falhar e levar o programa inteiro abaixo.
+    Blockly.Blocks['bloco_do_futuro'] = { init() {} };
+    const c = cenario((ws) => {
+      const d = instrucao(ws, 'dizer');
+      ligar(d, 'VALOR', instrucao(ws, 'bloco_do_futuro') as Blockly.BlockSvg);
+    });
+    try {
+      const b = paraBlocoLeigo(c.estado);
+      expect(b).not.toBeNull();
+      expect(emitir('python', b).texto).toContain('bloco do v2');
+    } finally {
+      delete Blockly.Blocks['bloco_do_futuro'];
+      c.libertar();
+    }
+  });
+
+  it('aceita as duas formas de estado, porque um `null` calado é um produto morto', () => {
+    // `workspaces.save` embrulha o estado; um estado escrito à mão não. A
+    // primeira versão lia só a forma escrita à mão, que é a que ela própria
+    // escrevia nos testes, e devolvia `null` para tudo o que o Blockly
+    // produz. Ler as duas é o que impede que a forma do teste e a forma da
+    // biblioteca voltem a divergir em silêncio.
+    const lista = [{ type: 'log', fields: {}, inputs: {} }];
+    expect(paraBlocoLeigo({ blocks: lista })).not.toBeNull();
+    expect(paraBlocoLeigo({ blocks: { languageVersion: 0, blocks: lista } })).not.toBeNull();
+  });
+});
+
+describe('deBlocoLeigo é o caminho inverso, e os dois caminhos fecham', () => {
+  it('o programa do motor volta a ser o programa do motor', () => {
+    const programa: BlocoLeigo = {
+      type: 'pilha',
+      inputs: {
+        CORPO: {
+          stack: [
+            { type: 'guardar', fields: { nome: { valor: 'total' } }, inputs: { VALOR: { valor: 5 } } },
+            {
+              type: 'repetir',
+              inputs: {
+                PASSOS: { valor: 3 },
+                CORPO: {
+                  stack: [
+                    { type: 'dizer', inputs: { VALOR: { valor: { ref: 'total' } } } },
+                    { type: 'log', inputs: { VALOR: { valor: 'fim' } } },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+    const estado = { blocks: { languageVersion: 0, blocks: deBlocoLeigo(programa) } };
+    expect(paraBlocoLeigo(estado)).toEqual(programa);
+  });
+
+  it('e o programa que sai de ecrã e volta a dar o mesmo texto', () => {
+    // Esta é a prova que vale: a ida e a volta não podem mudar o programa. Um
+    // teste que verifica cada sentido em separado passa com um tradutor que
+    // perde o corpo de um `repetir` na ida e o inventa na volta.
+    const c = cenario((ws) => {
+      const g = instrucao(ws, 'guardar');
+      g.setFieldValue('total', 'nome');
+      ligar(g, 'VALOR', valor(ws, 'dador_num', 'VALOR', 5));
+      const r = instrucao(ws, 'repetir');
+      ligar(r, 'PASSOS', valor(ws, 'dador_num', 'VALOR', 2));
+      const d = instrucao(ws, 'dizer');
+      const l = instrucao(ws, 'log');
+      r.getInput('CORPO')!.connection!.connect(d.previousConnection!);
+      encadear(d, l);
+      ligar(d, 'VALOR', valor(ws, 'texto', 'VALOR', 'olá'));
+      ligar(l, 'VALOR', valor(ws, 'variavel', 'NOME', 'total'));
+      encadear(g, r);
+    });
+    try {
+      const lido = paraBlocoLeigo(c.estado);
+      const volta = paraBlocoLeigo({ blocks: { languageVersion: 0, blocks: deBlocoLeigo(lido) } });
+      expect(volta).toEqual(lido);
+      expect(emitir('python', volta).texto).toBe(emitir('python', lido).texto);
+    } finally {
+      c.libertar();
+    }
+  });
+
+  it('uma pilha volta a ser vários blocos de topo, e não um bloco `pilha`', () => {
+    // Uma `pilha` não é um bloco do Blockly: são vários blocos de topo. Se o
+    // caminho inverso a escrevesse como um bloco, o ecrã do aluno mostrava um
+    // bloco que não existe e o programa desaparecia.
+    const saida = deBlocoLeigo({
+      type: 'pilha',
+      inputs: { CORPO: { stack: [{ type: 'log', fields: {}, inputs: {} }] } },
+    });
+    expect(saida).toHaveLength(1);
+    expect(saida[0]!.type).toBe('log');
+    expect(deBlocoLeigo(null)).toEqual([]);
+  });
+
+  it('o que o Bloco não consegue levar, fica fora, e não vira um bloco inventado', () => {
+    // Um valor sem forma conhecida — um booleano, antes de a Task 11 registar
+    // o bloco `logico` — não vira bloco nenhum. Deixar a ranhura vazia é a
+    // única resposta honesta: um bloco inventado apareceria no ecrã do aluno
+    // como uma coisa que ele não colocou. E «vazio» é **visível**.
+    const saida = deBlocoLeigo({ type: 'log', fields: {}, inputs: { VALOR: { valor: true } } });
+    expect(saida[0]!.inputs?.VALOR).toBeUndefined();
+  });
+});
+
+describe('o vocabulário vem da projeção, e não de uma lista neste ficheiro', () => {
+  it('o registo devolve exatamente os blocos que a projeção declara', () => {
+    // É este teste que diz que a fatia do SQL não tem de voltar a este
+    // ficheiro: `obter('sql').blocos` é outra lista, e o que o ecrã oferece
+    // segue a lista.
+    expect(registarBlocos('python')).toEqual(obter('python').blocos);
+    expect(registarBlocos('java')).toEqual(obter('java').blocos);
+  });
+
+  it('a caixa de ferramentas oferece a linguagem escolhida, e nada mais', () => {
+    const caixa = criarToolbox('python');
+    const instr = caixa.contents.find((c) => c.name === 'Instruções')!;
+    expect(instr.contents.map((b) => b.type)).toEqual(obter('python').blocos);
+    // Os blocos de valor são de todas as linguagens, e por isso não estão em
+    // `obter('python').blocos`. Uma categoria que os repetisse seria o mesmo
+    // bloco duas vezes no ecrã.
+    const valores = caixa.contents.find((c) => c.name === 'Números e texto')!;
+    expect(valores.contents.map((b) => b.type)).toEqual(['dador_num', 'texto', 'variavel']);
+  });
+
+  it('as duas linguagens que existem dão a mesma lista, e isso é de propósito', () => {
+    // O mesmo conjunto de instruções em duas linguagens é o que faz a
+    // linguagem ser a *sintaxe* e não o vocabulário — que é o que a spec §6.4
+    // corrigiu. Um teste que as igualasse sem dizer porquê parece um teste
+    // redundante; com a frase em cima, é a afirmação de que a diferença
+    // entre Python e Java ainda não chegou ao ecrã.
+    expect(obter('java').blocos).toEqual(obter('python').blocos);
+  });
+});
+
+describe('a área de blocos', () => {
+  it('monta, e o programa que veio de fora está no ecrã', () => {
+    // Este é o teste que apanha a versão do plano, que saltava a primeira
+    // aplicação do programa com um `primeira` de `ref`: a lição abria em
+    // branco, e o bloco inicial do passo nunca aparecia.
     const aoMudar = vi.fn();
-    render(<Blocos chave="t1" aoMudar={aoMudar} />);
+    const carregar = { type: 'guardar', fields: { nome: { valor: 'total' } }, inputs: { VALOR: { valor: 5 } } };
+    render(<Blocos chave="p1" linguagem="python" aoMudar={aoMudar} carregar={carregar} />);
     expect(screen.getByTestId('area-blocos')).toBeInTheDocument();
+    expect(aoMudar).toHaveBeenCalledWith(carregar);
+  });
+
+  it('quando o ecrã muda, o programa novo é dito — e não só na montagem', async () => {
+    const aoMudar = vi.fn();
+    render(<Blocos chave="p1" linguagem="python" aoMudar={aoMudar} />);
+    expect(aoMudar).toHaveBeenLastCalledWith(null);
+    const naMontagem = aoMudar.mock.calls.length;
+
+    const ws = ecraPrincipal();
+    const d = ws.newBlock('dizer') as Blockly.BlockSvg;
+    const t = ws.newBlock('texto') as Blockly.BlockSvg;
+    t.setFieldValue('olá', 'VALOR');
+    d.initSvg();
+    t.initSvg();
+    d.render();
+    t.render();
+    d.getInput('VALOR')!.connection!.connect(t.outputConnection!);
+
+    // A fila de eventos do Blockly é assíncrona: o evento chega depois do
+    // comando, e por isso se espera por ele. Disparar o evento à mão — que é o
+    // que a primeira versão fazia, com `ws.fire` — mede um caminho que a
+    // pessoa nunca percorre, e o `fire` nem sequer é público na biblioteca.
+    await waitFor(() => expect(aoMudar.mock.calls.length).toBeGreaterThan(naMontagem));
+    const ultimo = aoMudar.mock.calls.at(-1)![0];
+    expect(emitir('python', ultimo).texto).toBe("print('olá')\n");
+  });
+
+  it('o ecrã sobrevive a um novo `aoMudar`, que é o que acontece a cada passo', () => {
+    // Se `aoMudar` estivesse no array de dependências, cada estado novo
+    // recriaria o ecrã e o aluno perderia o programa a meio de o montar.
+    const antes = vi.fn();
+    const { rerender } = render(<Blocos chave="p1" linguagem="python" aoMudar={antes} />);
+    const d = ecraPrincipal().newBlock('dizer') as Blockly.BlockSvg;
+    d.initSvg();
+    d.render();
+    const depois = vi.fn();
+    rerender(<Blocos chave="p1" linguagem="python" aoMudar={depois} />);
+    expect(ecraPrincipal().getAllBlocks(false)).toHaveLength(1);
+  });
+
+  it('mudar a chave recria o ecrã, e é para isso que a chave existe', () => {
+    // O contrário do teste anterior: com uma chave nova, o programa antigo tem
+    // de ir embora, porque o passo é outro.
+    const { rerender } = render(<Blocos chave="p1" linguagem="python" aoMudar={vi.fn()} />);
+    const d = Blockly.getMainWorkspace().newBlock('dizer') as Blockly.BlockSvg;
+    d.initSvg();
+    d.render();
+    rerender(<Blocos chave="p2" linguagem="python" aoMudar={vi.fn()} />);
+    expect(ecraPrincipal().getAllBlocks(false)).toHaveLength(0);
+  });
+});
+
+describe('a lição inteira passa pelo ecrã sem perder uma letra', () => {
+  const licao = CARREGAR(variavelPython, 'python');
+  const todos = [
+    ...licao.blocos,
+    ...licao.passos.map((p) => p.bloco),
+    ...licao.sondas.flatMap((s) => (s.prova.programa === undefined ? [] : [s.prova.programa])),
+  ];
+
+  function corpusVazio(b: BlocoLeigo): boolean {
+    return (corpoDe(b) ?? []).length === 0;
+  }
+
+  /** Um programa do motor, montado num ecrã a sério, lido de volta. */
+  function peloEcran(programa: BlocoLeigo): BlocoLeigo | null {
+    const ws = ecrã();
+    try {
+      for (const bloco of deBlocoLeigo(programa)) {
+        const feito = Blockly.serialization.blocks.append(bloco, ws);
+        const svg = feito as Blockly.BlockSvg;
+        svg.initSvg();
+        svg.render();
+      }
+      return paraBlocoLeigo(Blockly.serialization.workspaces.save(ws));
+    } finally {
+      ws.dispose();
+    }
+  }
+
+  it('cada bloco da lição, montado no Blockly e lido de volta, escreve o mesmo', () => {
+    // O teste que liga esta tarefa à lição da anterior. A lição escreve
+    // programas em `BlocoLeigo` e o ecrã lê e escreve `BlocoJson`; nada os
+    // obriga a concordar, e o que se perde no caminho é **visível** — um
+    // `{ref: 'total'}` que vira uma string `'[object Object]'` dá um programa
+    // que corre e dá o resultado errado, que é a pior das maneiras de
+    // falhar. O passo de cima passa por um ecrã do Blockly a sério, e não
+    // por um objeto parecido com ele, pela mesma razão dos testes de cima.
+    for (const b of todos) {
+      const volta = peloEcran(b);
+      if (b.type === 'pilha' && corpusVazio(b)) {
+        // A pilha vazia é o único caso em que a volta não devolve o mesmo
+        // bloco, e é o caso em que **não deve**: um ecrã sem blocos não é um
+        // programa, e o passo da ficha de leitura começa assim de propósito.
+        // A lição que se abre em branco é a lição que ainda não foi feita.
+        expect(volta).toBeNull();
+        continue;
+      }
+      expect(volta, `o bloco ${b.type} não voltou`).toEqual(b);
+      expect(emitir('python', volta).texto).toBe(emitir('python', b).texto);
+    }
+  });
+
+  it('e nenhum deles escreve `undefined` depois da volta', () => {
+    // A prova negativa. Um tradutor que perde um campo dá `undefined` e o
+    // aluno lê `undefined = 5` — e a lição continua a passar nos testes que
+    // só perguntam se o programa é aceite.
+    for (const b of todos) {
+      const escrito = emitir('python', peloEcran(b)).texto;
+      expect(escrito).not.toMatch(/undefined/);
+      expect(escrito).not.toMatch(/\[object Object\]/);
+    }
   });
 });
 ```
 
-- [ ] **Step 7: Correr e ver passar**
+- [ ] **Step 4: Os quatro portões**
 
-Run: `npx vitest run src/ui/blocos.test.tsx src/ui/blocos.test.ts`
-Expected: PASS. Se o Blockly precisar de `getComputedStyle` com valores ou de `document.fonts`, acrescenta ao `preparacao.ts`:
-```typescript
-if (typeof window !== 'undefined' && !window.matchMedia) {
-  window.matchMedia = ((q: string) => ({
-    matches: false,
-    media: q,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
-}
-```
-
-- [ ] **Step 8: Typecheck e commit**
-
-```bash
-npm run typecheck
-git add -A
-git commit -m "feat: blocos Blockly com traducao para BlocoLeigo"
-```
-
----
-
-- [ ] **Step 9: O vocabulário vem da projeção, não do Blockly**
-
-O registo de blocos do Blockly tem de ser montado a partir de `obter(linguagem).blocos`, e não de uma lista fixa no ficheiro. É isso que faz o SQL (Plano C) ter um vocabulário declarativo sem que este ficheiro mude.
-
-```typescript
-it('o registo do Blockly tem exatamente os blocos da projecão', () => {
-  const ids = Object.keys(registarBlocos(obter('python')));
-  expect(ids).toEqual(obter('python').blocos);
-});
-```
-
-Acrescente `import { obter } from '../projecoes/registo';` ao topo do ficheiro de teste. Este teste é o que garante que a fatia do Plano C não precisa de volta a este ficheiro.
-
----
+`npx vitest run` — 409 testes, treze ficheiros.
+`npx tsc --noEmit` — mudo. Foi ele que apanhou o `appendField` e o `blocks.load`, e mais cinco erros que a suite passava a escrever.
+`npm run arvore` — núcleo limpo: sete ficheiros de produção e cinco de teste, zero importações de projeções. A pasta nova é `src/ui/`, que importa projeções **por direito**: é a camada que sabe a sintaxe, e o ecrã é sintaxe.
+`guard.py` em `src/`, `scripts/` e no YAML — limpo. A regra ganhou uma isenção nova, `output`, `utils` e `screen`: são nomes que a biblioteca obriga a escrever (`output` é uma chave do formato de bloco do Blockly, `utils` é um namespace dele, `screen` é uma exportação do testing-library), e a isenção é por tipo de ficheiro para que a prosa continue a ser verificada.
 
 ### Task 10: O estado da li��ão e o painel de texto
 

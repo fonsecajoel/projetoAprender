@@ -39,9 +39,16 @@ export const BLOCOS = {
   executar: 'executar',
   atribuir: 'atribuir',
   mostrar: 'mostrar',
+  variavel: 'variavel',
 } as const;
 
-export const CORES: Record<string, string> = {
+/** As cores, e a tabela é `as const` por uma razão que o compilador
+ *  impôs e que se provou ser a certa: com `Record<string, string>` e o
+ *  `noUncheckedIndexedAccess` ligado, `CORES.guardar` é `string | undefined`, e
+ *  uma cor em falta passava a ser uma cor qualquer — ou, pior, um `undefined`
+ *  entregue ao Blockly. Uma tabela de cores cujas chaves se podem perder não
+ *  é uma tabela de cores. */
+export const CORES = {
   guardar: '#2563eb',
   repetir: '#7c3aed',
   dizer: '#059669',
@@ -51,7 +58,8 @@ export const CORES: Record<string, string> = {
   texto: '#10b981',
   logico: '#f59e0b',
   acts: '#a855f7',
-};
+  variavel: '#0891b2',
+} as const;
 
 const PALAVRAS_PYTHON = new Set([
   'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def',
@@ -101,6 +109,18 @@ export function identificadorJava(nome: string): string {
   return identificadorDe(nome, PALAVRAS_JAVA);
 }
 
+/**
+ * O tipo *declarado* de um bloco, e só esse.
+ *
+ *  A palavra «declarado» está no nome por uma razão que a Task 11 vai pagar:
+ *  um bloco que traz o valor dentro de si — um número, um texto, um sim ou
+ *  não, um ator — tem um tipo antes de o programa correr. Uma referência a
+ *  uma variável **não tem**, e por isso `variavel` não está nesta tabela.
+ *
+ *  A ausência não é uma falha de preenchimento: é a resposta certa. O tipo de
+ *  `total` só existe depois da primeira atribuição, e quem a preenchesse com
+ *  «número» estaria a mentir ao aluno sobre a linguagem que ele escolheu.
+ */
 export const TIPO_DE_BLOCO: Record<string, Tipo> = {
   dador_num: 'número',
   texto: 'texto',

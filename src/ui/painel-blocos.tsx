@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as Blockly from 'blockly';
 import type { BlocoLeigo } from '../nucleo/avaliador';
 import type { Language } from '../nucleo/tipos';
+import { OPCOES_PONTE } from './blockly-tema';
 import { caixaComoOBlockly, criarToolbox, deBlocoLeigo, paraBlocoLeigo, registarBlocos } from './blocos';
 
 /** Põe um bloco acrescentado no ecrã.
@@ -58,7 +59,10 @@ export function Blocos({ aoMudar, carregar, chave, linguagem }: BlocosProps) {
     const elemento = alvo.current;
     if (elemento === null) return;
 
-    const injetado = Blockly.inject(elemento, { toolbox: caixaComoOBlockly(criarToolbox(linguagem)) });
+    const injetado = Blockly.inject(elemento, {
+      ...OPCOES_PONTE,
+      toolbox: caixaComoOBlockly(criarToolbox(linguagem)),
+    });
     espaco.current = injetado;
     registarBlocos(linguagem);
 

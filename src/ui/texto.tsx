@@ -81,7 +81,7 @@ export function PainelTexto({
         onChange={(e) => aoDigitar(e.target.value)}
       />
       <div className="painel-texto-acoes">
-        <button type="button" onClick={executar}>
+        <button type="button" className="btn btn-primario" onClick={executar}>
           Executar
         </button>
         {semBlocos ? (

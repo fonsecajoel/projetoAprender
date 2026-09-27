@@ -10,10 +10,13 @@ import type { Erro, Language, Recusa, Valor } from '../../nucleo/tipos';
 import { classificar, divergir as divergirNaLinguagem, emitir } from '../../projecoes/avaliar';
 import type { ClassesObservadas } from '../../projecoes/avaliar';
 import type { Licao } from '../../conteudo/esquema';
+import { NOMES } from '../../nucleo/tipos';
 
 export interface TelaProps {
   linguagem: Language;
   licao: Licao;
+  /** Volta ao seletor de linguagem. */
+  aoTrocarLinguagem?: () => void;
   /** O passo em que se abre. Existe para os testes poderem medir cada passo
    *  sem fazer a pessoa chegar lá a carregar em botões — e é a mesma razão
    *  pela qual a lição tem quinze passos e não quinze ecrãs. */
@@ -49,7 +52,7 @@ const SEM_CORRIDA: Corrida | null = null;
  *  «guarda um número com o nome `total`» e abre o painel vazio obriga a
  *  pessoa a saber a sintaxe antes de lhe terem ensinado nada, e o ficheiro
  *  de lição tem a linha escrita para ser lida antes de ser montada. */
-export function Tela({ linguagem, licao, passoInicial = 0 }: TelaProps) {
+export function Tela({ linguagem, licao, aoTrocarLinguagem, passoInicial = 0 }: TelaProps) {
   const estado = useLicao(licao, passoInicial);
   const [programa, definirPrograma] = useState<BlocoLeigo | null>(null);
   const [corrida, definirCorrida] = useState<Corrida | null>(SEM_CORRIDA);
@@ -63,6 +66,11 @@ export function Tela({ linguagem, licao, passoInicial = 0 }: TelaProps) {
   useEffect(() => {
     estado.definirErros([]);
   }, [estado.indicePasso]);
+
+  useEffect(() => {
+    definirCorrida(SEM_CORRIDA);
+    definirDivergencias([]);
+  }, [estado.indicePasso, estado.momento]);
 
   /** O programa do passo escrito na linguagem escolhida.
    *
@@ -161,10 +169,27 @@ export function Tela({ linguagem, licao, passoInicial = 0 }: TelaProps) {
 
   const revelado = estado.momentoActual !== null && (revelados[estado.momentoActual.id] ?? false);
 
+  useEffect(() => {
+    const aoTecla = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
+      const fonte = estado.momentoActual?.fonte ?? 'blocos';
+      if (fonte !== 'blocos') return;
+      e.preventDefault();
+      correr();
+    };
+    window.addEventListener('keydown', aoTecla);
+    return () => window.removeEventListener('keydown', aoTecla);
+  }, [correr, estado.momentoActual]);
+
   return (
     <main className="tela">
-      <Cabecalho estado={estado} />
-      <PassoView
+      <Cabecalho
+        estado={estado}
+        linguagem={linguagem}
+        aoTrocarLinguagem={aoTrocarLinguagem}
+      />
+      <div className="tela-corpo">
+        <PassoView
         estado={estado}
         linguagem={linguagem}
         programa={programa}
@@ -182,20 +207,64 @@ export function Tela({ linguagem, licao, passoInicial = 0 }: TelaProps) {
         aoRevelar={revelar}
         aoContinuar={continuar}
         aoVoltar={voltar}
-      />
+          aoIrParaPasso={estado.irPara}
+        />
+      </div>
     </main>
   );
 }
 
 /** Onde está, e o que esta lição é. */
-function Cabecalho({ estado }: { estado: EstadoLicao }) {
+function Cabecalho({
+  estado,
+  linguagem,
+  aoTrocarLinguagem,
+}: {
+  estado: EstadoLicao;
+  linguagem: Language;
+  aoTrocarLinguagem?: () => void;
+}) {
+  const passosFeitos = estado.indicePasso;
+  const momentoNoPasso =
+    estado.totalMomentos <= 1 ? 1 : (estado.momento + (estado.momentoActual !== null && estado.feito[estado.momentoActual.id] ? 1 : 0)) / estado.totalMomentos;
+  const fracaoPassoAtual = 1 / estado.totalPassos;
+  const progresso =
+    ((passosFeitos + momentoNoPasso * fracaoPassoAtual) / estado.totalPassos) * 100;
+
   return (
     <header className="tela-cabecalho">
-      <h1>{estado.licao.titulo}</h1>
-      <p className="tela-porque">{estado.licao.porqueTitulo.trim()}</p>
-      <p className="tela-progresso">
-        {`Passo ${estado.indicePasso + 1} de ${estado.totalPassos}`}
-      </p>
+      <div className="tela-barra-topo">
+        <div className="tela-barra-esq">
+          <span className="tela-marca">Ponte</span>
+          <span className="tela-separador" aria-hidden="true" />
+          <span className="tela-linguagem">{NOMES[linguagem]}</span>
+        </div>
+        {aoTrocarLinguagem === undefined ? null : (
+          <button type="button" className="btn btn-fantasma tela-trocar" onClick={aoTrocarLinguagem}>
+            Trocar linguagem
+          </button>
+        )}
+      </div>
+      <div
+        className="tela-barra-progresso"
+        role="progressbar"
+        aria-valuenow={Math.round(progresso)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Progresso na lição"
+      >
+        <div className="tela-barra-progresso-cheio" style={{ width: `${progresso}%` }} />
+      </div>
+      <div className="tela-cabecalho-texto">
+        <h1>{estado.licao.titulo}</h1>
+        <p className="tela-porque">{estado.licao.porqueTitulo.trim()}</p>
+        <p className="tela-progresso">
+          {`Passo ${estado.indicePasso + 1} de ${estado.totalPassos}`}
+          {estado.totalMomentos > 1
+            ? ` · Momento ${estado.momento + 1} de ${estado.totalMomentos}`
+            : ''}
+        </p>
+      </div>
     </header>
   );
 }

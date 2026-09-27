@@ -3,6 +3,8 @@ import { PORTA_ENTRADA, PORTA_SAIDA, PainelRobo } from '../robo';
 import { PainelTexto } from '../texto';
 import { ROTULOS } from '../tipos';
 import type { EstadoLicao } from '../estado';
+import { Celebracao } from './Celebracao';
+import { MapaPassos } from './MapaPassos';
 import { SondasView } from './SondasView';
 import type { BlocoLeigo } from '../../nucleo/avaliador';
 import type { Divergencia } from '../../nucleo/divergencia';
@@ -32,6 +34,7 @@ export interface PassoViewProps {
   aoRevelar: () => void;
   aoContinuar: () => void;
   aoVoltar: () => void;
+  aoIrParaPasso: (indice: number) => void;
 }
 
 /** O corpo de um passo: o que a lição pede, o programa, e o que fica.
@@ -63,92 +66,132 @@ export function PassoView({
   aoRevelar,
   aoContinuar,
   aoVoltar,
+  aoIrParaPasso,
 }: PassoViewProps) {
   const { passo, momentoActual, referencia } = estado;
   const fonte = momentoActual?.fonte ?? 'blocos';
   const visto = momentoActual !== null && estado.feito[momentoActual.id] === true;
   const nenhum = passo.momentos.length;
-
   return (
-    <section className="passo" aria-label="O passo">
-      <p className="passo-fase">{ROTULOS[passo.fase]}</p>
-      <p className="passo-porque">{passo.porque.trim()}</p>
-      {passo.nomear === undefined ? null : <p className="passo-palavra">{passo.nomear}</p>}
-
-      <SondasView
-        sonda={estado.sonda}
-        observada={observada}
-        motivo={motivo}
-        revelado={revelado}
-        aoRevelar={aoRevelar}
+    <section className={`passo${visto ? ' passo-visto' : ''}`} aria-label="O passo">
+      <MapaPassos
+        passos={estado.licao.passos}
+        indiceActual={estado.indicePasso}
+        aoIrPara={aoIrParaPasso}
       />
+      <div className="passo-layout">
+        <aside className="passo-instrucoes">
+          <Celebracao activa={visto} />
+          <p className="passo-fase">{ROTULOS[passo.fase]}</p>
+          <p className="passo-porque">{passo.porque.trim()}</p>
+          {passo.nomear === undefined ? null : <p className="passo-palavra">{passo.nomear}</p>}
 
-      {fonte === 'blocos' ? (
-        <div className="passo-blocos">
-          <Blocos
-            aoMudar={aoMudar}
-            chave={`${estado.indicePasso}-${estado.momento}`}
-            linguagem={linguagem}
-            carregar={passo.bloco}
+          <SondasView
+            sonda={estado.sonda}
+            observada={observada}
+            motivo={motivo}
+            revelado={revelado}
+            aoRevelar={aoRevelar}
           />
-          <PainelRobo
-            portas={[PORTA_ENTRADA, PORTA_SAIDA]}
-            valores={valores}
-            recusa={recusa}
-          />
-          <button type="button" onClick={aoCorrer}>
-            Correr o programa
-          </button>
+
+          {fonte === 'leitura' ? (
+            <Pergunta momento={momentoActual} resposta={estado.respostas} aoResponder={aoResponder} />
+          ) : null}
+
+          {estado.erros.length === 0 ? null : (
+            <div className="erros" role="alert">
+              <p className="erros-titulo">O que o programa fez</p>
+              <ul>
+                {estado.erros.map((erro, i) => (
+                  <li key={`${erro.classe}-${i}`} className="erro">
+                    <p className="erro-classe">{erro.classe}</p>
+                    <p className="erro-porque">{erro.porque}</p>
+                    <p className="erro-remedio">{erro.remedio}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <footer className="passo-rodape-instrucoes">
+            <p className="passo-progresso">{`Momento ${estado.momento + 1} de ${nenhum}`}</p>
+            {visto ? (
+              <p className="passo-completo" role="status">
+                <span className="passo-completo-icone" aria-hidden="true">✓</span>
+                Este momento está completo. Podes continuar.
+              </p>
+            ) : (
+              <p className="passo-falta">
+                {fonte === 'leitura'
+                  ? 'Ainda falta este momento: responde com uma frase sobre a linha.'
+                  : fonte === 'texto'
+                    ? 'Ainda falta este momento: escreve código equivalente aos blocos.'
+                    : 'Ainda falta este momento: corre o programa e vê o que acontece.'}
+              </p>
+            )}
+            <div className="passo-acoes">
+              <button type="button" className="btn btn-secundario" onClick={aoVoltar}>
+                Voltar
+              </button>
+              <button type="button" className="btn btn-primario" onClick={aoContinuar}>
+                Continuar
+              </button>
+            </div>
+          </footer>
+        </aside>
+
+        <div className="passo-workspace" data-fonte={fonte}>
+          {fonte === 'leitura' && referencia !== undefined ? (
+            <Ficha referencia={referencia} destaque />
+          ) : null}
+
+          {fonte === 'blocos' ? (
+            <div className="passo-blocos">
+              <div className="workspace-cabeca">
+                <h2 className="workspace-titulo">Área de trabalho</h2>
+                <p className="workspace-dica">Monta o programa com blocos e corre para ver o resultado.</p>
+              </div>
+              <div className="workspace-blocos">
+                <Blocos
+                  aoMudar={aoMudar}
+                  chave={`${estado.indicePasso}-${estado.momento}`}
+                  linguagem={linguagem}
+                  carregar={passo.bloco}
+                />
+              </div>
+              <div className="workspace-barra-inferior">
+                <PainelRobo
+                  portas={[PORTA_ENTRADA, PORTA_SAIDA]}
+                  valores={valores}
+                  recusa={recusa}
+                />
+                <div className="workspace-correr">
+                  <button type="button" className="btn btn-correr" onClick={aoCorrer}>
+                    Correr o programa
+                  </button>
+                  <p className="workspace-atalho">
+                    Atalho: <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {fonte === 'texto' ? (
+            <div className="passo-editor">
+              <div className="workspace-cabeca">
+                <h2 className="workspace-titulo">Editor</h2>
+                <p className="workspace-dica">Escreve o mesmo programa em código — o painel compara com os blocos.</p>
+              </div>
+              <PainelTexto
+                linguagem={linguagem}
+                resposta={textoInicial}
+                aoComparar={aoComparar}
+                divergencias={divergencias}
+              />
+            </div>
+          ) : null}
         </div>
-      ) : null}
-
-      {fonte === 'texto' ? (
-        <PainelTexto
-          linguagem={linguagem}
-          resposta={textoInicial}
-          aoComparar={aoComparar}
-          divergencias={divergencias}
-        />
-      ) : null}
-
-      {fonte === 'leitura' ? (
-        <div className="passo-leitura">
-          {referencia === undefined ? null : <Ficha referencia={referencia} />}
-          <Pergunta momento={momentoActual} resposta={estado.respostas} aoResponder={aoResponder} />
-        </div>
-      ) : null}
-
-      {estado.erros.length === 0 ? null : (
-        <div className="erros" role="alert">
-          <p className="erros-titulo">O que o programa fez</p>
-          <ul>
-            {estado.erros.map((erro, i) => (
-              <li key={`${erro.classe}-${i}`} className="erro">
-                <p className="erro-classe">{erro.classe}</p>
-                <p className="erro-porque">{erro.porque}</p>
-                <p className="erro-remedio">{erro.remedio}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <p className="passo-progresso">{`Momento ${estado.momento + 1} de ${nenhum}`}</p>
-      {visto ? null : (
-        <p className="passo-falta">
-          {fonte === 'leitura'
-            ? 'Ainda falta este momento: responde com uma frase sobre a linha.'
-            : 'Ainda falta este momento: corre o programa e vê o que acontece.'}
-        </p>
-      )}
-
-      <div className="passo-acoes">
-        <button type="button" onClick={aoVoltar}>
-          Voltar
-        </button>
-        <button type="button" onClick={aoContinuar}>
-          Continuar
-        </button>
       </div>
     </section>
   );
@@ -163,14 +206,21 @@ export function PassoView({
  *  sobre essa linha ficaria sem resposta possível. Por isso cada linha vai
  *  dentro de um elemento com a linha preservada tal e qual, e o teste
  *  compara o `textContent` e não o texto do ecrã. */
-function Ficha({ referencia }: { referencia: { nome: string; linhas: string[] } }) {
+function Ficha({
+  referencia,
+  destaque = false,
+}: {
+  referencia: { nome: string; linhas: string[] };
+  destaque?: boolean;
+}) {
   return (
-    <div className="ficha">
+    <div className={destaque ? 'ficha ficha-editor' : 'ficha'}>
       <h2 className="ficha-nome">{referencia.nome}</h2>
       <ol className="ficha-linhas">
         {referencia.linhas.map((linha, i) => (
-          <li key={`${i}-${linha}`} className="ficha-linha" data-linha={i + 1}>
-            <code>{linha}</code>
+          <li key={`${i}-${linha}`} className="ficha-linha">
+            <span className="ficha-num" aria-hidden="true">{i + 1}</span>
+            <code data-linha={i + 1}>{linha}</code>
           </li>
         ))}
       </ol>

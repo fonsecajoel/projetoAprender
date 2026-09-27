@@ -55,5 +55,11 @@ export function Aplicacao() {
     );
   }
 
-  return <Tela linguagem={linguagem} licao={CARREGAR(bruto, linguagem)} />;
+  return (
+    <Tela
+      linguagem={linguagem}
+      licao={CARREGAR(bruto, linguagem)}
+      aoTrocarLinguagem={() => definirLinguagem(null)}
+    />
+  );
 }

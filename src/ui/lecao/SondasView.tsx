@@ -40,7 +40,7 @@ export function SondasView({ sonda, observada, motivo, revelado, aoRevelar }: So
           fizeste conta na mesma — o produto não tem opinião sobre o teu trabalho, só
           tem sobre as sondagens.
         </p>
-        <button type="button" onClick={aoRevelar}>
+        <button type="button" className="btn btn-fantasma" onClick={aoRevelar}>
           Ver a resposta
         </button>
       </section>
@@ -50,9 +50,15 @@ export function SondasView({ sonda, observada, motivo, revelado, aoRevelar }: So
   const bateu = observada !== null && observada === sonda.esperado.classe;
 
   return (
-    <section className="sondas">
+    <section className={`sondas${bateu ? ' sondas-ok' : observada !== null ? ' sondas-pendente' : ''}`}>
+      <div className="sonda-cabeca">
+        <span className="sonda-etiqueta">Objetivo</span>
+        {bateu ? <span className="sonda-estado-ok" aria-hidden="true">Concluído</span> : null}
+      </div>
       <p className="sonda-pergunta">{sonda.pergunta}</p>
-      {observada === null ? null : (
+      {observada === null ? (
+        <p className="sonda-aguarda">Corre o programa ou responde para veres o veredicto aqui.</p>
+      ) : (
         <p className={bateu ? 'sonda-veredicto' : 'sonda-veredicto sonda-veredicto-falta'}>
           {bateu
             ? `Agora já viste o que a sondagem queria ver. Isto deu ${observada}.`
@@ -68,7 +74,7 @@ export function SondasView({ sonda, observada, motivo, revelado, aoRevelar }: So
           </p>
         </div>
       ) : null}
-      <button type="button" onClick={aoRevelar}>
+      <button type="button" className="btn btn-fantasma" onClick={aoRevelar}>
         Ver a resposta
       </button>
     </section>

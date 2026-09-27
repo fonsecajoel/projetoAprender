@@ -1,4 +1,5 @@
 import type { Language } from '../../nucleo/tipos';
+import './seletor.css';
 
 export interface OpcaoLinguagem {
   linguagem: Language;
@@ -30,21 +31,42 @@ export interface SeletorLinguagemProps {
  *  sabe se foi ela ou o produto. Sem botão, a leitura é a mesma para todos —
  *  a pessoa lê o cartão, lê a razão, e segue em frente. */
 export function SeletorLinguagem({ opcoes, aoEscolher }: SeletorLinguagemProps) {
+  const prontas = opcoes.filter((o) => o.pronta).length;
+
   return (
     <main className="seletor">
-      <h1>Qual linguagem queres ler?</h1>
-      <p className="seletor-pergunta">
-        Escolhe uma. Vais aprender só essa, e a próxima vez que abrires um
-        ficheiro dela vais saber o que está a ser lido.
-      </p>
+      <header className="seletor-hero">
+        <p className="seletor-marca">Ponte</p>
+        <h1>Aprende código lendo o que importa</h1>
+        <p className="seletor-pergunta">
+          Escolhe uma linguagem. Cada cartão mostra três linhas reais — responde
+          «isto?» — e a lição ensina só essa, passo a passo, como num curso
+          interativo.
+        </p>
+        <p className="seletor-contagem">
+          {prontas === 0
+            ? 'Ainda não há lições prontas.'
+            : `${prontas} ${prontas === 1 ? 'curso disponível' : 'cursos disponíveis'} · ${opcoes.length} linguagens no mapa`}
+        </p>
+      </header>
       <ul className="seletor-lista">
-        {opcoes.map((opcao) => (
-          <li key={opcao.linguagem} className="seletor-cartao" data-linguagem={opcao.linguagem}>
-            <h2>{opcao.nome}</h2>
-            <pre className="seletor-exemplo">{opcao.exemplo.join('\n')}</pre>
+        {opcoes.map((opcao, i) => (
+          <li
+            key={opcao.linguagem}
+            className={`seletor-cartao${opcao.pronta ? ' seletor-cartao-pronto' : ' seletor-cartao-bloqueado'}${opcao.pronta && i === opcoes.findIndex((o) => o.pronta) ? ' seletor-cartao-destaque' : ''}`}
+            data-linguagem={opcao.linguagem}
+          >
+            <div className="seletor-cartao-cabeca">
+              <h2>{opcao.nome}</h2>
+              {opcao.pronta ? <span className="seletor-etiqueta">Pronto</span> : null}
+            </div>
+            <pre className="seletor-exemplo" aria-label={`Exemplo em ${opcao.nome}`}>
+              {opcao.exemplo.join('\n')}
+            </pre>
             {opcao.pronta ? (
               <button
                 type="button"
+                className="btn btn-primario seletor-cta"
                 onClick={() => aoEscolher(opcao.linguagem)}
               >
                 {`Começar ${opcao.nome}`}

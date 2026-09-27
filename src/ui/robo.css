@@ -1,7 +1,9 @@
 .robo {
+  flex: 1;
+  min-width: min(100%, 20rem);
   background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: 0.5rem;
+  border-radius: var(--raio);
   padding: 1rem;
 }
 

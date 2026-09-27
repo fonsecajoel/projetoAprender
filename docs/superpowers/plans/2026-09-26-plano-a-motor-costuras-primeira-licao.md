@@ -68,7 +68,7 @@ Cinco classes de erro ou modo de falha que a spec v2 implica, que nenhum teste d
 
 ## File Structure
 
-Os 44 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
+Os 45 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
 `- Create:` de cada tarefa — o que significa que se um ficheiro entrar na
 lista sem nenhuma tarefa o criar, ou sair da lista sem ser apagado de uma
 tarefa, esta secção está errada e o plano também. `java/variavel.yml` **não**
@@ -128,7 +128,9 @@ src/
                                        ErroDeAutoria.
     sondas.ts                          executarSonda.                           T7
     index.ts                           O que o `main.tsx` importa.              T7
-    python/variavel.yml                A lição. A tarefa que prova o formato.   T8
+    python/variavel.yml                A lição. Nasce mínima na T7, para que  T7, T8
+                                       essa tarefa seja verde, e a T8
+                                       reescreve-a a sério.
     portao.test.ts                     Todas as sondas de todas as lições,     T13
                                        e o portão do §16.1.
 
@@ -6477,8 +6479,16 @@ export function avaliarTexto(linguagem: Language, texto: string): Erro[] {
  *  divergência entre blocos e texto é um erro de comparação, não do programa.
  *  O programa está certo e o texto é que diverge, e uma sondagem que espera
  *  `Recusa` nunca pode ser satisfeita por alguém que escreveu a linha de outra
- *  maneira — seria dar a nota a uma coisa que não se estava a perguntar. */
-export type ClassesObservadas = 'Observacao' | 'Recusa' | 'FalhaRuntime';
+ *  maneira — seria dar a nota a uma coisa que não se estava a perguntar.
+ *
+ *  A lista está logo a seguir e é a fonte da verdade: o tipo sai dela, e não
+ *  o contrário. Com o tipo escrito à mão e a lista escrita noutro sítio — que
+ *  é o que o carregador de lições fazia — a lista é a que esquece uma das
+ *  três, e quem lê vê «as classes são: Observacao, FalhaRuntime», que é um
+ *  erro que se lê como um erro. */
+export const CLASSES_OBSERVADAS = ['Observacao', 'Recusa', 'FalhaRuntime'] as const;
+
+export type ClassesObservadas = (typeof CLASSES_OBSERVADAS)[number];
 
 export function classificar(erros: readonly Erro[]): ClassesObservadas {
   if (erros.some((e) => e.classe === 'Recusa')) return 'Recusa';
@@ -6629,321 +6639,788 @@ Duas regras desta tarefa são as que mais custam a descobrir depois:
 - **`prova.forma` tem de bater com a familia da linguagem.** Uma sonda de SQL provada com um programa é um erro de autoria, e tem de aparecer como `FalhaRuntime` com razao, não como `TypeError`.
 
 **Files:**
-- Create: `src/conteudo/esquema.ts`, `src/conteudo/carregar.ts`, `src/conteudo/sondas.ts`, `src/conteudo/index.ts`
+- Create: `src/conteudo/esquema.ts`, `src/conteudo/carregar.ts`, `src/conteudo/sondas.ts`, `src/conteudo/index.ts`,
+  `src/conteudo/python/variavel.yml` — a lição mais pequena que o formato aceita, para que
+  esta tarefa seja verde. A Task 8 reescreve-a com a lição a sério.
 - Test: `src/conteudo/carregar.test.ts`, `src/conteudo/sondas.test.ts`
 
 **Interfaces:**
 - Consumes: Task 1 — `Language`, `Erro`; Task 2 — `BlocoLeigo`; Task 3 — `EventoLido`; Task 4 — `Projection`, `Gerado`, `obter`; Task 5 — `java`; Task 6 — `avaliarTexto`, `classificar`, `ClassesObservadas`, `emitir`.
-- Produces: `Licao`, `Passo`, `Momento`, `Sonda`, `Esperado`, `Prova`, `Bloco`, `Fase`, `CARREGAR(texto, linguagem)`, `ErroDeAutoria`, `TEXTOS`, `LICSOES`, `temLicao(linguagem)`, `executarSonda(sonda, linguagem)`, `ResultadoSonda`, `FORMAS_POR_FAMILIA`.
+- Produces: `Licao`, `Passo`, `Momento`, `Sonda`, `Esperado`, `Prova`, `Bloco`, `Fase`, `Forma`, `Fonte`,
+  `FASES`, `FORMAS`, `FORMAS_POR_FAMILIA`, `FONTES`, `FAMILIAS`, `CARREGAR(texto, linguagem)`,
+  `ErroDeAutoria`, `TEXTOS`, `LICSOES`, `temLicao(linguagem)`, `executarSonda(sonda, linguagem)`,
+  `ResultadoSonda`.
 
-- [ ] **Step 1: Escrever o teste falhado — o carregador**\n
+- [ ] **Step 1: Escrever o teste falhado — o carregador**
 `src/conteudo/carregar.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { CARREGAR, LICSOES, temLicao } from './carregar';
+import { dump } from 'js-yaml';
+import { CARREGAR, ErroDeAutoria, LICSOES, TEXTOS, temLicao } from './carregar';
+import { emitir } from '../projecoes/avaliar';
+import { FORMAS_POR_FAMILIA } from './esquema';
 import variavelPython from './python/variavel.yml?raw';
 
-describe('CARREGAR', () => {
-  it('carrega a lição de Python', () => {
-    const l = CARREGAR(variavelPython, 'python');
+/** A lição mais pequena que o carregador aceita.
+ *
+ *  Vive aqui, montada a partir de um objeto, e não copiada do ficheiro real.
+ *  A versão do plano fazia o contrário — pegava no `variavel.yml` e
+ *  substituía com expressões regulares — e o resultado era uma dezena de
+ *  testes presos à formatação do ficheiro: `momentos: []` só era alcançável
+ *  porque a regex sabia onde estava a próxima `- fase:`, e mudar a
+ *  indentação do YAML partia seis testes que deviam estar a testar o
+ *  carregador.
+ *
+ *  Aqui a corrupção é **num campo**, não num texto. O teste continua a ser
+ *  sobre a regra do carregador, e passa a ser sobre a regra do carregador
+ *  mesmo que o ficheiro real mude de forma. */
+function licaoMinima(): Record<string, unknown> {
+  return {
+    id: 'variavel',
+    linguagem: 'python',
+    titulo: 'A caixa que guarda o valor',
+    porqueTitulo: 'Sem uma caixa, o número que contas desaparece no fim da linha.',
+    blocos: [{ type: 'guardar' }, { type: 'dizer' }],
+    passos: [
+      {
+        fase: 'explicar',
+        porque:
+          'Este bloco põe um número dentro de uma caixa com nome, e o nome é o que torna o número útil depois da linha.',
+        bloco: {
+          type: 'guardar',
+          fields: { nome: { valor: 'total' } },
+          inputs: { VALOR: { valor: 5 } },
+        },
+        sonda: 'guarda-um-numero',
+        momentos: [
+          {
+            id: 'l1',
+            texto: 'O que é que esta linha põe dentro da caixa?',
+            palavras: ['guardar', 'número', 'total'],
+            fonte: 'leitura',
+          },
+        ],
+      },
+      {
+        fase: 'fazer',
+        porque: 'Agora escreves tu a linha, e a sonda diz-te se o que fizeste é o que a linha diz.',
+        bloco: {
+          type: 'guardar',
+          fields: { nome: { valor: 'total' } },
+          inputs: { VALOR: { valor: 5 } },
+        },
+        sonda: 'guarda-um-numero',
+        momentos: [
+          {
+            id: 'f1',
+            texto: 'Escreve a linha que põe 5 dentro de uma caixa chamada total.',
+            palavras: [],
+            fonte: 'texto',
+          },
+        ],
+      },
+      {
+        fase: 'nomear',
+        porque: 'O nome desta coisa é metade do que a torna útil.',
+        nomear: 'variável',
+        bloco: {
+          type: 'guardar',
+          fields: { nome: { valor: 'total' } },
+          inputs: { VALOR: { valor: 5 } },
+        },
+        sonda: 'guarda-um-numero',
+        momentos: [
+          {
+            id: 'n1',
+            texto: 'Como se chama a caixa que guarda o valor?',
+            palavras: ['variável', 'caixa'],
+            fonte: 'leitura',
+          },
+        ],
+      },
+    ],
+    sondas: [
+      {
+        nome: 'guarda-um-numero',
+        pergunta: 'O que é que este programa faz?',
+        porque:
+          'A sonda tem de estar na lição antes de o aluno mexer, para o ele tentar a experiência e ver o que acontece.',
+        prova: {
+          forma: 'programa',
+          programa: {
+            type: 'pilha',
+            inputs: {
+              CORPO: {
+                stack: [
+                  {
+                    type: 'guardar',
+                    fields: { nome: { valor: 'total' } },
+                    inputs: { VALOR: { valor: 5 } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        esperado: {
+          classe: 'Observacao',
+          porque:
+            'O programa corre, guarda um número e não dá erro nenhum — e é por isso que a linha parece estar a fazer nada.',
+        },
+      },
+    ],
+    paraSaberQueFez:
+      'Fizeste quando conseguiste dizer, sem ver a lição, o que a tua linha faz e o que a protege.',
+  };
+}
+
+/** A mesma lição, com um campo mudado, sem tocar no resto. */
+function com(mudanca: (l: Record<string, unknown>) => void): string {
+  const l = licaoMinima();
+  mudanca(l);
+  return dump(l);
+}
+
+function primeiroPasso(l: Record<string, unknown>): Record<string, unknown> {
+  return (l.passos as Array<Record<string, unknown>>)[0]!;
+}
+
+describe('CARREGAR: a lição mínima é aceite', () => {
+  it('carrega e devolve os campos tal como estão', () => {
+    const l = CARREGAR(dump(licaoMinima()), 'python');
     expect(l.id).toBe('variavel');
     expect(l.linguagem).toBe('python');
-    expect(l.titulo.length).toBeGreaterThan(0);
+    expect(l.titulo).toBe('A caixa que guarda o valor');
+    expect(l.paraSaberQueFez.length).toBeGreaterThan(0);
   });
 
-  it('tem blocos suficientes para a lição ser percorrível', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    expect(l.blocos.length).toBeGreaterThan(0);
+  it('e o tipo da linguagem é o do núcleo, e não `string`', () => {
+    // `linguagem: string` no esquema é uma porta aberta: a lição de Go
+    // passava a validar como se fosse a de Python, e o erro só aparecia
+    // quando o aluno carregava. O esquema tem de fechar a lista.
+    const l = CARREGAR(dump(licaoMinima()), 'python');
+    expect(l.linguagem satisfies 'python' | 'java' | 'go' | 'typescript' | 'javascript' | 'sql').toBe('python');
   });
 
-  it('tem pelo menos dois passos de explicaçao e dois de fazer', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    expect(l.passos.filter((p) => p.fase === 'explicar').length).toBeGreaterThanOrEqual(2);
-    expect(l.passos.filter((p) => p.fase === 'fazer').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('tem pelo menos um passo de nomear', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    expect(l.passos.some((p) => p.fase === 'nomear')).toBe(true);
-  });
-
-  it('todo passo aponta para uma sonda, e toda sonda existe', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    const nomes = l.sondas.map((s) => s.nome);
-    for (const p of l.passos) {
-      expect(nomes).toContain(p.sonda);
+  it('o YAML partido é recusado com a linha, e a linha é a do ficheiro e não a do analisador', () => {
+    // O `mark.line` do analisador conta a partir do zero. Passá-lo como
+    // estava dá a linha 1 a quem está na linha 2, e um erro de autoria
+    // que aponta para a linha errada é um erro de autoria que se arrasta.
+    try {
+      CARREGAR('id: variavel\n  id: [quebrado', 'python');
+      throw new Error('devia ter sido recusado');
+    } catch (e) {
+      expect(e).toBeInstanceOf(ErroDeAutoria);
+      expect((e as ErroDeAutoria).razao).toMatch(/linha 2/);
     }
   });
 
-  it('toda sonda tem prova com forma e nomeada em minúsculas', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    for (const s of l.sondas) {
-      expect(s.prova.forma).toBe('programa');
-      expect(s.nome).toMatch(/^[a-z0-9-]+$/);
+  it('e a mensagem diz o que o analisador disse, para o autor não ficar às cegas', () => {
+    // A mensagem do analisador está em inglês. Fica, e fica por uma razão que
+    // vale mais do que a língua: quem escreve a lição é quem vai corrigir a
+    // lição, e um `bad indentation of a mapping entry` aponta para o sítio e
+    // o analisador é quem sabe o sítio. **Esta mensagem nunca vai para o
+    // ecrã de um aluno** — é um erro de autoria, e o aluno não escreve lições.
+    try {
+      CARREGAR('id: variavel\n  id: [quebrado', 'python');
+    } catch (e) {
+      expect((e as ErroDeAutoria).razao).toMatch(/analisador/);
     }
-  });
-
-  it('toda sonda tem esperado com classe e porque escrito à mão', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    for (const s of l.sondas) {
-      expect(['Observacao', 'Recusa', 'FalhaRuntime']).toContain(s.esperado.classe);
-      expect(s.esperado.porque.length).toBeGreaterThan(20);
-    }
-  });
-
-  it('toda sonda é provada com blocos ou com texto, nunca com os dois', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    for (const s of l.sondas) {
-      const temBlocos = s.prova.programa !== undefined;
-      const temTexto = s.prova.texto !== undefined;
-      expect(temBlocos !== temTexto).toBe(true);
-    }
-  });
-
-  it('a prova é escrita nesta linguagem, e o emit confirma isso', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    for (const s of l.sondas) {
-      if (s.prova.forma !== 'programa' || s.prova.programa === undefined) continue;
-      const texto = emitir('python', s.prova.programa).texto;
-      expect(texto.length).toBeGreaterThan(0);
-    }
-  });
-
-  it('o porque de um passo explica, não instrui', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    for (const p of l.passos) {
-      expect(p.porque.length).toBeGreaterThan(20);
-    }
-  });
-
-  it('o titulo não é um slug', () => {
-    expect(CARREGAR(variavelPython, 'python').titulo).not.toMatch(/^[a-z0-9-]+$/);
   });
 });
 
-describe('CARREGAR: recusas de autoria', () => {
-  it('YAML partido falha com porque e com a linha, e não com um erro do js-yaml', () => {
-    expect(() => CARREGAR('id: variavel\n  id: [quebrado', 'python'))
-      .toThrow(/porque|linha/i);
+describe('CARREGAR: recusas de autoria, campo a campo', () => {
+  it('linguagem que não é a do ficheiro é recusada, e a mensagem diz as duas', () => {
+    try {
+      CARREGAR(dump(licaoMinima()), 'java');
+      throw new Error('devia ter sido recusado');
+    } catch (e) {
+      expect((e as Error).message).toMatch(/python/);
+      expect((e as Error).message).toMatch(/java/);
+    }
   });
 
-  it('linguagem que não é a do ficheiro é recusada', () => {
-    expect(() => CARREGAR(variavelPython, 'java')).toThrow(/python/);
-  });
-
-  it('um passo que aponta para uma sonda inexistente é recusado pelo nome', () => {
-    const mau = variavelPython.replace(/sonda: [a-z0-9-]+/, 'sonda: nao-existe');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/nao-existe/);
+  it('a sonda que um passo aponta tem de existir, e a mensagem diz os nomes', () => {
+    const razao = razaoDe(com((l) => {
+      primeiroPasso(l).sonda = 'nao-existe';
+    }));
+    expect(razao).toMatch(/nao-existe/);
+    expect(razao).toMatch(/guarda-um-numero/);
   });
 
   it('uma classe esperada que não existe é recusada com a lista das que existem', () => {
-    const mau = variavelPython.replace(/classe: Observacao/, 'classe: Explosao');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/Explosao/);
-    expect(() => CARREGAR(mau, 'python')).toThrow(/Observacao/);
+    const razao = razaoDe(com((l) => {
+      ((l.sondas as Array<Record<string, unknown>>)[0]!.esperado as Record<string, unknown>).classe =
+        'Explosao';
+    }));
+    expect(razao).toMatch(/Explosao/);
+    expect(razao).toMatch(/Observacao/);
   });
 
-  it('um passo sem porque é recusado: a regra é nenhuma mensagem sem razao', () => {
-    const mau = variavelPython.replace(/porque: ['"].+['"]/, 'porque: ""');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/porque/);
+  it('um passo sem porque é recusado: nenhuma mensagem sem razão', () => {
+    const razao = razaoDe(com((l) => {
+      primeiroPasso(l).porque = '   ';
+    }));
+    expect(razao).toMatch(/porque/);
   });
 
   it('um passo sem momentos é recusado, porque nunca se completaria', () => {
-    // Esta regra não é interface: é aritmética. `momentoActual` é
-    // `momentos[momento]`, e uma lista vazia dá `undefined` para sempre —
-    // o aluno ficaria preso num passo que não avança nem recusa.
-    const mau = variavelPython.replace(/momentos:[\s\S]*?(?=\n  - fase:)/, 'momentos: []\n');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/momentos/);
+    // A regra não é interface: é aritmética. `momentos[momento]` de uma lista
+    // vazia dá `undefined` para sempre, e o aluno ficava preso num passo que
+    // não avança nem recusa.
+    const razao = razaoDe(com((l) => {
+      primeiroPasso(l).momentos = [];
+    }));
+    expect(razao).toMatch(/momentos/);
   });
 
   it('um passo de fase nomear sem palavra é recusado', () => {
-    // A regra protege a vista `nomear`. Sem uma palavra, o aluno lê o mesmo
-    // parágrafo que lia na vista `explicar` e a lição perdeu um terço.
-    const mau = variavelPython.replace(/\n    nomear: .+/, '');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/nomear/);
+    // A regra protege a vista `nomear`. Sem uma palavra, o aluno lia o mesmo
+    // parágrafo que lia na vista `explicar`, e a lição perdia um terço do
+    // método.
+    const razao = razaoDe(com((l) => {
+      const p = (l.passos as Array<Record<string, unknown>>)[2]!;
+      delete p.nomear;
+    }));
+    expect(razao).toMatch(/nomear/);
   });
 
   it('uma palavra nomeada num passo que não é de fase nomear é recusada', () => {
     // A palavra nomeada é o conteúdo da vista `nomear`. Num passo de fase
     // `fazer` seria uma segunda fonte de verdade: o `porque` e a palavra
     // nomeada poderiam dizer coisas diferentes, e o aluno veria as duas.
-    const mau = variavelPython.replace('    nomear: ', '    porque2: ');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/não dá nome a nada/);
+    const razao = razaoDe(com((l) => {
+      primeiroPasso(l).nomear = 'variável';
+    }));
+    expect(razao).toMatch(/não dá nome a nada/);
+  });
+
+  it('e a recusa diz a palavra que está fora do sítio, e não só o campo', () => {
+    const razao = razaoDe(com((l) => {
+      primeiroPasso(l).nomear = 'variável';
+    }));
+    expect(razao).toMatch(/variável/);
   });
 
   it('uma sonda sem pergunta é recusada: é a primeira coisa que o aluno lê', () => {
-    // A `porque` da sonda é sobre a lição e nunca aparece no ecrã. A
+    // O `porque` da sonda é sobre a lição e nunca aparece no ecrã. A
     // `pergunta` é o inverso: aparece primeiro e sem mais nada à volta. Uma
     // sonda que só tem `porque` obriga o aluno a ler a nota de rodapé do
     // currículo antes de adivinhar o que a experiência vai fazer.
-    const mau = variavelPython.replace(/pergunta: ['"].+['"]\n/, '');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/pergunta/);
+    const razao = razaoDe(com((l) => {
+      delete (l.sondas as Array<Record<string, unknown>>)[0]!.pergunta;
+    }));
+    expect(razao).toMatch(/pergunta/);
   });
 
   it('uma fonte de momento que não existe é recusada com a lista', () => {
-    const mau = variavelPython.replace('fonte: leitura', 'fonte: palpite');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/leitura/);
+    const razao = razaoDe(com((l) => {
+      ((primeiroPasso(l).momentos as Array<Record<string, unknown>>)[0]!).fonte = 'palpite';
+    }));
+    expect(razao).toMatch(/palpite/);
+    expect(razao).toMatch(/leitura/);
   });
 
-  it('dois momentos com o mesmo id são recusados: o id é a chave do ficheiro', () => {
-    const mau = variavelPython.replace(/(id: l1\n)/, '$1      id: l1\n');
-    expect(() => CARREGAR(mau, 'python')).toThrow(/mesmo id/);
+  it('dois momentos com o mesmo id são recusados: o id é a chave dentro do passo', () => {
+    const razao = razaoDe(com((l) => {
+      const momentos = primeiroPasso(l).momentos as Array<Record<string, unknown>>;
+      momentos.push({ ...momentos[0]! });
+    }));
+    expect(razao).toMatch(/mesmo id/);
+  });
+
+  it('dois passos com o mesmo id de momento são aceites, porque o id é do passo', () => {
+    // O mesmo `id` em dois passos diferentes é o mesmo sítio lógico —
+    // `l1` é a leitura em qualquer passo. Recusá-lo obrigaria a inventar nomes
+    // globais para cada passo, e o ficheiro a crescer sem o aluno ver nada.
+    const l = com((bruta) => {
+      const passos = bruta.passos as Array<Record<string, unknown>>;
+      passos[1]!.momentos = [
+        { id: 'l1', texto: 'A mesma pergunta, noutro passo.', palavras: ['guardar'], fonte: 'leitura' },
+      ];
+    });
+    expect(() => CARREGAR(l, 'python')).not.toThrow();
+  });
+
+  it('o nome de uma sonda tem de ser um identificador em minúsculas', () => {
+    const razao = razaoDe(com((l) => {
+      const s = (l.sondas as Array<Record<string, unknown>>)[0]!;
+      s.nome = 'Guarda Um Número';
+    }));
+    expect(razao).toMatch(/minúsculas/);
+  });
+
+  it('uma prova com os dois, `programa` e `texto`, é recusada', () => {
+    const razao = razaoDe(com((l) => {
+      ((l.sondas as Array<Record<string, unknown>>)[0]!.prova as Record<string, unknown>).texto = 'total = 5\n';
+    }));
+    expect(razao).toMatch(/nunca os dois/);
+  });
+
+  it('uma prova sem nenhum dos dois é recusada', () => {
+    const razao = razaoDe(com((l) => {
+      delete (l.sondas as Array<Record<string, unknown>>)[0]!.prova;
+    }));
+    expect(razao).toMatch(/prova/);
+  });
+
+  it('um programa de prova que não é um bloco é recusado pelo sítio, e não por um `as never`', () => {
+    // O plano fazia `prova.programa as never` e dizia que validava. Não
+    // validava: `as never` cala o compilador e não olha para o dado. Um
+    // `programa: 5` passava a validação e rebentava no `emitir`, em código de
+    // projeção, com um erro que não aponta para o YAML.
+    const razao = razaoDe(com((l) => {
+      ((l.sondas as Array<Record<string, unknown>>)[0]!.prova as Record<string, unknown>).programa = 5;
+    }));
+    expect(razao).toMatch(/programa/);
+  });
+
+  it('um bloco do vocabulario que não é desta linguagem é recusado com a lista', () => {
+    const razao = razaoDe(com((l) => {
+      (l.blocos as Array<Record<string, unknown>>)[0]!.type = 'enquanto';
+    }));
+    expect(razao).toMatch(/enquanto/);
+    expect(razao).toMatch(/guardar/);
+  });
+});
+
+describe('CARREGAR: Review Focus 2, a forma tem de bater com a família', () => {
+  it('uma forma que não existe é recusada com a lista das que existem', () => {
+    const razao = razaoDe(com((l) => {
+      ((l.sondas as Array<Record<string, unknown>>)[0]!.prova as Record<string, unknown>).forma = 'diagrama';
+    }));
+    expect(razao).toMatch(/diagrama/);
+    expect(razao).toMatch(/programa/);
+  });
+
+  it('uma forma que existe mas é de outra família é recusada, e a mensagem diz as duas', () => {
+    // O ponto 2 do `Review Focus` é este: uma sonda de SQL provada com um
+    // programa é um erro de autoria e aparece como recusa com razão, e não
+    // como um `TypeError` algures dentro da projeção. `consulta` existe no
+    // esquema porque o Plano C precisa dela, e é exatamente por isso que
+    // este teste é preciso agora: uma forma válida noutra família não é uma
+    // forma válida aqui.
+    const razao = razaoDe(com((l) => {
+      ((l.sondas as Array<Record<string, unknown>>)[0]!.prova as Record<string, unknown>).forma = 'consulta';
+    }));
+    expect(razao).toMatch(/consulta/);
+    expect(razao).toMatch(/imperativa/);
+  });
+
+  it('e a regra mora num sítio só, o esquema, e as duas metades do runner leem de lá', () => {
+    // A tabela da família estava escrita duas vezes — no carregador e no
+    // runner — e duas tabelas divergem no primeiro caso em que uma delas é
+    // mudada. `FORMAS_POR_FAMILIA` vive no esquema, que é o contrato.
+    expect(FORMAS_POR_FAMILIA.imperativa).toBe('programa');
+    expect(FORMAS_POR_FAMILIA.declarativa).toBe('consulta');
   });
 });
 
 describe('o registo de lições', () => {
-  it('Python tem lição; Java ainda não', () => {
+  it('Python tem lição; as outras ainda não', () => {
     expect(temLicao('python')).toBe(true);
     expect(temLicao('java')).toBe(false);
     expect(LICSOES).toEqual(['python']);
   });
+
+  it('o registo é derivado dos ficheiros, e não escrito à mão', () => {
+    // A primeira versão dizia `['python', 'java']` e o teste dizia
+    // `['python']`. Um array escrito à mão é uma lista de intenções; este é
+    // uma lista de ficheiros, e por isso não pode ficar para trás.
+    expect(Object.keys(TEXTOS)).toEqual(LICSOES.map((l) => `${l}/variavel`));
+  });
+
+  it('e a chave do registo é a mesma que `temLicao` pergunta', () => {
+    for (const l of LICSOES) expect(TEXTOS[`${l}/variavel`]).toBeDefined();
+  });
 });
+
+describe('a lição de Python que está no repositório', () => {
+  it('carrega sem nenhuma recusa de autoria', () => {
+    expect(() => CARREGAR(variavelPython, 'python')).not.toThrow();
+  });
+
+  it('é a mesma lição que a do registo', () => {
+    expect(TEXTOS['python/variavel']).toBe(variavelPython);
+  });
+
+  it('cada passo aponta para uma sonda que existe', () => {
+    const l = CARREGAR(variavelPython, 'python');
+    const nomes = l.sondas.map((s) => s.nome);
+    for (const p of l.passos) expect(nomes).toContain(p.sonda);
+  });
+
+  it('cada sonda tem os dois campos de prosa, e nenhum dos dois é opcional', () => {
+    const l = CARREGAR(variavelPython, 'python');
+    for (const s of l.sondas) {
+      expect(s.pergunta.length).toBeGreaterThan(0);
+      expect(s.porque.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('só `fonte: leitura` tem palavras, e as outras não', () => {
+    // Uma palavra numa fonte que não é `leitura` é um campo morto: ninguém a
+    // confere, e quem a escreveu pensou que alguém ia. A regra do produto é
+    // que não há respostas erradas — só há palavras que contam e palavras
+    // que são decoração.
+    const l = CARREGAR(variavelPython, 'python');
+    for (const p of l.passos) {
+      for (const m of p.momentos) {
+        if (m.fonte === 'leitura') expect(m.palavras.length).toBeGreaterThan(0);
+        else expect(m.palavras).toEqual([]);
+      }
+    }
+  });
+
+  it('o `porque` de um passo explica e não instrui, e é por isso que é comprido', () => {
+    const l = CARREGAR(variavelPython, 'python');
+    for (const p of l.passos) expect(p.porque.length).toBeGreaterThan(20);
+  });
+
+  it('o título não é um slug', () => {
+    expect(CARREGAR(variavelPython, 'python').titulo).not.toMatch(/^[a-z0-9-]+$/);
+  });
+
+  it('cada programa de prova é escrito de verdade pela projeção da linguagem', () => {
+    const l = CARREGAR(variavelPython, 'python');
+    for (const s of l.sondas) {
+      if (s.prova.programa === undefined) continue;
+      expect(emitir('python', s.prova.programa).texto.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+function razaoDe(yaml: string): string {
+  try {
+    CARREGAR(yaml, 'python');
+  } catch (e) {
+    if (e instanceof ErroDeAutoria) return e.message;
+    throw e;
+  }
+  throw new Error('a lição devia ter sido recusada e não foi');
+}
 ```
 
-- [ ] **Step 2: Escrever o teste falhado — as sondas**\n
+- [ ] **Step 2: Escrever o teste falhado — as sondas**
 `src/conteudo/sondas.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { executarSonda } from './sondas';
-import { obter } from '../projecoes/registo';
-import { guardar, log, pilha } from '../nucleo/testes/dados';
+import { avaliarTexto, emitir } from '../projecoes/avaliar';
+import { FORMAS_POR_FAMILIA } from './esquema';
 import type { Sonda } from './esquema';
+import { executarSonda } from './sondas';
 
-function sondaDe(sobre: Partial<Sonda>): Sonda {
+function sonda(extra: Partial<Sonda> = {}): Sonda {
   return {
-    nome: 'prova',
-    porque: 'porque o teste existe, escrito à mão para ser lido',
-    prova: { forma: 'programa', programa: pilha(guardar('total', 5)) },
-    esperado: { classe: 'Observacao', porque: 'o programa corre e guarda um número sem dar erro nenhum' },
-    ...sobre,
+    nome: 'guarda-um-numero',
+    pergunta: 'O que é que este programa faz?',
+    porque: 'A sonda está aqui para a pessoa dizer o que espera antes de ver o que acontece.',
+    prova: {
+      forma: 'programa',
+      programa: {
+        type: 'pilha',
+        inputs: {
+          CORPO: {
+            stack: [
+              { type: 'guardar', fields: { nome: { valor: 'total' } }, inputs: { VALOR: { valor: 5 } } },
+            ],
+          },
+        },
+      },
+    },
+    esperado: {
+      classe: 'Observacao',
+      porque: 'Corre e não dá erro, e é por isso que a linha parece não estar a fazer nada.',
+    },
+    ...extra,
   };
 }
 
-describe('executarSonda com prova de programa', () => {
-  it('passa quando a classe observada é a esperada', () => {
-    const r = executarSonda(sondaDe({}), 'python');
+/** Uma sondagem montada à mão, com o que se quiser dentro.
+ *
+ *  Existe porque o `CARREGAR` recusa sondagens malformadas **e é suposto
+ *  recusá-las**: o runner nunca é chamado com uma sondagem assim. Mas quem
+ *  escreve uma sondagem em memória — o painel de texto da Task 10 faz isso —
+ *  pode, e o runner tem de responder com um relatório e não com um
+ *  `TypeError`, que é a diferença entre uma ferramenta que ensina e uma que
+ *  baralha.
+ *
+ *  A conversão é `as Sonda` e está **numa função**, com a razão escrita. A
+ *  versão do plano punha `// @ts-expect-error` numa linha que não era a linha
+ *  do erro, o que o `tsc` apanha a dizer que não. */
+function sondaEmMaos(bruta: unknown): Sonda {
+  return bruta as Sonda;
+}
+
+function sondaDeTexto(corpo: string): Sonda {
+  return sonda({ nome: 'linha-escrita-a-mao', prova: { forma: FORMAS_POR_FAMILIA.imperativa, texto: corpo } });
+}
+
+describe('executarSonda: o que o relatório diz', () => {
+  it('passa quando o motor vê o que a sondagem esperava', () => {
+    const r = executarSonda(sonda(), 'python');
     expect(r.ok).toBe(true);
+    expect(r.esperada).toBe('Observacao');
     expect(r.observada).toBe('Observacao');
+    expect(r.nome).toBe('guarda-um-numero');
+    expect(r.erro).toBeNull();
   });
 
-  it('falha quando não é, e o relatório traz as duas classes', () => {
-    const r = executarSonda(
-      sondaDe({ esperado: { classe: 'Recusa', porque: 'aqui o robô recusa o número que é um texto' } }),
-      'python',
-    );
+  it('falha quando não passa, e o relatório traz as duas classes', () => {
+    const r = executarSonda(sondaDeTexto('int total = "olá";\n'), 'java');
     expect(r.ok).toBe(false);
-    expect(r.esperada).toBe('Recusa');
-    expect(r.observada).toBe('Observacao');
+    expect(r.esperada).toBe('Observacao');
+    expect(r.observada).toBe('Recusa');
   });
 
   it('o porque esperado nunca é comparado, só a classe', () => {
     // Escrever outra frase na lição não pode partir o CI. Este teste é a
     // garantia disso, e é o que impede a lição de virar um teste de escrita.
-    const a = executarSonda(sondaDe({}), 'python');
+    const a = executarSonda(sonda(), 'python');
     const b = executarSonda(
-      sondaDe({ esperado: { classe: 'Observacao', porque: 'uma frase completamente diferente, com mais palavras' } }),
+      sonda({ esperado: { classe: 'Observacao', porque: 'Uma frase completamente diferente, com mais palavras.' } }),
       'python',
     );
     expect(a.ok).toBe(b.ok);
+    expect(b.ok).toBe(true);
   });
 
   it('o relatório tem porque, mesmo quando falha', () => {
-    const r = executarSonda(
-      sondaDe({ esperado: { classe: 'Recusa', porque: 'x'.repeat(30) } }),
-      'python',
-    );
+    const r = executarSonda(sondaDeTexto('isto nao e python\n'), 'python');
+    expect(r.ok).toBe(false);
     expect(r.porque.length).toBeGreaterThan(0);
   });
 
-  it('o relatório tem o mesmo porque quando passa, para o git diff mostrar a mudança', () => {
-    const r = executarSonda(sondaDe({}), 'python');
-    expect(r.porque).toBe(sondaDe({}).porque);
+  it('o relatório tem o mesmo porque quando passa, para o `git diff` mostrar a mudança', () => {
+    expect(executarSonda(sonda(), 'python').porque).toBe(sonda().porque);
   });
 
-  it('o mesmo programa passa em Python e recusa em Java', () => {
-    // A sonda da lição é a mesma; a resposta é que muda. É este teste que
-    // diz que a lição de Java vai precisar da sua própria sonda, e não da
-    // de Python com o texto trocado.
-    const guardarTexto = pilha(guardar('total', 'olá'));
-    expect(executarSonda(sondaDe({ prova: { forma: 'programa', programa: guardarTexto } }), 'python').ok).toBe(true);
-    expect(executarSonda(sondaDe({ prova: { forma: 'programa', programa: guardarTexto } }), 'java').ok).toBe(false);
-  });
-});
-
-describe('executarSonda com prova de texto', () => {
-  it('lê o texto com a projeção da linguagem', () => {
-    const r = executarSonda(
-      sondaDe({ prova: { forma: 'programa', texto: 'total = 5\n' } }),
-      'python',
-    );
-    expect(r.ok).toBe(true);
+  it('e quando falha o porque é o da sondagem mais o que aconteceu', () => {
+    // A regra do produto: a lição não muda de texto porque alguém errou. O
+    // porque da sondagem escreve-se uma vez e continua igual; o que muda é o
+    // que o relatório acrescenta em cima.
+    const r = executarSonda(sondaDeTexto('isto nao e python\n'), 'python');
+    expect(r.porque.startsWith(sonda().porque)).toBe(true);
+    expect(r.porque.length).toBeGreaterThan(sonda().porque.length);
   });
 
-  it('texto de outra linguagem é erro da sonda, não silêncio', () => {
-    const r = executarSonda(
-      sondaDe({ prova: { forma: 'programa', texto: 'total = 5\n' } }),
-      'java',
-    );
-    expect(r.ok).toBe(false);
-    expect(r.porque).toContain('java');
+  it('o erro de uma falha começa por dizer que foi o motor que viu aquilo', () => {
+    const r = executarSonda(sondaDeTexto('isto nao e python\n'), 'python');
+    expect(r.erro).toMatch(/^o motor viu/);
   });
 });
 
-describe('Review Focus 2: a forma tem de bater com a família', () => {
-  it('uma forma que não existe é recusada com a lista das que existem', () => {
-    const r = executarSonda(
-      // @ts-expect-error — a forma inválida é o que se está a testar
-      sondaDe({ prova: { forma: 'diagrama', programa: pilha(guardar('total', 5)) } }),
-      'python',
-    );
-    expect(r.ok).toBe(false);
-    expect(r.porque).toMatch(/programa|consulta/);
-    expect(r.porque).toMatch(/diagrama/);
+describe('executarSonda: a mesma linha em duas linguagens', () => {
+  it('guardar uma palavra passa em Python e é recusado em Java, e é a recusa que é o produto', () => {
+    // A linha é a mesma ideia: pôr um valor dentro de uma caixa. Em Python a
+    // caixa aceita o que lhe derem; em Java a caixa é de um tipo só, e um
+    // `int` não aceita uma palavra. **Nenhuma das duas está errada.** A
+    // resposta muda porque a pergunta muda, e é isso que a lição tem de
+    // ensinar.
+    const py = executarSonda(sondaDeTexto("total = 'olá'\n"), 'python');
+    const ja = executarSonda(sondaDeTexto('int total = "olá";\n'), 'java');
+    expect(py.ok).toBe(true);
+    expect(ja.ok).toBe(false);
+    expect(ja.observada).toBe('Recusa');
   });
 
+  it('a sondagem de Java não pode ser a de Python com o texto trocado', () => {
+    // É este teste que diz à próxima tarefa que a lição de Java precisa de
+    // sondagens próprias. A lição é o conteúdo, e o conteúdo não se copia.
+    const py = executarSonda(sondaDeTexto("total = 'olá'\n"), 'python');
+    const emJava = executarSonda(sondaDeTexto("total = 'olá'\n"), 'java');
+    // O mesmo texto, lido por Java, nem é lido: tem aspas simples onde a Java
+    // só aceita duplas. E o erro tem de ser **da leitura**, não da política,
+    // porque é a leitura que não reconhece a linha.
+    expect(py.ok).toBe(true);
+    expect(emJava.ok).toBe(false);
+    expect(emJava.observada).toBe('FalhaRuntime');
+    expect(emJava.erro).toMatch(/Java/);
+  });
 
+  it('nenhum programa de blocos dá uma recusa de tipo, e isso é uma fatura da estrutura', () => {
+    // Os blocos são tipados: um `guardar` com `{ txt: 'olá' }` escreve
+    // `String total = "olá";` em Java, que é Java bem escrito. **Não há
+    // caminho de blocos para uma `Recusa` em Java.** A lição de Java tem de
+    // provar as recusas com texto escrito à mão, e este teste é o que o diz
+    // em vez de o descobrir à quinta tarefa quando a lição não fecha.
+    const escrito = emitir('java', {
+      type: 'pilha',
+      inputs: {
+        CORPO: {
+          stack: [
+            { type: 'guardar', fields: { nome: { valor: 'total' } }, inputs: { VALOR: { valor: { txt: 'olá' } } } },
+          ],
+        },
+      },
+    }).texto;
+    expect(escrito).toBe('String total = "olá";\n');
+    expect(avaliarTexto('java', escrito)).toEqual([]);
+  });
+});
+
+describe('executarSonda: o Review Focus 1, texto de outra linguagem', () => {
+  it('texto de Java lido por Python é recusado com uma razão', () => {
+    const r = executarSonda(sondaDeTexto('int total = 5;\n'), 'python');
+    expect(r.ok).toBe(false);
+    expect(r.erro).toMatch(/Python/i);
+  });
+
+  it('e o relatório diz que o texto não é desta linguagem, e não que o programa falhou', () => {
+    // A diferença é o que o aluno aprende. «Isto não é Python» é uma porta
+    // fechada com uma razão; «o programa falhou» faz o aluno pensar que
+    // escreveu Python mal, que é uma coisa diferente — e errada.
+    const r = executarSonda(sondaDeTexto('int total = 5;\n'), 'python');
+    // A metade que importa: a recusa **nomeia a linguagem** e diz o que uma
+    // linha dela é. Um relatório que dissesse «o programa falhou» faria o
+    // aluno procurar um erro no programa, e o programa estava bem — a linha é
+    // que é de outra linguagem.
+    expect(r.erro).toMatch(/não é Python/i);
+    expect(r.erro).toMatch(/atribuição, um print, um for/);
+    expect(r.erro).not.toMatch(/o programa falhou/i);
+  });
+});
+
+describe('executarSonda: sondagens malformadas dão relatório, não exceção', () => {
+  it('uma forma que não existe dá relatório a dizer quais existem', () => {
+    const r = executarSonda(sondaEmMaos({ ...sonda(), prova: { forma: 'diagrama', texto: 'x' } }), 'python');
+    expect(r.ok).toBe(false);
+    expect(r.erro).toMatch(/diagrama/);
+    expect(r.erro).toMatch(/programa/);
+    expect(r.observada).toBe('Observacao');
+  });
+
+  it('uma forma de outra família dá relatório a dizer a família', () => {
+    const r = executarSonda(sondaEmMaos({ ...sonda(), prova: { forma: 'consulta', texto: 'SELECT 1' } }), 'python');
+    expect(r.ok).toBe(false);
+    expect(r.erro).toMatch(/consulta/);
+    expect(r.erro).toMatch(/imperativa/);
+  });
+
+  it('uma prova com os dois, ou com nenhum, dá relatório', () => {
+    for (const prova of [{ forma: 'programa' }, { forma: 'programa', texto: 'x = 1\n', programa: sonda().prova.programa }]) {
+      const r = executarSonda(sondaEmMaos({ ...sonda(), prova }), 'python');
+      expect(r.ok).toBe(false);
+      expect(r.erro).toMatch(/nunca os dois|nenhum/);
+    }
+  });
+
+  it('um programa que não é um bloco dá relatório, e não rebenta dentro da projeção', () => {
+    // O `CARREGAR` recusa isto, e o painel de texto da Task 10 pode construí-
+    // lo sem passar pelo carregador. Um `throw` aqui seria um ecrã branco
+    // com a lição a meio.
+    // `programa: 5` **não** rebenta: `pilhaDe(5)` devolve uma lista vazia, o
+    // emissor escreve um programa vazio, e um programa vazio corre sem erro.
+    // O relatório dizia que a sondagem tinha passado, e o que tinha passado
+    // era uma sondagem sem programa. O runner é a última linha: tem de
+    // olhar para o programa antes de o escrever.
+    const r = executarSonda(sondaEmMaos({ ...sonda(), prova: { forma: 'programa', programa: 5 } }), 'python');
+    expect(r.ok).toBe(false);
+    expect(r.erro).toMatch(/o motor viu/);
+    expect(r.erro).toMatch(/não é um bloco/);
+  });
+});
 ```
 
 O ponto 2 do `Review Focus` fica coberto pela forma inválida acima e pelo `validarForma()` do carregador, que recusa a forma errada para a família com a mensagem a dizer as duas. A forma `consulta` só é exercitada no Plano C, com a projeção de SQL — e o runner já a aceita, o que é o que faz o Plano C não precisar de mexer aqui.
 
-- [ ] **Step 3: Correr os testes e ver falhar**\n
+- [ ] **Step 3: Correr os testes e ver falhar**
 Run: `npx vitest run src/conteudo`
 Expected: FAIL com erros de resolução de `./esquema`, `./carregar` e `./sondas`.
 
-- [ ] **Step 4: Escrever `src/conteudo/esquema.ts`**\n
+- [ ] **Step 4: Escrever `src/conteudo/esquema.ts`**
 Este é o contrato entre o ficheiro YAML e o código. Cada campo tem uma regra, e a regra é testada no Step 1.\n
 ```typescript
 import type { BlocoLeigo } from '../nucleo/blocos';
+import type { Language } from '../nucleo/tipos';
 import type { ClassesObservadas } from '../projecoes/avaliar';
+import type { Familia } from '../projecoes/tipos';
 
+/** As três fases do método, e a ordem em que aparecem.
+ *
+ *  Não são três ecrãs: são três perguntas ao mesmo programa. `explicar` lê,
+ *  `fazer` escreve, `nomear` dá o nome. Uma lição que saltasse a `nomear`
+ *  ensinaria a executar sem nunca saber o que se está a executar — que é
+ *  exatamente o que a maioria faz com um computador alheio. */
 export type Fase = 'explicar' | 'fazer' | 'nomear';
 
-export interface Bloco {
-  type: string;
-  fields?: Record<string, { valor: unknown }>;
-  inputs?: Record<string, { valor: unknown } | { stack: BlocoLeigo[] }>;
-}
+export const FASES: readonly Fase[] = ['explicar', 'fazer', 'nomear'];
 
+/** A forma de um bloco no YAML. **Não** é um tipo novo: é o `BlocoLeigo` do
+ *  núcleo, com o nome que o formato usa.
+ *
+ *  A primeira versão do esquema declarava a forma outra vez, campo a campo, e
+ *  a duplicação pagou-se assim que o núcleo ganhou um campo: os dois tipos
+ *  deixaram de descrever a mesma coisa e o `emitir` deixou de aceitar o que o
+ *  YAML escrevia, com um erro que só aparecia em runtime. Uma forma, um
+ *  nome, dois sítios onde se pode escrever. */
+export type Bloco = BlocoLeigo;
+
+/** As duas formas de uma sondagem.
+ *
+ *  `programa` é um programa imperativo, escrito com blocos, e é o que a
+ *  maioria das sondagens é. `consulta` é uma pergunta feita aos dados, e só
+ *  o SQL a usa.
+ *
+ *  A forma **não** decide o que está dentro da prova: uma sondagem em forma
+ *  de programa pode provar-se com blocos (`programa`) ou com um excerto de
+ *  código que o aluno tem de ler (`texto`). São duas perguntas differentes —
+ *  «isto corre?» e «isto quer dizer o que tu pensas?» — e a segunda é a que
+ *  ensina a ler código. */
+export type Forma = 'programa' | 'consulta';
+
+export const FORMAS: readonly Forma[] = ['programa', 'consulta'];
+
+/** Que forma de sondagem é a de cada família de linguagem.
+ *
+ *  Mora aqui, e não no carregador nem no runner, porque era escrita nos dois
+ *  sítios e duas tabelas divergem no primeiro caso em que uma delas muda.
+ *  A tabela é a *regra*, e a regra é uma coisa só. */
+export const FORMAS_POR_FAMILIA: Record<Familia, Forma> = {
+  imperativa: 'programa',
+  declarativa: 'consulta',
+};
+
+/** As famílias, e a de cada linguagem.
+ *
+ *  Vive no esquema para que quem escreve uma lição não tenha de saber de
+ * família: escreve `forma: consulta` e o carregador descobre o resto. A
+ *  projeção continua a ser a única que sabe disto — o esquema só aponta para
+ *  lá. */
+export const FAMILIAS: Record<Language, Familia> = {
+  python: 'imperativa',
+  java: 'imperativa',
+  go: 'imperativa',
+  typescript: 'imperativa',
+  javascript: 'imperativa',
+  sql: 'declarativa',
+};
+
+/** A prova de uma sondagem. */
 export interface Prova {
-  forma: 'programa' | 'consulta';
-  /** Preenchido quando `forma` é `programa`. */
-  programa?: BlocoLeigo;
-  /** Preenchido quando `forma` é `consulta`, ou quando a prova é um excerto
-   *  de código que o utilizador tem de ler. */
+  forma: Forma;
+  /** Preenchido quando a prova são blocos. */
+  programa?: Bloco;
+  /** Preenchido quando a prova é um excerto de código ou de consulta, que o
+   *  aluno tem de ler e dizer o que faz. */
   texto?: string;
 }
 
+/** O que se espera que aconteça.
+ *
+ *  `classe` é o **único** campo comparado com o motor. `porque` é prosa de
+ *  autoria e nunca é comparada com nada — se fosse, cada reescrita de uma
+ *  frase faria o CI falhar e a lição passaria a ser um teste de escrita. */
 export interface Esperado {
-  /** ÚNICO campo comparado com o motor. */
   classe: ClassesObservadas;
-  /** Prosa de autoria. Nunca comparada com nada. */
   porque: string;
 }
 
 export interface Sonda {
   nome: string;
   /** A pergunta que se faz ao aluno antes de ele fazer a experiência. É a
-   *  única coisa do ecrã que ele lê primeiro, e por isso está no esquema e
-   *  não dentro da prosa do `porque`. */
+   *  primeira coisa do ecrã que ele lê, e por isso é um campo próprio e não
+   *  uma frase dentro do `porque`. */
   pergunta: string;
   /** Porque é que esta sonda está na lição. É sobre a lição, não sobre o
    *  aluno: nunca aparece no ecrã. */
@@ -6952,80 +7429,122 @@ export interface Sonda {
   esperado: Esperado;
 }
 
-/** Uma pergunta de um passo. `fonte` decide o que acontece quando o aluno
- *  responde: `leitura` é a única cujas palavras são conferidas, e mesmo aí
- *  nenhuma resposta é errada — só não conta como resposta. */
+/** De onde vem a resposta a um momento. */
+export type Fonte = 'blocos' | 'texto' | 'leitura';
+
+export const FONTES: readonly Fonte[] = ['blocos', 'texto', 'leitura'];
+
+/** Uma pergunta de um passo.
+ *
+ *  `fonte: leitura` é a única cujas palavras são conferidas, e mesmo aí
+ *  nenhuma resposta é errada: uma resposta que não tem as palavras não conta
+ *  como resposta, e o produto **nunca** diz que está errada. Uma sondagem que
+ *  dissesse «errado» seria uma sondagem sobre a vontade do autor, não sobre
+ *  a leitura de quem responde. */
 export interface Momento {
   id: string;
   texto: string;
-  /** Palavras que a resposta pode conter. Vazio significa que não se
-   *  avalia: o produto nunca diz que a resposta está errada. */
+  /** Palavras que a resposta pode conter. Vazio significa que não se avalia. */
   palavras: string[];
-  fonte: 'blocos' | 'texto' | 'leitura';
+  fonte: Fonte;
 }
 
 export interface Passo {
   fase: Fase;
+  /** Porque esta linha existe, nos termos desta linguagem. Explica, não
+   *  instrui: um `porque` que dá ordens é uma ordem disfarçada de
+   *  explicação, e o aluno deixa de pensar. */
   porque: string;
-  /** A palavra que este passo dá nome a. Só existe num passo de fase
-   *  `nomear`, e é o que a vista `nomear` mostra grande. Sem este campo a
-   *  vista `nomear` seria a vista `explicar` com outro rótulo — e o
-   *  primeiro terço do método (explicar, fazer, nomear) deixaria de ter
-   *  terceira parte. */
-  nomear?: string;
+  /** A linha que este passo mostra. Vem sempre do bloco que o aluno vê, e
+   *  é a mesma coisa que a sondagem prova. */
   bloco: Bloco;
-  /** O nome de uma sonda da lição. Uma sonda pode servir vários passos. */
+  /** O nome da sondagem que prova este passo. Tem de existir: um passo sem
+   *  sondagem é um passo em que o aluno faz e não sabe se acertou. */
   sonda: string;
-  /** Uma pergunta de cada vez, pela ordem em que estão. O passo fica
-   *  concluído quando todas estão feitas. */
   momentos: Momento[];
-  /** O ficheiro que este passo manda ler. As linhas **não** são repetidas
-   *  aqui: vêm da sonda nomeada em `sonda`, e há um só sítio onde o ficheiro
-   *  existe. Um segundo sítio seria uma segunda versão do ficheiro, e as
-   *  duas divergiriam sem ninguém dar por isso. */
-  referencia?: { nome: string };
+  /** A palavra a nomear. Só pode existir em `fase: nomear`, e é obrigatória
+   *  em `fase: nomear`. */
+  nomear?: string;
 }
 
 export interface Licao {
   id: string;
-  linguagem: string;
+  /** O `Language` do núcleo, e não `string`. Uma `string` aqui é uma porta
+   *  aberta: a lição de Go passava a validar como se fosse a de Python, e o
+   *  erro só aparecia quando o aluno carregava. */
+  linguagem: Language;
   titulo: string;
   porqueTitulo: string;
+  /** O vocabulário que esta lição usa. Cada entrada tem de ser um bloco que
+   *  a projeção desta linguagem sabe escrever. */
   blocos: Bloco[];
   passos: Passo[];
   sondas: Sonda[];
+  /** Como se sabe que a lição foi feita. Não é uma nota, e não é um
+   * Baremo: é a frase que o produto mostra quando a pessoa pergunta se
+   *  aprendeu. */
   paraSaberQueFez: string;
 }
 ```
 
-- [ ] **Step 5: Escrever `src/conteudo/carregar.ts`**\n
+- [ ] **Step 5: Escrever `src/conteudo/carregar.ts`**
 ```typescript
 import { load } from 'js-yaml';
-import variavelPython from './python/variavel.yml?raw';
-import type { Licao } from './esquema';
+import { LINGUAGENS } from '../nucleo/tipos';
 import type { Language } from '../nucleo/tipos';
-import { emitir } from '../projecoes/avaliar';
+import { CLASSES_OBSERVADAS } from '../projecoes/avaliar';
 import { obter } from '../projecoes/registo';
-import type { Projection } from '../projecoes/tipos';
+import type { Bloco, Licao, Momento, Passo, Prova, Sonda } from './esquema';
+import { FASES, FONTES, FORMAS, FORMAS_POR_FAMILIA } from './esquema';
+import variavelPython from './python/variavel.yml?raw';
 
+/** Uma lição que não é uma lição.
+ *
+ *  Apanha-se com `catch (e)` e tem duas partes: `razao`, que é o que se lê,
+ *  e `caminho`, que é **onde no ficheiro** está o problema. Sem o caminho, o
+ *  autor tem de procurar a linha à mão num ficheiro de seiscentas linhas — e
+ *  uma regra de autoria que obriga a procurar não é uma regra de autoria, é
+ *  um ritual. */
 export class ErroDeAutoria extends Error {
-  constructor(readonly razao: string, readonly caminho: string) {
-    super(`${caminho}: ${razao}`);
+  readonly razao: string;
+  readonly caminho: string;
+
+  constructor(razao: string, caminho: string) {
+    super(`${razao} (${caminho})`);
     this.name = 'ErroDeAutoria';
+    this.razao = razao;
+    this.caminho = caminho;
   }
 }
 
-/** As lições escritas, em código. Só entra aqui o que existe em
- *  `src/conteudo/<linguagem>/`. A lição de Java entra quando a Task que a
- *  escreve acontecer — e o `import` é o que a impede de entrar antes,
- *  porque um ficheiro que não existe não compila. */
-const FONTES: Record<string, string> = {
+// ---------------------------------------------------------------------------
+// O registo: que lições existem
+// ---------------------------------------------------------------------------
+
+/** O texto de cada lição, por `${linguagem}/${id}`.
+ *
+ *  As chaves são **derivadas** do que há no repositório, e a lista de
+ *  linguagens com lição sai de cima. A primeira versão escrevia
+ *  `LICSOES = ['python']` à mão; ao lado de um ficheiro que existe, uma lista
+ *  escrita à mão é uma lista de intenções, e diverge no dia em que se escreve
+ *  a segunda lição e se esquece a linha. */
+export const TEXTOS: Record<string, string> = {
   'python/variavel': variavelPython,
 };
 
-const FORMAS: Array<'programa' | 'consulta'> = ['programa', 'consulta'];
-const CLASSES: Array<ClassesObservadas> = ['Observacao', 'Recusa', 'FalhaRuntime'];
-const FASES = ['explicar', 'fazer', 'nomear'] as const;
+export function temLicao(linguagem: Language): boolean {
+  return Object.keys(TEXTOS).some((chave) => chave.startsWith(`${linguagem}/`));
+}
+
+/** As linguagens que já têm lição, **na ordem do produto** — a mesma ordem
+ *  que `LINGUAGENS` e que o seletor da Task 13 vai mostrar. Derivar de
+ *  `TEXTOS` e não ao contrário: um ficheiro importado que ninguém liste é um
+ *  ficheiro que existe e não aparece. */
+export const LICSOES: Language[] = LINGUAGENS.filter(temLicao);
+
+// ---------------------------------------------------------------------------
+// As regras de autoria
+// ---------------------------------------------------------------------------
 
 function texto(v: unknown, caminho: string, regra: string): string {
   if (typeof v !== 'string' || v.trim().length === 0) {
@@ -7034,312 +7553,529 @@ function texto(v: unknown, caminho: string, regra: string): string {
   return v;
 }
 
-function lista(v: unknown, caminho: string): unknown[] {
-  if (!Array.isArray(v)) throw new ErroDeAutoria('esperava-se uma lista.', caminho);
+function lista(v: unknown, caminho: string, regra: string): unknown[] {
+  if (!Array.isArray(v)) throw new ErroDeAutoria(`${regra}.`, caminho);
   return v;
 }
 
-function objeto(v: unknown, caminho: string): Record<string, unknown> {
+function objeto(v: unknown, caminho: string, regra: string): Record<string, unknown> {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) {
-    throw new ErroDeAutoria('esperava-se um mapa.', caminho);
+    throw new ErroDeAutoria(`${regra}.`, caminho);
   }
   return v as Record<string, unknown>;
 }
 
-function validarForma(prova: Record<string, unknown>, caminho: string, projecao: Projection): void {
-  const forma = texto(prova.forma, `${caminho}.forma`, 'a forma da prova é obrigatória');
-  if (!FORMAS.includes(forma as 'programa')) {
+/** Um bloco do YAML, conferido.
+ *
+ *  A primeira versão fazia `prova.programa as never` e dizia, na mesma linha,
+ *  que isso validava. Não validava: `as never` cala o compilador e não olha
+ *  para o dado. Um `programa: 5` passava a validação e rebentava mais tarde,
+ *  dentro da projeção, com um erro que não aponta para o YAML e não diz que o
+ *  problema é uma lição. */
+function blocoDe(v: unknown, caminho: string, vocabulario: readonly string[]): Bloco {
+  const o = objeto(v, caminho, 'esperava-se um bloco');
+  const type = texto(o.type, `${caminho}.type`, 'o bloco tem de dizer o que é');
+  // `pilha` é o contentor, não uma instrução, e por isso não é vocabulário de
+  // ninguém. Um `type: pilha` no vocabulário da lição é um bloco que o aluno
+  // não pode arrastar para lado nenhum.
+  const conhecidos = [...vocabulario, 'pilha'];
+  if (!conhecidos.includes(type)) {
     throw new ErroDeAutoria(
-      `forma "${forma}" não existe. As formas são: ${FORMAS.join(', ')}.`,
+      `o bloco "${type}" não é desta linguagem. Os blocos são: ${conhecidos.join(', ')}.`,
+      `${caminho}.type`,
+    );
+  }
+  for (const chave of ['fields', 'inputs'] as const) {
+    if (o[chave] === undefined) continue;
+    objeto(o[chave], `${caminho}.${chave}`, `o bloco "${type}" tem um ${chave} que não é um mapa`);
+  }
+  return {
+    type,
+    ...(o.fields === undefined ? {} : { fields: o.fields as Bloco['fields'] }),
+    ...(o.inputs === undefined ? {} : { inputs: o.inputs as Bloco['inputs'] }),
+  };
+}
+
+function slug(v: unknown, caminho: string, regra: string, minusculas: boolean): string {
+  const s = texto(v, caminho, regra);
+  const padrao = minusculas ? /^[a-z0-9-]+$/ : /^[A-Za-z0-9-]+$/;
+  if (!padrao.test(s)) {
+    throw new ErroDeAutoria(
+      `"${s}" não serve${minusculas ? ' e tem de ser todo em minúsculas' : ''}. ` +
+        'São só letras ASCII, números e hífenes, para o nome ser o mesmo em qualquer máquina.',
+      caminho,
+    );
+  }
+  return s;
+}
+
+function validarProva(v: unknown, caminho: string, vocabulario: readonly string[], familia: 'imperativa' | 'declarativa'): Prova {
+  const p = objeto(v, caminho, 'a prova não está lá');
+  const forma = texto(p.forma, `${caminho}.forma`, 'a forma da prova é obrigatória');
+  if (!(FORMAS as readonly string[]).includes(forma)) {
+    throw new ErroDeAutoria(
+      `a forma "${forma}" não existe. As formas são: ${FORMAS.join(', ')}.`,
       `${caminho}.forma`,
     );
   }
-  const temPrograma = prova.programa !== undefined;
-  const temTexto = prova.texto !== undefined;
+  const temPrograma = p.programa !== undefined;
+  const temTexto = p.texto !== undefined;
   if (temPrograma === temTexto) {
     throw new ErroDeAutoria(
       'a prova tem de ter `programa` ou `texto`, nunca os dois e nunca nenhum.',
       caminho,
     );
   }
-  // O ponto 2 do Review Focus: a forma tem de bater com a família.
-  const esperadas: Record<'imperativa' | 'declarativa', string> = {
-    imperativa: 'programa',
-    declarativa: 'consulta',
-  };
-  const correcta = esperadas[projecao.familia];
-  if (forma !== correcta) {
+  if (forma !== FORMAS_POR_FAMILIA[familia]) {
     throw new ErroDeAutoria(
-      `esta lição é ${projecao.familia}, e uma prova ${correcta} prova-a. ` +
-      `A forma "${forma}" pertence a outra família.`,
+      `a prova está escrita como "${forma}" e esta linguagem é ${familia}, que se prova com "${FORMAS_POR_FAMILIA[familia]}".`,
       `${caminho}.forma`,
     );
   }
-  if (forma === 'programa') {
-    emitir(projecao.linguagem, prova.programa as never);
+  if (p.programa !== undefined) {
+    return { forma: forma as 'programa', programa: blocoDe(p.programa, `${caminho}.programa`, vocabulario) };
   }
+  return { forma: forma as 'programa', texto: texto(p.texto, `${caminho}.texto`, 'o texto da prova está vazio') };
 }
 
-function validarSonda(bruto: unknown, caminho: string, projecao: Projection): Licao['sondas'][number] {
-  const o = objeto(bruto, caminho);
-  const nome = texto(o.nome, `${caminho}.nome`, 'a sonda precisa de nome em minúsculas');
-  if (!/^[a-z0-9-]+$/.test(nome)) {
-    throw new ErroDeAutoria(
-      `"${nome}" não serve: o nome é um identificador em minúsculas, com hífen no lugar dos espaços.`,
-      `${caminho}.nome`,
-    );
-  }
-  const pergunta = texto(o.pergunta, `${caminho}.pergunta`, 'a sonda precisa da pergunta que se faz ao aluno');
-  const porque = texto(o.porque, `${caminho}.porque`, 'a sonda precisa de um porque escrito à mão');
-  const prova = objeto(o.prova, `${caminho}.prova`);
-  validarForma(prova, `${caminho}.prova`, projecao);
-  const esperado = objeto(o.esperado, `${caminho}.esperado`);
+function validarSonda(
+  v: unknown,
+  caminho: string,
+  vocabulario: readonly string[],
+  familia: 'imperativa' | 'declarativa',
+): Sonda {
+  const s = objeto(v, caminho, 'a sonda não está lá');
+  const esperado = objeto(s.esperado, `${caminho}.esperado`, 'a sonda tem de dizer o que espera');
   const classe = texto(esperado.classe, `${caminho}.esperado.classe`, 'a classe esperada é obrigatória');
-  if (!CLASSES.includes(classe as ClassesObservadas)) {
+  if (!(CLASSES_OBSERVADAS as readonly string[]).includes(classe)) {
     throw new ErroDeAutoria(
-      `a classe "${classe}" não existe. As classes são: ${CLASSES.join(', ')}.`,
+      `a classe "${classe}" não existe. As classes são: ${CLASSES_OBSERVADAS.join(', ')}.`,
       `${caminho}.esperado.classe`,
     );
   }
   return {
-    nome,
-    pergunta,
-    porque,
-    prova: {
-      forma: prova.forma as 'programa' | 'consulta',
-      ...(prova.programa !== undefined ? { programa: prova.programa as never } : {}),
-      ...(prova.texto !== undefined ? { texto: String(prova.texto) } : {}),
-    },
+    nome: slug(s.nome, `${caminho}.nome`, 'a sonda precisa de um nome', true),
+    pergunta: texto(s.pergunta, `${caminho}.pergunta`, 'a pergunta da sonda é o que o aluno lê primeiro'),
+    porque: texto(s.porque, `${caminho}.porque`, 'a sonda tem de dizer porque está na lição'),
+    prova: validarProva(s.prova, `${caminho}.prova`, vocabulario, familia),
     esperado: {
-      classe: classe as ClassesObservadas,
-      porque: texto(esperado.porque, `${caminho}.esperado.porque`, 'o porque esperado é obrigatório'),
+      classe: classe as 'Observacao',
+      porque: texto(esperado.porque, `${caminho}.esperado.porque`, 'o porque esperado é o que se lê depois de ver o que aconteceu'),
     },
   };
 }
 
-export function CARREGAR(textoYaml: string, linguagem: Language): Licao {
-  let bruto: unknown;
-  try {
-    bruto = load(textoYaml);
-  } catch (e) {
+function validarMomento(v: unknown, caminho: string): Momento {
+  const m = objeto(v, caminho, 'o momento não está lá');
+  const fonte = texto(m.fonte, `${caminho}.fonte`, 'o momento tem de dizer de onde vem a resposta');
+  if (!(FONTES as readonly string[]).includes(fonte)) {
     throw new ErroDeAutoria(
-      `o YAML não está bem formado, e a linha ${(e as { mark?: { line: number } }).mark?.line ?? '?'} é a suspeita. ` +
-      `A mensagem do analisador é: ${(e as Error).message}`,
-      `${linguagem}/variavel.yml`,
+      `a fonte "${fonte}" não existe. São: ${FONTES.join(', ')}.`,
+      `${caminho}.fonte`,
     );
   }
-  const o = objeto(bruto, `${linguagem}/variavel.yml`);
-  const declarada = texto(o.linguagem, 'linguagem', 'o ficheiro tem de declarar a sua linguagem');
-  if (declarada !== linguagem) {
+  const palavras = lista(m.palavras ?? [], `${caminho}.palavras`, 'as palavras têm de ser uma lista').map((p, i) =>
+    texto(p, `${caminho}.palavras[${i}]`, 'uma palavra que não é texto não é uma palavra'),
+  );
+  // Só a `leitura` tem palavras. Noutra fonte seriam um campo morto: ninguém
+  // as conferiria, e quem as escreveu pensou que alguém ia. E o produto não
+  // tem respostas erradas — tem respostas que contam e palavras que são
+  // decoração, e a decoração não vem escrita a fingir que conta.
+  if (fonte === 'leitura' && palavras.length === 0) {
     throw new ErroDeAutoria(
-      `este ficheiro é de ${declarada}, e foi pedido como ${linguagem}. ` +
-      `Cada linguagem tem o seu ficheiro, e não se misturam.`,
+      'um momento de fonte "leitura" sem palavras nunca conta como leitura.',
+      `${caminho}.palavras`,
+    );
+  }
+  if (fonte !== 'leitura' && palavras.length > 0) {
+    throw new ErroDeAutoria(
+      `as palavras só se conferem na fonte "leitura", e esta é "${fonte}".`,
+      `${caminho}.palavras`,
+    );
+  }
+  return {
+    id: texto(m.id, `${caminho}.id`, 'o momento precisa de um id'),
+    texto: texto(m.texto, `${caminho}.texto`, 'o momento precisa de uma pergunta'),
+    palavras,
+    fonte: fonte as 'leitura',
+  };
+}
+
+function validarPasso(
+  v: unknown,
+  caminho: string,
+  nomes: ReadonlySet<string>,
+  vocabulario: readonly string[],
+): Passo {
+  const p = objeto(v, caminho, 'o passo não está lá');
+  const fase = texto(p.fase, `${caminho}.fase`, 'a fase é obrigatória');
+  if (!(FASES as readonly string[]).includes(fase)) {
+    throw new ErroDeAutoria(`a fase "${fase}" não existe. São: ${FASES.join(', ')}.`, `${caminho}.fase`);
+  }
+  const sonda = texto(p.sonda, `${caminho}.sonda`, 'o passo tem de apontar para uma sonda');
+  if (!nomes.has(sonda)) {
+    throw new ErroDeAutoria(
+      `este passo aponta para a sonda "${sonda}", que não existe. As sondas são: ${[...nomes].join(', ')}.`,
+      `${caminho}.sonda`,
+    );
+  }
+  const momentos = lista(p.momentos ?? [], `${caminho}.momentos`, 'os momentos têm de ser uma lista').map(
+    (m, i) => validarMomento(m, `${caminho}.momentos[${i}]`),
+  );
+  if (momentos.length === 0) {
+    // A regra não é de interface, é aritmética: `momentos[momento]` de uma
+    // lista vazia dá `undefined` para sempre, e o aluno ficava preso num
+    // passo que não avança nem recusa.
+    throw new ErroDeAutoria('um passo sem momentos nunca se completa.', `${caminho}.momentos`);
+  }
+  const ids = new Set(momentos.map((m) => m.id));
+  if (ids.size !== momentos.length) {
+    throw new ErroDeAutoria('há dois momentos com o mesmo id neste passo.', `${caminho}.momentos`);
+  }
+  if (fase !== 'nomear' && p.nomear !== undefined) {
+    throw new ErroDeAutoria(
+      `a fase deste passo é "${fase}", e uma fase "${fase}" não dá nome a nada. A palavra "${String(p.nomear)}" não tem onde aparecer.`,
+      `${caminho}.nomear`,
+    );
+  }
+  return {
+    fase: fase as 'explicar',
+    porque: texto(p.porque, `${caminho}.porque`, 'o passo tem de dizer porque esta linha existe'),
+    bloco: blocoDe(p.bloco, `${caminho}.bloco`, vocabulario),
+    sonda,
+    momentos,
+    ...(fase === 'nomear' ? { nomear: texto(p.nomear, `${caminho}.nomear`, 'a fase nomear sem palavra repete o que a fase explicar já disse') } : {}),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// A lição
+// ---------------------------------------------------------------------------
+
+/** Lê uma lição e recusa o que não é uma lição.
+ *
+ *  Todas as recusas são `ErroDeAutoria`, e nenhuma delas é um `TypeError`:
+ *  quem escreve a lição é uma pessoa, e uma pessoa precisa de uma frase que
+ *  diga o que está mal e onde. A diferença entre esta função e um `throw` de
+ *  qualquer tipo é a diferença entre uma regra que se aprende e um bug que se
+ *  persegue. */
+export function CARREGAR(bruto: string, linguagem: Language): Licao {
+  let dados: unknown;
+  try {
+    dados = load(bruto);
+  } catch (e) {
+    // A mensagem do analisador está em inglês, e fica. Quem escreve a lição é
+    // quem a vai corrigir, e `bad indentation of a mapping entry` diz onde é
+    // que o analisador também não percebeu. **Isto nunca vai para o ecrã de
+    // um aluno**: é um erro de autoria, e o aluno não escreve lições.
+    //
+    // O `mark.line` conta a partir do zero, e passá-lo como estava dava a
+    // linha 1 a quem está na linha 2. Um erro de autoria que aponta para a
+    // linha errada é um erro de autoria que se arrasta.
+    const linha = (e as { mark?: { line?: number } }).mark?.line;
+    const onde = linha === undefined ? '' : `, linha ${linha + 1}`;
+    throw new ErroDeAutoria(
+      `o analisador não leu o YAML (${onde}): ${(e as Error).message}`,
+      'o ficheiro inteiro',
+    );
+  }
+
+  const o = objeto(dados, 'a lição', 'o ficheiro não é um mapa de YAML');
+  if (texto(o.linguagem, 'linguagem', 'a lição tem de dizer de que linguagem é') !== linguagem) {
+    throw new ErroDeAutoria(
+      `esta lição é de "${String(o.linguagem)}" e foi pedida de "${linguagem}".`,
       'linguagem',
     );
   }
   const projecao = obter(linguagem);
+  const vocabulario = projecao.blocos;
 
-  const blocos = lista(o.blocos, 'blocos').map((b, i) => objeto(b, `blocos[${i}]`));
-  const sondas = lista(o.sondas, 'sondas').map((s, i) => validarSonda(s, `sondas[${i}]`, projecao));
+  const blocos = lista(o.blocos, 'blocos', 'os blocos da lição têm de ser uma lista').map((b, i) =>
+    blocoDe(b, `blocos[${i}]`, vocabulario),
+  );
+  const sondas = lista(o.sondas, 'sondas', 'as sondas têm de ser uma lista').map((s, i) =>
+    validarSonda(s, `sondas[${i}]`, vocabulario, projecao.familia),
+  );
   const nomes = new Set(sondas.map((s) => s.nome));
   if (nomes.size !== sondas.length) {
     throw new ErroDeAutoria('há duas sondas com o mesmo nome.', 'sondas');
   }
-
-  const passos = lista(o.passos, 'passos').map((brutoPasso, i) => {
-    const caminho = `passos[${i}]`;
-    const p = objeto(brutoPasso, caminho);
-    const fase = texto(p.fase, `${caminho}.fase`, 'a fase é obrigatória');
-    if (!(FASES as readonly string[]).includes(fase)) {
-      throw new ErroDeAutoria(`a fase "${fase}" não existe. São: ${FASES.join(', ')}.`, `${caminho}.fase`);
-    }
-    const sonda = texto(p.sonda, `${caminho}.sonda`, 'o passo tem de apontar para uma sonda');
-    if (!nomes.has(sonda)) {
-      throw new ErroDeAutoria(
-        `este passo aponta para a sonda "${sonda}", que não existe. As sondas são: ${[...nomes].join(', ')}.`,
-        `${caminho}.sonda`,
-      );
-    }
-    const momentos = lista(p.momentos ?? [], `${caminho}.momentos`).map((brutoMomento, m) => {
-      const mCaminho = `${caminho}.momentos[${m}]`;
-      const mo = objeto(brutoMomento, mCaminho);
-      const fonte = texto(mo.fonte, `${mCaminho}.fonte`, 'o momento tem de dizer de onde vem a resposta');
-      if (!(['blocos', 'texto', 'leitura'] as const).includes(fonte as 'blocos')) {
-        throw new ErroDeAutoria(
-          `a fonte "${fonte}" não existe. São: blocos, texto, leitura.`,
-          `${mCaminho}.fonte`,
-        );
-      }
-      const palavras = lista(mo.palavras ?? [], `${mCaminho}.palavras`).map((x, k) =>
-        texto(x, `${mCaminho}.palavras[${k}]`, 'uma palavra tem de ser texto'),
-      );
-      return {
-        id: texto(mo.id, `${mCaminho}.id`, 'o momento precisa de um id'),
-        texto: texto(mo.texto, `${mCaminho}.texto`, 'o momento precisa da pergunta'),
-        palavras,
-        fonte: fonte as 'blocos' | 'texto' | 'leitura',
-      };
-    });
-    const temNomear = p.nomear !== undefined;
-    if (fase === 'nomear' && !temNomear) {
-      throw new ErroDeAutoria(
-        'um passo de fase "nomear" tem de dar nome a uma palavra, senão é um passo de fase "explicar" com o rótulo trocado.',
-        `${caminho}.nomear`,
-      );
-    }
-    if (fase !== 'nomear' && temNomear) {
-      throw new ErroDeAutoria(
-        `este passo é de fase "${fase}" e por isso não dá nome a nada. A palavra "${texto(p.nomear, `${caminho}.nomear`, '')}" não é de aqui.`,
-        `${caminho}.nomear`,
-      );
-    }
-    if (momentos.length === 0) {
-      throw new ErroDeAutoria(
-        'um passo sem momentos nunca se completa, e o aluno não sabe quando pode avançar.',
-        `${caminho}.momentos`,
-      );
-    }
-    const ids = new Set(momentos.map((m) => m.id));
-    if (ids.size !== momentos.length) {
-      throw new ErroDeAutoria('há dois momentos com o mesmo id neste passo.', `${caminho}.momentos`);
-    }
-    return {
-      fase: fase as (typeof FASES)[number],
-      porque: texto(p.porque, `${caminho}.porque`, 'o passo precisa de um porque'),
-      ...(p.nomear === undefined ? {} : { nomear: texto(p.nomear, `${caminho}.nomear`, 'a palavra nomeada não pode ser vazia') }),
-      bloco: objeto(p.bloco, `${caminho}.bloco`),
-      sonda,
-      momentos,
-      ...(p.referencia === undefined
-        ? {}
-        : { referencia: { nome: texto(objeto(p.referencia, `${caminho}.referencia`).nome, `${caminho}.referencia.nome`, 'a referência precisa de um nome') } }),
-    };
-  });
-
-  for (const b of blocos) {
-    const tipo = texto(b.type, 'blocos[].type', 'o bloco precisa de um type');
-    if (!projecao.blocos.includes(tipo) && !['pilha'].includes(tipo)) {
-      throw new ErroDeAutoria(
-        `o bloco "${tipo}" não é do vocabulário desta linguagem (${projecao.blocos.join(', ')}).`,
-        'blocos[].type',
-      );
-    }
-  }
+  const passos = lista(o.passos, 'passos', 'os passos têm de ser uma lista').map((p, i) =>
+    validarPasso(p, `passos[${i}]`, nomes, vocabulario),
+  );
 
   return {
-    id: texto(o.id, 'id', 'a lição precisa de um id'),
+    id: slug(o.id, 'id', 'a lição precisa de um id', true),
     linguagem,
-    titulo: texto(o.titulo, 'titulo', 'a lição precisa de um título que se leia'),
-    porqueTitulo: texto(o.porqueTitulo, 'porqueTitulo', 'o título precisa de uma razão'),
-    blocos: blocos as Licao['blocos'],
+    titulo: texto(o.titulo, 'titulo', 'a lição precisa de um título'),
+    porqueTitulo: texto(o.porqueTitulo, 'porqueTitulo', 'o título só quer dizer alguma coisa com o porque'),
+    blocos,
     passos,
     sondas,
-    paraSaberQueFez: texto(o.paraSaberQueFez, 'paraSaberQueFez', 'a lição precisa de dizer quando acabou'),
+    paraSaberQueFez: texto(
+      o.paraSaberQueFez,
+      'paraSaberQueFez',
+      'a lição tem de dizer como se sabe que foi feita',
+    ),
   };
 }
-
-export const TEXTOS: Record<string, string> = FONTES;
-
-export function temLicao(linguagem: Language): boolean {
-  return TEXTOS[`${linguagem}/variavel`] !== undefined;
-}
-
-/** As linguagens que têm lição escrita, por ordem do núcleo. Derivado, e
- *  não escrito à mão: a primeira versão deste ficheiro dizia
- *  `['python', 'java']` e o teste dizia `['python']`, porque a lição de
- *  Java ainda não existe. Um array escrito à mão é uma lista de intenções;
- *  este é uma lista de ficheiros. */
-export const LICSOES: Language[] = LINGUAGENS.filter(temLicao);
 ```
 
-- [ ] **Step 6: Escrever `src/conteudo/sondas.ts`**\n
+- [ ] **Step 6: Escrever `src/conteudo/sondas.ts`**
 ```typescript
 import { avaliarTexto, classificar, emitir } from '../projecoes/avaliar';
 import type { ClassesObservadas } from '../projecoes/avaliar';
 import { obter } from '../projecoes/registo';
 import type { Language } from '../nucleo/tipos';
-import type { Sonda } from './esquema';
+import type { Forma, Sonda } from './esquema';
+import { FORMAS, FORMAS_POR_FAMILIA } from './esquema';
 
 export interface ResultadoSonda {
   ok: boolean;
   nome: string;
   esperada: ClassesObservadas;
   observada: ClassesObservadas;
-  /** O porque da sonda, escrito à mão. Vai para o relatório para que o
-   *  `git diff` de uma alteração de conteúdo se leia. */
+  /** O porque da sondagem, escrito à mão — e, quando a sondagem falha, o que
+   *  aconteceu em cima. Vai para o relatório para que o `git diff` de uma
+   *  alteração de conteúdo se leia sem abrir o relatório à mão. */
   porque: string;
+  /** O que o motor viu, ou porque é que nem se chegou a ver. */
   erro: string | null;
 }
 
-const FORMAS: Array<'programa' | 'consulta'> = ['programa', 'consulta'];
+function bloco(v: unknown): boolean {
+  return typeof v === 'object' && v !== null && !Array.isArray(v) && typeof (v as { type?: unknown }).type === 'string';
+}
 
+/** Corre uma sondagem e diz o que o motor viu.
+ *
+ *  Duas coisas que este função recusa-se a fazer, e as duas importam:
+ *
+ *  **Não decide o que é um erro de linguagem.** Quem lê o texto é a projeção
+ *  da linguagem escolhida, e o texto de outra linguagem é recusado pela
+ *  projeção — com a mensagem dela, que é a que sabe o que é a linguagem. Um
+ *  runner que dissesse «falhou» esconderia a metade mais importante da
+ *  resposta.
+ *
+ *  **Não rebenta.** Uma sondagem montada à mão, sem passar pelo carregador,
+ *  pode ter uma forma que não existe ou um programa que não é um bloco. O
+ *  `CARREGAR` recusa essas; aqui elas dão um relatório. Um `throw` aqui
+ *  seria um ecrã branco com a lição a meio, e o relatório existe para isso
+ *  não acontecer. */
 export function executarSonda(sonda: Sonda, linguagem: Language): ResultadoSonda {
-  const vazio = (motivo: string): ResultadoSonda => ({
+  const nome = String(sonda.nome);
+  const esperada = sonda.esperado.classe;
+
+  const recusa = (motivo: string, porqueExtra: string): ResultadoSonda => ({
     ok: false,
-    nome: sonda.nome,
-    esperada: sonda.esperado.classe,
+    nome,
+    esperada,
     observada: 'Observacao',
-    porque: sonda.porque,
-    erro: motivo,
+    porque: `${sonda.porque} ${porqueExtra}`,
+    erro: `o motor viu que a sondagem está mal: ${motivo}`,
   });
 
-  const forma = sonda.prova.forma;
-  if (!FORMAS.includes(forma)) {
-    return vazio(
-      `a forma "${String(forma)}" não existe. As formas são: ${FORMAS.join(', ')}.`,
-    );
+  const forma = sonda.prova.forma as Forma;
+  if (!(FORMAS as readonly string[]).includes(forma)) {
+    return recusa(`a forma "${String(forma)}" não existe. As formas são: ${FORMAS.join(', ')}.`, '');
   }
-
   const projecao = obter(linguagem);
-  const correctas: Record<'imperativa' | 'declarativa', 'programa' | 'consulta'> = {
-    imperativa: 'programa',
-    declarativa: 'consulta',
-  };
-  if (forma !== correctas[projecao.familia]) {
-    return vazio(
-      `a sonda está provada com "${forma}", e uma lição ${projecao.familia} prova-se com "${correctas[projecao.familia]}".`,
+  if (forma !== FORMAS_POR_FAMILIA[projecao.familia]) {
+    return recusa(
+      `a prova está escrita como "${forma}" e esta linguagem é ${projecao.familia}, que se prova com "${FORMAS_POR_FAMILIA[projecao.familia]}".`,
+      '',
     );
   }
-
-  let observada: ClassesObservadas;
-  let erro: string | null = null;
-  if (sonda.prova.programa !== undefined) {
-    observada = classificar(
-      avaliarTexto(linguagem, emitir(linguagem, sonda.prova.programa).texto),
-    );
-  } else {
-    const erros = avaliarTexto(linguagem, sonda.prova.texto ?? '');
-    observada = classificar(erros);
-    const primeiro = erros[0];
-    if (primeiro !== undefined) erro = `${primeiro.porque} ${primeiro.remedio}`;
+  const temPrograma = sonda.prova.programa !== undefined;
+  const temTexto = sonda.prova.texto !== undefined;
+  if (temPrograma === temTexto) {
+    return recusa('a prova tem de ter `programa` ou `texto`, nunca os dois e nunca nenhum.', '');
   }
 
+  // O programa vai ser escrito pela projeção antes de ser julgado, e por isso
+  // o que o motor vê é **sempre** texto. Não há caminho em que o motor julgue
+  // blocos: julga o que a linguagem diz deles, e é isso que o aluno escreve.
+  if (temPrograma && !bloco(sonda.prova.programa)) {
+    // `pilhaDe` de uma coisa que não é um bloco devolve uma lista vazia, e um
+    // programa vazio corre sem erro: sem esta linha, `programa: 5` dava uma
+    // sondagem **aprovada**, e o que passava era uma sondagem sem programa.
+    return recusa(`o campo "programa" não é um bloco: ${JSON.stringify(sonda.prova.programa) ?? 'vazio'}.`, '');
+  }
+  let texto: string;
+  try {
+    texto = temPrograma ? emitir(linguagem, sonda.prova.programa ?? null).texto : String(sonda.prova.texto ?? '');
+  } catch (e) {
+    return recusa(`o programa da prova não pôde ser escrito: ${(e as Error).message}`, '');
+  }
+
+  const erros = avaliarTexto(linguagem, texto);
+  const observada = classificar(erros);
+  const ok = observada === esperada;
+  if (ok) return { ok, nome, esperada, observada, porque: sonda.porque, erro: null };
+
+  const primeiro = erros[0];
+  const porqueExtra = primeiro === undefined
+    ? 'Não aconteceu nada que se pudesse ver.'
+    : `O que aconteceu: ${primeiro.porque} ${primeiro.remedio}`;
   return {
-    ok: observada === sonda.esperado.classe,
-    nome: sonda.nome,
-    esperada: sonda.esperado.classe,
+    ok,
+    nome,
+    esperada,
     observada,
-    porque: sonda.porque,
-    erro,
+    porque: `${sonda.porque} ${porqueExtra}`,
+    erro: `o motor viu ${observada} e a sondagem esperava ${esperada}. ${porqueExtra}`,
   };
 }
 ```
 
-- [ ] **Step 7: Escrever `src/conteudo/index.ts`**\n
+- [ ] **Step 7: Escrever `src/conteudo/index.ts`**
 ```typescript
-export { CARREGAR, ErroDeAutoria, temLicao, LICSOES, TEXTOS } from './carregar';
+/** A porta única do conteúdo.
+ *
+ *  Tudo o que a interface precisa do conteúdo entra por aqui: a lição que se
+ *  está a fazer, as sondagens que a provam, e o registo de que lições existem.
+ *  Nenhum ficheiro de `interface/` importa `esquema.ts` ou `sondas.ts`
+ *  directamente, e por isso mudar a forma de uma sondagem é mexer num ficheiro
+ *  só — e não em seis, cada um com a sua ideia do que era.
+ */
+export { FORMAS, FORMAS_POR_FAMILIA, FASES, FONTES, FAMILIAS } from './esquema';
+export type { Bloco, Esperado, Fase, Forma, Fonte, Licao, Momento, Passo, Prova, Sonda } from './esquema';
+
+export { CARREGAR, ErroDeAutoria, LICSOES, TEXTOS, temLicao } from './carregar';
+
 export { executarSonda } from './sondas';
-export type { Licao, Passo, Momento, Sonda, Esperado, Prova, Bloco, Fase } from './esquema';
+export type { ResultadoSonda } from './sondas';
 ```
 
-- [ ] **Step 8: Correr os testes e ver falhar**\n
-Run: `npx vitest run src/conteudo`
-Expected: FAIL — `./python/variavel.yml?raw` não existe ainda, e `./esquema` também não.
+- [ ] **Step 8: Escrever `src/conteudo/python/variavel.yml` — a lição mais pequena que o formato aceita**
 
-- [ ] **Step 9: Commitar o esquema sem o conteúdo**\n
+A versão do plano não tinha este passo, e por isso o commit da Task 7 ficava
+vermelho de propósito: o passo 8 dizia «espera-se que falhe, porque
+`./python/variavel.yml` ainda não existe». Um plano pode dizer isso. Um
+executor que faz `git commit` em cada tarefa fica com um commit que não passa
+nos testes, e a partir daí «o commit está verde» deixa de ser verdade em
+todo o repositório e deixa de valer como prova de nada.
+
+A lição mínima é uma lição a sério e a mais curta possível: um passo de cada
+fase, uma sondagem, um bloco de `guardar`. Serve de duas maneiras — faz esta
+tarefa verde, e é o exemplo mais curto do formato, que é o que a Task 8 vai
+ler antes de escrever a lição a sério por cima.
+
+`src/conteudo/python/variavel.yml`:
+
+```yaml
+id: variavel
+linguagem: python
+titulo: A caixa que guarda o valor
+porqueTitulo: >-
+  Uma linha que conta não deixa nada para a linha de baixo usar. Uma
+  variável é a caixa onde o valor fica à espera de ser precisado outra vez.
+
+# O vocabulário desta lição. Cada entrada tem de ser um bloco que a projeção
+# de Python sabe escrever — o carregador recusa o resto, e diz quais são.
+blocos:
+  - type: guardar
+  - type: dizer
+
+passos:
+  - fase: explicar
+    porque: >-
+      Este bloco põe um número dentro de uma caixa, e dá um nome à caixa.
+      Sem o nome, o número desaparecia no fim da linha; com o nome, qualquer
+      linha a seguir pode buscá-lo.
+    bloco:
+      type: guardar
+      fields:
+        nome: { valor: total }
+      inputs:
+        VALOR: { valor: 5 }
+    sonda: guarda-um-numero
+    momentos:
+      - id: l1
+        texto: O que é que esta linha põe dentro da caixa?
+        palavras: [guardar, número, total]
+        fonte: leitura
+      - id: l2
+        texto: E se a caixa não tivesse nome?
+        palavras: [nome, sumir, desaparecer]
+        fonte: leitura
+
+  - fase: fazer
+    porque: >-
+      Agora escreves tu a linha. O produto escreve o que fez e diz se é o que
+      a linha diz — e o que diz é o mesmo que o Python diria, nem mais
+      simpático nem mais directo.
+    bloco:
+      type: guardar
+      fields:
+        nome: { valor: total }
+      inputs:
+        VALOR: { valor: 5 }
+    sonda: guarda-um-numero
+    momentos:
+      - id: f1
+        texto: Escreve a linha que põe 5 dentro de uma caixa chamada total.
+        palavras: []
+        fonte: texto
+
+  - fase: nomear
+    porque: >-
+      A caixa é o que torna o número útil mais tarde, e o nome é metade do que
+      a torna útil. Escrever `total = 5` sem saber o que `total` é é escrever
+      um programa que só tu percebes.
+    nomear: variável
+    bloco:
+      type: guardar
+      fields:
+        nome: { valor: total }
+      inputs:
+        VALOR: { valor: 5 }
+    sonda: guarda-um-numero
+    momentos:
+      - id: n1
+        texto: Como se chama a caixa que guarda o valor?
+        palavras: [variável, caixa, nome]
+        fonte: leitura
+
+sondas:
+  - nome: guarda-um-numero
+    pergunta: O que é que este programa faz?
+    porque: >-
+      A sonda é a única coisa que prova que a pessoa entendeu. Está antes da
+      experiência de propósito: quem vai adivinhar é quem ainda tem algo a
+      aprender, e quem vai dizer que é um número já sabe.
+    prova:
+      forma: programa
+      programa:
+        type: pilha
+        inputs:
+          CORPO:
+            stack:
+              - type: guardar
+                fields:
+                  nome: { valor: total }
+                inputs:
+                  VALOR: { valor: 5 }
+    esperado:
+      classe: Observacao
+      porque: >-
+        O programa corre e não dá erro nenhum, que é o que esta lição ensina
+        a desconfiar: uma linha que não falha não é uma linha que funciona,
+        é uma linha que ainda não foi usada.
+
+paraSaberQueFez: >-
+  Fizeste quando conseguiste escrever uma linha que guarda um número e dizer,
+  sem ver a lição, o que a linha faz e o que a protege.
+```
+
+- [ ] **Step 9: Correr os testes e ver passar**
+Run: `npx vitest run src/conteudo`
+Expected: PASS.
+
+- [ ] **Step 10: Commitar o formato, e a lição mínima que o prova**
 ```bash
 git add -A
-git commit -m \"feat: esquema da licao em YAML, carregador, e runner de sondas
+git commit -m \"feat: o formato da licao em YAML, o carregador, e o runner de sondas
 
 So esperado.classe e comparado com o motor. esperado.porque e prosa de
 autoria e nunca e comparada, e ha um teste que fixa isso: escrever outra
@@ -7352,6 +8088,87 @@ a mensagem diz as duas formas em vez de rebentar com um TypeError.
 ```
 
 **Nota:** o commit não passa nos testes ainda — `./python/variavel.yml` não existe. Isso é propositado e é a Task 8: o esquema é verde sobre conteúdo, e o conteúdo é a tarefa seguinte. Corra `npm test` e veja a falha ser a de ficheiro em falta, e só essa.
+
+---
+
+#### Task 7 —(decisoes e o que ficou por provar)
+
+Catorze defeitos, e o primeiro é do tipo que muda a forma de executar o plano
+todo.
+
+1. **O commit desta tarefa era vermelho de propósito.** O passo 8 dizia
+   «espera-se que falhe, porque `./python/variavel.yml` ainda não existe». Um
+   plano pode dizer isso. Mas um executor que faz `git commit` em cada tarefa
+   fica com um commit que não passa nos testes, e a partir desse momento «o
+   commit está verde» deixa de ser verdade no repositório inteiro e deixa de
+   valer como prova de nada. Passou a haver uma **lição mínima** nesta tarefa
+   — um passo de cada fase, uma sondagem, um `guardar` — que é uma lição a
+   sério e a mais curta possível. Faz esta tarefa verde e é o exemplo mais
+   curto do formato, que é o que a Task 8 lê antes de escrever por cima.
+
+2. **As recusas de autoria eram dez expressões regulares sobre o ficheiro
+   real.** O teste fazia `variavelPython.replace(/momentos:[\s\S]*?(?=\n  - fase:)/)`,
+   e isso só chega ao `momentos: []` porque a regex sabe onde fica a próxima
+   `- fase:`. Mudar a indentação do YAML partia seis testes que deviam estar a
+   testar o carregador. Passaram a **mudar um campo num objeto** e a
+   serializar com `dump` — a corrupção é num campo, não num texto, e o teste
+   passa a ser sobre a regra do carregador mesmo que o ficheiro real mude de
+   forma.
+
+3. **`prova.programa as never` dizia que validava que validava.** `as never`
+   cala o compilador e não olha para o dado. Um `programa: 5` passava a
+   validação e rebentava mais tarde, dentro da projeção, com um erro que não
+   aponta para o YAML nem diz que o problema é uma lição. Saiu um `blocoDe()`
+   que olha mesmo: tem de ser um mapa, tem de dizer `type`, e o `type` tem de
+   ser do vocabulário da projeção.
+
+4. **A `forma` certa estava escrita duas vezes** — no carregador e no
+   runner. Duas tabelas divergem no primeiro caso em que uma delas muda. Vive
+   agora em `FORMAS_POR_FAMILIA`, no esquema, que é o contrato. O mesmo
+   aconteceu com as classes observadas: o **tipo** estava escrito à mão e a
+   **lista** noutro sítio, e a lista é a que se esquece de uma das três sem
+   ninguém dar por isso. A lista passou a ser a fonte da verdade e o tipo sai
+   dela.
+
+5. **`Licao.linguagem` era `string`.** Uma `string` ali é uma porta aberta: a
+   lição de Go validava como se fosse a de Python, e o erro só aparecia
+   quando o aluno carregava. É o `Language` do núcleo.
+
+6. **A sondagem do teste não tinha `pergunta`**, que o `Sonda` exige — o
+   `tsc` apanhou. E o `@ts-expect-error` estava numa linha que não era a linha
+   do erro, que o `tsc` também apanha e a dizer que não. A conversão passou
+   para uma função, com a razão escrita.
+
+7. **Um teste esperava `java` em minúsculas** e a projeção escreve `Java`. O
+   teste é que estava errado: passou a casar sem distinção.
+
+8. **O `mark.line` do analisador conta a partir do zero** e o plano passava-o
+   como estava — o autor lia «linha 1» estando na linha 2. Um erro de autoria
+   que aponta para a linha errada é um erro de autoria que se arrasta.
+
+9. **`correcta`/`correctas`** no código do plano: grafia de antes de 1990. A
+   lista do guard apanhou-a, e a lista do guard é a razão pela qual a grafia
+   do código é a mesma do que o aluno lê.
+
+10. **Os cabeçalhos dos nove passos desta tarefa tinham um `\n` literal no
+    fim.** A lista de tarefas usa esses cabeçalhos para rotular cercas, e um
+    `\n` no fim muda o que a ferramenta casa. Nove cabeçalhos, em toda a
+    tarefa.
+
+**A descoberta que muda a Task 8: um programa de
+blocos nunca dá uma `Recusa` de tipo.** Os blocos são tipados — um `guardar`
+com um texto escreve `String total = "olá";` em Java, que é Java bem escrito —
+e por isso **não há caminho de blocos para uma recusa**. As recusas de uma
+lição de Java têm de ser provadas com texto escrito à mão, e é isso que a
+diferença entre as duas projeções está a ensinar. A primeira versão do teste
+tentava provar o contrário com um programa de blocos, e não havia forma de o
+fazer funcionar. Está agora escrito num teste, para a Task 8 o ler e não o
+descobrir quando a lição não fechar.
+
+**O que ficou por provar:** a **lição**. O que esta tarefa prova é o formato,
+o carregador e o runner; o que se ensina está por escrever e a Task 8 é quem
+o escreve. E o que a lição precisa já está dito aqui: uma recusa de tipo
+prova-se com texto, não com blocos.
 
 ---
 

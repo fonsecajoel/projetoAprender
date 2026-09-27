@@ -1,0 +1,102 @@
+id: variavel
+linguagem: python
+titulo: A caixa que guarda o valor
+porqueTitulo: >-
+  Uma linha que conta não deixa nada para a linha de baixo usar. Uma
+  variável é a caixa onde o valor fica à espera de ser precisado outra vez.
+
+# O vocabulário desta lição. Cada entrada tem de ser um bloco que a projeção
+# de Python sabe escrever — o carregador recusa o resto, e diz quais são.
+blocos:
+  - type: guardar
+  - type: dizer
+
+passos:
+  - fase: explicar
+    porque: >-
+      Este bloco põe um número dentro de uma caixa, e dá um nome à caixa.
+      Sem o nome, o número desaparecia no fim da linha; com o nome, qualquer
+      linha a seguir pode buscá-lo.
+    bloco:
+      type: guardar
+      fields:
+        nome: { valor: total }
+      inputs:
+        VALOR: { valor: 5 }
+    sonda: guarda-um-numero
+    momentos:
+      - id: l1
+        texto: O que é que esta linha põe dentro da caixa?
+        palavras: [guardar, número, total]
+        fonte: leitura
+      - id: l2
+        texto: E se a caixa não tivesse nome?
+        palavras: [nome, sumir, desaparecer]
+        fonte: leitura
+
+  - fase: fazer
+    porque: >-
+      Agora escreves tu a linha. O produto escreve o que fez e diz se é o que
+      a linha diz — e o que diz é o mesmo que o Python diria, nem mais
+      simpático nem mais directo.
+    bloco:
+      type: guardar
+      fields:
+        nome: { valor: total }
+      inputs:
+        VALOR: { valor: 5 }
+    sonda: guarda-um-numero
+    momentos:
+      - id: f1
+        texto: Escreve a linha que põe 5 dentro de uma caixa chamada total.
+        palavras: []
+        fonte: texto
+
+  - fase: nomear
+    porque: >-
+      A caixa é o que torna o número útil mais tarde, e o nome é metade do que
+      a torna útil. Escrever `total = 5` sem saber o que `total` é é escrever
+      um programa que só tu percebes.
+    nomear: variável
+    bloco:
+      type: guardar
+      fields:
+        nome: { valor: total }
+      inputs:
+        VALOR: { valor: 5 }
+    sonda: guarda-um-numero
+    momentos:
+      - id: n1
+        texto: Como se chama a caixa que guarda o valor?
+        palavras: [variável, caixa, nome]
+        fonte: leitura
+
+sondas:
+  - nome: guarda-um-numero
+    pergunta: O que é que este programa faz?
+    porque: >-
+      A sonda é a única coisa que prova que a pessoa entendeu. Está antes da
+      experiência de propósito: quem vai adivinhar é quem ainda tem algo a
+      aprender, e quem vai dizer que é um número já sabe.
+    prova:
+      forma: programa
+      programa:
+        type: pilha
+        inputs:
+          CORPO:
+            stack:
+              - type: guardar
+                fields:
+                  nome: { valor: total }
+                inputs:
+                  VALOR: { valor: 5 }
+    esperado:
+      classe: Observacao
+      porque: >-
+        O programa corre e não dá erro nenhum, que é o que esta lição ensina
+        a desconfiar: uma linha que não falha não é uma linha que funciona,
+        é uma linha que ainda não foi usada.
+
+paraSaberQueFez: >-
+  Fizeste quando conseguiste escrever uma linha que guarda um número e dizer,
+  sem ver a lição, o que a linha faz e o que a protege.

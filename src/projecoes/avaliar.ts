@@ -45,8 +45,16 @@ export function avaliarTexto(linguagem: Language, texto: string): Erro[] {
  *  divergência entre blocos e texto é um erro de comparação, não do programa.
  *  O programa está certo e o texto é que diverge, e uma sondagem que espera
  *  `Recusa` nunca pode ser satisfeita por alguém que escreveu a linha de outra
- *  maneira — seria dar a nota a uma coisa que não se estava a perguntar. */
-export type ClassesObservadas = 'Observacao' | 'Recusa' | 'FalhaRuntime';
+ *  maneira — seria dar a nota a uma coisa que não se estava a perguntar.
+ *
+ *  A lista está logo a seguir e é a fonte da verdade: o tipo sai dela, e não
+ *  o contrário. Com o tipo escrito à mão e a lista escrita noutro sítio — que
+ *  é o que o carregador de lições fazia — a lista é a que esquece uma das
+ *  três, e quem lê vê «as classes são: Observacao, FalhaRuntime», que é um
+ *  erro que se lê como um erro. */
+export const CLASSES_OBSERVADAS = ['Observacao', 'Recusa', 'FalhaRuntime'] as const;
+
+export type ClassesObservadas = (typeof CLASSES_OBSERVADAS)[number];
 
 export function classificar(erros: readonly Erro[]): ClassesObservadas {
   if (erros.some((e) => e.classe === 'Recusa')) return 'Recusa';

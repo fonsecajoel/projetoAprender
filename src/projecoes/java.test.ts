@@ -309,6 +309,30 @@ describe('ler: o que a Java recusa, e o que diz', () => {
     expect(java.ler('String nome = "a;b";\n').erros).toEqual([]);
   });
 
+  it('o espaço antes do ponto-e-vírgula é espaço, e não parte do valor', () => {
+    // Java válida recusada, e a pior versão: a recusa dizia que a linha não
+    // era Java, que é uma mentira, e não dizia que o problema eram dois
+    // espaços. A causa era o `(.+);$` ganancioso, que **aceita** a linha e
+    // guarda `"5 "` como valor — texto com um espaço no fim, e não o número
+    // cinco. A regra de Java é que o valor não tem espaços nas pontas, e a
+    // expressão tinha de a dizer.
+    //
+    // A lista toda, porque a falha era do espaço e o sintoma não dizia onde:
+    // o espaço antes, o espaço depois, e os dois lados ao mesmo tempo.
+    for (const linha of [
+      'int total = 5 ;',
+      'int total = 5; ',
+      'int total  =  5 ;',
+      'int  total  =  5;',
+      'String nome = "olá" ;',
+    ]) {
+      expect(java.ler(linha + '\n').erros).toEqual([]);
+    }
+    // E o que é mesmo errado continua errado: dois pontos-e-vírgula não são
+    // uma linha de Java, e a correção do espaço não pode tê-lo comido.
+    expect(java.ler('int total = 5;;\n').erros.length).toBeGreaterThan(0);
+  });
+
   it('falta o tipo é dito como falta de tipo, e o mesmo erro não se repete', () => {
     const r = java.ler('total = 5;\n');
     expect(r.erros).toHaveLength(1);

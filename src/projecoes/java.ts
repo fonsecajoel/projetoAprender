@@ -23,7 +23,7 @@ import type { Gerado, LerResultado, Projection } from './tipos';
 // fazer — passou a vida a dizer "confia no que te digo, e eu digo porquê".
 //
 // **Um erro que não é dado é muito mais barato do que um erro que é dado à
-// cosa.** A recusa tem de ser verdadeira, e o silêncio sobre o que não se
+// coisa.** A recusa tem de ser verdadeira, e o silêncio sobre o que não se
 // sabe fica escrito como uma nota neste ficheiro, e não escondido.
 
 // ---------------------------------------------------------------------------
@@ -153,7 +153,16 @@ function emitir(b: BlocoLeigo, e: Emissor): void {
 // O `;` faz parte do padrão, e é a sua ausência que dá a mensagem do ponto-e-
 // vírgula. Se ficasse de fora, o `ler` não distinguiria "falta o ponto" de
 // "falta o tipo", e a pessoa corrigia uma coisa e recebia o erro da outra.
-const ATRIBUIR = /^(int|double|String|boolean|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+);$/;
+/* O `\s*` à frente do valor é o que faz a diferença entre `int total = 5;` e
+ * `int total = 5 ;`, e não é tolucá-lo: `(.+);$` com um valor ganancioso **aceita**
+ * as duas linhas, e na segunda o valor capturado é `"5 "` — texto com um espaço
+ * no fim, e não o número cinco. O sintoma era uma recusa de Java perfeitamente
+ * válida, e a pior das duas porque a recusa dizia que a linha não é Java sem
+ * dizer que o problema eram os dois espaços. O `\s*` antes do `;` é a regra de
+ * Java; o que fica entre ele e o fecho é o valor, e o valor não tem espaços
+ * nas pontas. `IMPRIMIR` já fazia isto, e a diferença entre as duas era
+ * exatamente a diferença entre aceitar e recusar o mesmo programa. */
+const ATRIBUIR = /^(int|double|String|boolean|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*;$/;
 const IMPRIMIR = /^System\.out\.println\(\s*(.+?)\s*\);$/;
 const CICLO = /^for\s*\(\s*int\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*0;\s*[A-Za-z_][A-Za-z0-9_]*\s*<\s*(\d+);\s*[A-Za-z_][A-Za-z0-9_]*\s*\+\+\s*\)\s*\{$/;
 // Uma atribuição sem a palavra de tipo. Serve só para a mensagem: `total = 5;`

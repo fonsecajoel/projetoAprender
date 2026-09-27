@@ -20,7 +20,7 @@ import { obter } from '../projecoes/registo';
 //   `inputs[chave].block`  ->  o bloco ligado à ranhura
 //   `next.block`           ->  a instrução seguinte da cadeia
 //
-// Duas dessas quatroifactos que o plano escrevia estavam erradas, e as duas
+// Duas dessas quatro formas que o plano escrevia estavam erradas, e as duas
 // erradas de uma maneira que não dá erro nenhum: devolvem `undefined` ou `null`
 // em silêncio, e o produto fica morto sem uma única falha no ecrã. Por isso
 // cada função abaixo tem um teste que a alimenta com a **saída real** do

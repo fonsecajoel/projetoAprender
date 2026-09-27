@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { avaliarTexto, emitir } from '../projecoes/avaliar';
-import { FORMAS_POR_FAMILIA } from './esquema';
+import { FAMILIAS, FORMAS, FORMAS_POR_FAMILIA } from './esquema';
+import { LINGUAGENS } from '../nucleo/tipos';
 import type { Sonda } from './esquema';
 import { executarSonda } from './sondas';
 
@@ -196,6 +197,46 @@ describe('executarSonda: sondagens malformadas dão relatório, não exceção',
       const r = executarSonda(sondaEmMaos({ ...sonda(), prova }), 'python');
       expect(r.ok).toBe(false);
       expect(r.erro).toMatch(/nunca os dois|nenhum/);
+    }
+  });
+
+  it('uma sondagem de Go, TypeScript, JavaScript ou SQL dá relatório, e não rebenta', () => {
+    // Este teste foi escrito depois de uma revisão de fora, e a revisão
+    // tinha razão. A linha que decide se a forma bate com a família pedia a
+    // **projeção**, e uma projeção que não existe rebenta. Rebentar ali é a
+    // pior coisa que podia acontecer, e por duas Razões: o SQL é a única
+    // declarativa das seis, e `forma: consulta` com `sql` é a combinação
+    // **certa** — a que a linha existe para dizer que está errada quando não
+    // está. Quatro das seis linguagens nunca chegaram a ver esta linha.
+    //
+    // A família é uma propriedade da linguagem e vive no `FAMILIAS`; a
+    // projeção só é preciso depois, para escrever o programa.
+    //
+    // E a prova não é que deixou de rebentar: é que as doze combinações dão
+    // uma **mensagem**, e que a mensagem é a do sítio certo. A do par errado
+    // diz «esta linguagem é declarativa, que se prova com "consulta"» e é
+    // essa a resposta que se queria; a do par certo passa à regra seguinte,
+    // porque já não há nada a dizer sobre a forma.
+    for (const linguagem of LINGUAGENS) {
+      for (const forma of FORMAS) {
+        const certa = forma === FORMAS_POR_FAMILIA[FAMILIAS[linguagem]];
+        const r = executarSonda(
+          sondaEmMaos({ ...sonda(), prova: { forma, texto: 'qualquer' } }),
+          linguagem,
+        );
+        expect(r.ok).toBe(false);
+        if (certa) {
+          // O par certo: a forma não é o assunto, e a regra seguinte diz
+          // do assunto. É por isso que isto mede a **passagem** e não a
+          // recusa, e é por isso que a recusa é o que se afirma.
+          expect(r.erro).not.toMatch(/que se prova com/);
+        } else {
+          expect(r.erro).toMatch(/que se prova com/);
+          expect(r.erro).toMatch(
+            new RegExp(FAMILIAS[linguagem] === 'declarativa' ? 'declarativa' : 'imperativa'),
+          );
+        }
+      }
     }
   });
 

@@ -26,6 +26,20 @@ produto que não compila.
   onde não há nada é um guarda a que se deixa de dar ouvido. O mesmo vale
   para a regra dois: `facto` dentro de `const facto = 1` é um nome, e não uma
   grafia antiga.
+  5. **A prosa que está dentro de um literal.** A pessoa lê o que está nas
+     cadeias de caracteres, e as mensagens de erro deste produto são todas
+     cadeias de caracteres. As quatro regras acima só viam comentários e
+     Markdown, que é onde a documentação vive — e a documentação é o que a
+     pessoa que escreve o produto lê, não o que a pessoa que usa o produto lê.
+
+  A quinta regra é a que tem uma medição por trás, e a medição é que a fez
+  passar. Em `src/` há 880 cadeias de caracteres com quatro ou mais palavras, e
+  a regra apontava para **três** — e as três eram falsos positivos meus: duas
+  vezes `directamente`, que nunca foi grafia de antes de 1990 (o que mudou foi
+  `directo` para `direto`, e o advérbio nunca teve o `c` para tirar), e uma
+  amostra de SQL. Zero em trezentos e setenta e nove é o que faz uma regra
+  valer a pena: uma regra que grita trezentas vezes onde não há nada é uma
+  regra a que se deixa de dar ouvido, e a quinta regra quase não existia.
 
   Duas excepções estreitas, e estreitas mesmo. Um selector de elemento em
   CSS (`input {`) é o nome que o CSS impõe, não uma escolha. E este ficheiro
@@ -55,7 +69,7 @@ OUTRA_ESCRITA = re.compile(
 #    aparecer num ficheiro: uma lista de quarenta palavras que ninguém reviu
 #    é uma lista em que ninguém confia.
 ANTES_1990 = [
-    'aspecto', 'contacto', 'correctamente', 'correcto', 'directamente',
+    'aspecto', 'contacto', 'correctamente', 'correcto',
     'directo', 'efectivo', 'exactamente', 'exacta', 'exacto', 'excepto',
     'facto', 'objectiva', 'objecto', 'respectivo', 'selectivo',
 ]
@@ -86,11 +100,27 @@ TEXTO_HTML = re.compile(r'>([^<>]+)<')
 
 # O diário da SDD é a única coisa deste repositório escrita **sem acentos**,
 # e é uma escolha e não um esquecimento: é o registo do que se foi fazendo
-# enquanto se fazia, e aacentá-lo a meio seria mexer no passado. A regra dos
+# enquanto se fazia, e acentá-lo a meio seria mexer no passado. A regra dos
 # acentos não se aplica lá — as outras três continuam a aplicar-se, e sem esta
 # excepção o `projecao` sem acento das linhas do diário seria um guarda a
 # gritar onde não há nada.
 DIARIO = os.path.join('.superpowers', 'sdd')
+
+# Regra 5: a prosa dentro de um literal. O que separa uma **frase** de um
+# identificador, de um caminho e de uma amostra de código são dois sinais que
+# andam juntos — pelo menos quatro palavras, e nenhum destes símbolos:
+#
+#   `=`      uma atribuição, uma comparação, o nome de um campo de um literal
+#   `;`      o fim de uma linha de código, e a amostra de SQL mais óbvia
+#   `(` `)`  uma chamada, e portanto código
+#   `{{`     um pedaço de Blockly, e portanto um identificador com pontos
+#
+# O `SELECT total FROM vendas;` é o caso que motivou o `;`: é uma frase de
+# cinco palavras em inglês, e o `;` é a única coisa que diz que é código. Um
+# guarda que visse a frase sem ver o `;` gritava por causa de uma amostra de
+# SQL que alguém quis mostrar à pessoa.
+LITERAL = re.compile(r"'([^'\\\n]{12,})'|`([^`\\]{12,})`")
+NAO_E_FRASE = re.compile(r'[;=(){}]|\{\{|\}\}|=>|::|^\s*[.#]')
 
 
 def sem_codigo(texto):
@@ -114,6 +144,47 @@ def prosa(caminho, linha):
     if ext == '.html':
         return TEXTO_HTML.search(linha) is not None
     return COMENTARIO.match(linha) is not None
+
+
+def semComentarios(texto):
+    """O mesmo texto sem os comentários de linha e de bloco.
+
+  A regra 5 lê os literais, e um literal escrito dentro de um comentário não é
+  prosa que a pessoa lê: é prosa sobre a prosa. Sem esta limpeza, o ficheiro
+  que explica a tentação de importar uma projeção seria vigiado por cada
+  menção que faz — e o que se quer é o contrário. O `(^|[^:])` existe para
+  não partir o `https://` das URL.
+  """
+    return re.sub(r'/\*[\s\S]*?\*/', '', re.sub(r'(^|[^:])//.*$', r'\1', texto, flags=re.M))
+
+
+def regra_das_palavras(limpa, caminho, regista, n, linha):
+    """As três regras de palavras, sobre um texto que já se sabe ser prosa.
+
+  O `limpa` já não tem código, e o `baixo` é a forma dobrada para o casamento
+  não depender das maiusculas. A mesma função serve a prosa e os literais,
+  porque é a **mesma** regra: uma frase é uma frase, e escrevê-la dentro de
+  um literal não a torna menos uma frase.
+  """
+    baixo = limpa.lower()
+
+    for palavra in ANTES_1990:
+        if re.search(r'\b' + re.escape(palavra) + r'\b', baixo):
+            regista(n, 'grafia de antes de 1990 %r' % palavra, linha)
+
+    if DIARIO not in caminho:
+        for palavra in SEM_ACENTO_OU_CORROMPIDO:
+            if re.search(r'\b' + re.escape(palavra), baixo):
+                regista(n, 'palavra sem o acento que lhe pertence %r' % palavra, linha)
+
+    for palavra in INGLES:
+        # Um nome imposto continua a ser nome quando está a ser usado como
+        # nome: `.input` e `o input` não são a mesma coisa, e só o segundo é
+        # uma palavra inglesa dentro de uma frase.
+        if palavra in NOMES_IMPOSTOS:
+            continue
+        if re.search(r'\b' + re.escape(palavra) + r'\b', limpa):
+            regista(n, 'palavra de ingles %r' % palavra, linha)
 
 
 def verifica(caminho, falhas):
@@ -148,29 +219,22 @@ def verifica(caminho, falhas):
         if not prosa(caminho, linha):
             continue
         limpa = sem_codigo(linha)
-        baixo = limpa.lower()
-
-        for palavra in ANTES_1990:
-            if re.search(r'\b' + re.escape(palavra) + r'\b', baixo):
-                regista(n, 'grafia de antes de 1990 %r' % palavra, linha)
-
-        if DIARIO not in caminho:
-            for palavra in SEM_ACENTO_OU_CORROMPIDO:
-                if re.search(r'\b' + re.escape(palavra), baixo):
-                    regista(n, 'palavra sem o acento que lhe pertence %r' % palavra, linha)
-
         if caminho.endswith('.css') and SELECTOR_CSS.match(limpa):
             limpa = ''
-        for palavra in INGLES:
-            achado = re.search(r'\b' + re.escape(palavra) + r'\b', limpa)
-            if achado is None:
+        regra_das_palavras(limpa, caminho, regista, n, linha)
+
+    # 5. A prosa dentro de um literal. Só em ficheiros de código, porque um
+    #    ficheiro de YAML e um de Markdown já são prosa de ponta a ponta e não
+    #    têm literais: lá a regra 5 é a regra 2, e tê-la duas vezes seria
+    #    contar a mesma frase duas vezes.
+    if os.path.splitext(caminho)[1] in ('.ts', '.tsx'):
+        sem_comentarios = semComentarios(bruto)
+        for achado in LITERAL.finditer(sem_comentarios):
+            texto = (achado.group(1) or achado.group(2)).strip()
+            if len(texto.split()) < 4 or NAO_E_FRASE.search(texto):
                 continue
-            # Um nome imposto continua a ser nome quando está a ser usado
-            # como nome: `.input` e `o input` não são a mesma coisa, e só o
-            # segundo é uma palavra inglesa numa frase.
-            if palavra in NOMES_IMPOSTOS:
-                continue
-            regista(n, 'palavra de ingles %r' % palavra, linha)
+            n = sem_comentarios.count('\n', 0, achado.start()) + 1
+            regra_das_palavras(texto, caminho, regista, n, texto)
 
 
 def recolhe(alvo):

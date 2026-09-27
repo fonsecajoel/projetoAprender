@@ -1,9 +1,8 @@
 import { avaliarTexto, classificar, emitir } from '../projecoes/avaliar';
 import type { ClassesObservadas } from '../projecoes/avaliar';
-import { obter } from '../projecoes/registo';
 import type { Language } from '../nucleo/tipos';
 import type { Forma, Sonda } from './esquema';
-import { FORMAS, FORMAS_POR_FAMILIA } from './esquema';
+import { FAMILIAS, FORMAS, FORMAS_POR_FAMILIA } from './esquema';
 
 export interface ResultadoSonda {
   ok: boolean;
@@ -54,10 +53,19 @@ export function executarSonda(sonda: Sonda, linguagem: Language): ResultadoSonda
   if (!(FORMAS as readonly string[]).includes(forma)) {
     return recusa(`a forma "${String(forma)}" não existe. As formas são: ${FORMAS.join(', ')}.`, '');
   }
-  const projecao = obter(linguagem);
-  if (forma !== FORMAS_POR_FAMILIA[projecao.familia]) {
+  // A família vem do `FAMILIAS`, e **não** da projeção. A primeira versão
+  // desta linha pedia a projeção, e uma linguagem sem projeção — Go, SQL,
+  // mais três — rebentava em vez de explicar. Era o pior sítio possível para
+  // rebentar: o SQL é a única declarativa das seis, e `forma: consulta` com
+  // `sql` é a **combinação certa**, a que esta linha existe para dizer que
+  // está errada quando não está. A família é uma propriedade da linguagem e
+  // está escrita num sítio só; perguntar à projeção era pedir a coisa certa ao
+  // sítio errado.
+  const familia = FAMILIAS[linguagem];
+  const formaDaFamilia = FORMAS_POR_FAMILIA[familia];
+  if (forma !== formaDaFamilia) {
     return recusa(
-      `a prova está escrita como "${forma}" e esta linguagem é ${projecao.familia}, que se prova com "${FORMAS_POR_FAMILIA[projecao.familia]}".`,
+      `a prova está escrita como "${forma}" e esta linguagem é ${familia}, que se prova com "${formaDaFamilia}".`,
       '',
     );
   }
@@ -83,7 +91,18 @@ export function executarSonda(sonda: Sonda, linguagem: Language): ResultadoSonda
     return recusa(`o programa da prova não pôde ser escrito: ${(e as Error).message}`, '');
   }
 
-  const erros = avaliarTexto(linguagem, texto);
+  // O `avaliarTexto` vai no mesmo `try` que o `emitir` e por uma razão que
+  // só se vê depois de partir: as duas coisas precisam da projeção, e uma
+  // projeção que não existe rebenta nas duas. A primeira versão só
+  // apanhava o `emitir`, e a promessa «**não rebenta**» do ficheiro era
+  // verdadeira para metade do caminho — a outra metade rebentava a meio da
+  // lição, que é exatamente o ecrã branco que o texto promete evitar.
+  let erros;
+  try {
+    erros = avaliarTexto(linguagem, texto);
+  } catch (e) {
+    return recusa(`o texto da prova não pôde ser lido: ${(e as Error).message}`, '');
+  }
   const observada = classificar(erros);
   const ok = observada === esperada;
   if (ok) return { ok, nome, esperada, observada, porque: sonda.porque, erro: null };

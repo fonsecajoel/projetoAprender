@@ -21,9 +21,14 @@ export function obter(linguagem: Language): Projection {
     // código, e diz também o que existe. Um erro que só diz o que falta
     // obriga quem o lê a ir procurar a lista; um erro que diz a lista
     // transforma-se no próximo passo.
+    //
+    // E a mensagem é **acentuada**, como todas as que a pessoa lê. O
+    // `projecao` sem acento é o nome de uma pasta, e é por isso que aqui a
+    // palavra é «projeção»: uma palavra escrita em código e uma palavra
+    // escrita para a pessoa não são a mesma palavra.
     throw new Error(
-      `A projecao para ${linguagem} ainda nao foi construida. ` +
-        `As linguagens com projecao sao: ${LINGUAGENS_COM_PROJECAO.join(', ')}.`,
+      `A projeção para ${linguagem} ainda não foi construída. ` +
+        `As linguagens com projeção são: ${LINGUAGENS_COM_PROJECAO.join(', ')}.`,
     );
   }
   return p;

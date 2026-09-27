@@ -275,7 +275,7 @@ function lerAtribuir(nome: string, resto: string, passo: number): LerResultado {
   // o que faz `total = total + 1` ser a linha da lição. O que não é um termo
   // é `2 - 3` escrito do lado direito de um `1 -`.
   //
-  // A leitura da conta é a do leitor partilhado, e a diferença entre_requireer
+  // A leitura da conta é a do leitor partilhado, e a diferença entre requerer
   // número e não requerer está escrita num sítio só, e não em dois — que é
   // como os dois ficheiros divergiam.
   const conta = eventosDeConta(resto, passo, (t) => valorDe(t, passo), 'número');

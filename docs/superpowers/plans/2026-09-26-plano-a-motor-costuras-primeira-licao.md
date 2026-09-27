@@ -441,7 +441,29 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const NUCLEO = 'src/nucleo';
-const PROIBIDO = /from\s+['"][^'"]*projecoes[^'"]*['"]/;
+
+/* O casamento é sobre o **caminho**, e não sobre a sintaxe do import.
+ *
+ *  A primeira versão casava `from '…'`, e isso deixava passar cinco furos que
+ *  uma revisão mediu um a um: o `await import('../projecoes/avaliar')`, que o
+ *  Vitest transforma numa chamada e que funciona; o `require('../projecoes/…')`;
+ *  e o `import 'projecoes/avaliar';` sem nome nenhum, que é um import
+ *  verdadeiro. Os três são a mesma coisa — um caminho para uma projeção escrito
+ *  num literal — e casar a sintaxe em vez do caminho é casar a metade que é
+ *  mais fácil e deixar passar a que interessa.
+ *
+ *  E `String s = 'a'; const t = "projecoes";` **também** é apanhado agora. É
+ *  um falso positivo, e é o preço certo: um ficheiro do núcleo que tem a
+ *  palavra `projecoes` num literal não tem motivo nenhum para a ter, e o
+ *  núcleo vive da promessa de não saber sintaxe nenhuma. */
+const PROIBIDO = /['"][^'"]*projecoes[^'"]*['"]/;
+
+/* As extensões são as que o `tsconfig` compila **e** as que um dia
+ *  alguém usaria para fugir ao verificador. Um `.mts` no núcleo não é
+ *  compilado por nada hoje, e por isso o ficheiro seria código morto — mas
+ *  «código morto que viola o invariante» é a pior das duas coisas, e o preço
+ *  de o fechar é uma palavra numa expressão. */
+const EXTENSOES = ['.ts', '.tsx', '.mts', '.cts', '.mjs', '.cjs'];
 
 /** Os comentários saem antes do casamento.
  *
@@ -465,7 +487,7 @@ function ficheiros(raiz: string): string[] {
   return readdirSync(raiz).flatMap((nome) => {
     const caminho = join(raiz, nome);
     if (statSync(caminho).isDirectory()) return ficheiros(caminho);
-    return caminho.endsWith('.ts') || caminho.endsWith('.tsx') ? [caminho] : [];
+    return EXTENSOES.some((e) => caminho.endsWith(e)) ? [caminho] : [];
   });
 }
 
@@ -1315,9 +1337,11 @@ describe('valores de entrada', () => {
     expect(a.trace.erros.length).toBe(0);
   });
 
+  it('um número é número', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: 3 }, 1).tipo).toBe('número');
   });
-  it('um booleano é lógico', () => {
+});
+it('um booleano é lógico', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: true }, 1).tipo).toBe('lógico');
   });
   it('{bloco} é avaliado recursivamente', () => {
@@ -1399,7 +1423,7 @@ describe('executar', () => {
 describe('partilha de Regra', () => {
   it('dois avaliadores com a mesma Regra veem as mesmas linhas', () => {
     // A linha tem de ser escrita por um `executar`, não por um `avaliar`
-    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` directo que
+    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` direto que
     // a deixa por abrir. A versão anterior deste teste escrevia a linha com
     // dois `avaliar` e depois jurava que os dois avaliadores a partilhavam —
     // e passava a testar que a `Regra` não partilha nada.
@@ -5013,6 +5037,30 @@ describe('ler: o que a Java recusa, e o que diz', () => {
     expect(java.ler('String nome = "a;b";\n').erros).toEqual([]);
   });
 
+  it('o espaço antes do ponto-e-vírgula é espaço, e não parte do valor', () => {
+    // Java válida recusada, e a pior versão: a recusa dizia que a linha não
+    // era Java, que é uma mentira, e não dizia que o problema eram dois
+    // espaços. A causa era o `(.+);$` ganancioso, que **aceita** a linha e
+    // guarda `"5 "` como valor — texto com um espaço no fim, e não o número
+    // cinco. A regra de Java é que o valor não tem espaços nas pontas, e a
+    // expressão tinha de a dizer.
+    //
+    // A lista toda, porque a falha era do espaço e o sintoma não dizia onde:
+    // o espaço antes, o espaço depois, e os dois lados ao mesmo tempo.
+    for (const linha of [
+      'int total = 5 ;',
+      'int total = 5; ',
+      'int total  =  5 ;',
+      'int  total  =  5;',
+      'String nome = "olá" ;',
+    ]) {
+      expect(java.ler(linha + '\n').erros).toEqual([]);
+    }
+    // E o que é mesmo errado continua errado: dois pontos-e-vírgula não são
+    // uma linha de Java, e a correção do espaço não pode tê-lo comido.
+    expect(java.ler('int total = 5;;\n').erros.length).toBeGreaterThan(0);
+  });
+
   it('falta o tipo é dito como falta de tipo, e o mesmo erro não se repete', () => {
     const r = java.ler('total = 5;\n');
     expect(r.erros).toHaveLength(1);
@@ -7278,7 +7326,8 @@ function razaoDe(yaml: string): string {
 ```typescript
 import { describe, expect, it } from 'vitest';
 import { avaliarTexto, emitir } from '../projecoes/avaliar';
-import { FORMAS_POR_FAMILIA } from './esquema';
+import { FAMILIAS, FORMAS, FORMAS_POR_FAMILIA } from './esquema';
+import { LINGUAGENS } from '../nucleo/tipos';
 import type { Sonda } from './esquema';
 import { executarSonda } from './sondas';
 
@@ -7474,6 +7523,46 @@ describe('executarSonda: sondagens malformadas dão relatório, não exceção',
       const r = executarSonda(sondaEmMaos({ ...sonda(), prova }), 'python');
       expect(r.ok).toBe(false);
       expect(r.erro).toMatch(/nunca os dois|nenhum/);
+    }
+  });
+
+  it('uma sondagem de Go, TypeScript, JavaScript ou SQL dá relatório, e não rebenta', () => {
+    // Este teste foi escrito depois de uma revisão de fora, e a revisão
+    // tinha razão. A linha que decide se a forma bate com a família pedia a
+    // **projeção**, e uma projeção que não existe rebenta. Rebentar ali é a
+    // pior coisa que podia acontecer, e por duas Razões: o SQL é a única
+    // declarativa das seis, e `forma: consulta` com `sql` é a combinação
+    // **certa** — a que a linha existe para dizer que está errada quando não
+    // está. Quatro das seis linguagens nunca chegaram a ver esta linha.
+    //
+    // A família é uma propriedade da linguagem e vive no `FAMILIAS`; a
+    // projeção só é preciso depois, para escrever o programa.
+    //
+    // E a prova não é que deixou de rebentar: é que as doze combinações dão
+    // uma **mensagem**, e que a mensagem é a do sítio certo. A do par errado
+    // diz «esta linguagem é declarativa, que se prova com "consulta"» e é
+    // essa a resposta que se queria; a do par certo passa à regra seguinte,
+    // porque já não há nada a dizer sobre a forma.
+    for (const linguagem of LINGUAGENS) {
+      for (const forma of FORMAS) {
+        const certa = forma === FORMAS_POR_FAMILIA[FAMILIAS[linguagem]];
+        const r = executarSonda(
+          sondaEmMaos({ ...sonda(), prova: { forma, texto: 'qualquer' } }),
+          linguagem,
+        );
+        expect(r.ok).toBe(false);
+        if (certa) {
+          // O par certo: a forma não é o assunto, e a regra seguinte diz
+          // do assunto. É por isso que isto mede a **passagem** e não a
+          // recusa, e é por isso que a recusa é o que se afirma.
+          expect(r.erro).not.toMatch(/que se prova com/);
+        } else {
+          expect(r.erro).toMatch(/que se prova com/);
+          expect(r.erro).toMatch(
+            new RegExp(FAMILIAS[linguagem] === 'declarativa' ? 'declarativa' : 'imperativa'),
+          );
+        }
+      }
     }
   });
 
@@ -10016,7 +10105,7 @@ import { obter } from '../projecoes/registo';
 //   `inputs[chave].block`  ->  o bloco ligado à ranhura
 //   `next.block`           ->  a instrução seguinte da cadeia
 //
-// Duas dessas quatroifactos que o plano escrevia estavam erradas, e as duas
+// Duas dessas quatro formas que o plano escrevia estavam erradas, e as duas
 // erradas de uma maneira que não dá erro nenhum: devolvem `undefined` ou `null`
 // em silêncio, e o produto fica morto sem uma única falha no ecrã. Por isso
 // cada função abaixo tem um teste que a alimenta com a **saída real** do
@@ -13645,9 +13734,11 @@ describe('valores de entrada', () => {
     expect(a.trace.erros.length).toBe(0);
   });
 
+  it('um número é número', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: 3 }, 1).tipo).toBe('número');
   });
-  it('um booleano é lógico', () => {
+});
+it('um booleano é lógico', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: true }, 1).tipo).toBe('lógico');
   });
   it('{bloco} é avaliado recursivamente', () => {
@@ -13729,7 +13820,7 @@ describe('executar', () => {
 describe('partilha de Regra', () => {
   it('dois avaliadores com a mesma Regra veem as mesmas linhas', () => {
     // A linha tem de ser escrita por um `executar`, não por um `avaliar`
-    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` directo que
+    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` direto que
     // a deixa por abrir. A versão anterior deste teste escrevia a linha com
     // dois `avaliar` e depois jurava que os dois avaliadores a partilhavam —
     // e passava a testar que a `Regra` não partilha nada.
@@ -14174,7 +14265,7 @@ type Ranhura = { valor?: unknown; stack?: Bloco[]; bloco?: Bloco };
  *
  *  Uma sondagem que escrevesse um nome com acento passava despercebida se a
  *  busca fosse rasa, e a busca rasa é o que dá a ilusão de que se olhou
- *  tudo. Por isso a funcao desce a `stack` e a `bloco`, e não só ao primeiro
+ *  tudo. Por isso a função desce a `stack` e a `bloco`, e não só ao primeiro
  *  nível — e por isso recebe uma lista tanto como um bloco, porque os
  *  passos de uma lição são uma lista. */
 function varre(programa: Bloco | Bloco[] | null, achou: (nome: string) => void): void {

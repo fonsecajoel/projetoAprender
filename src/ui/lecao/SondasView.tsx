@@ -22,7 +22,7 @@ export interface SondasViewProps {
 /** A sondagem do passo: a pergunta, o que aconteceu, e a fuga.
  *
  *  A sondagem é o que decide se o momento fica visto. Não é o botão, não é o
- *  clique, e não é ofacto de a pessoa ter mexido em algum bloco: é o
+ *  clique, e não vem de a pessoa ter mexido em algum bloco: é o
  *  resultado que o motor deu ser o que a sondagem queria. Uma porta
  *  Hogwarts que se abre com um gesto e uma porta que se abre com a coisa
  *  certain estão a ensinar coisas diferentes, e o produto é a segunda.

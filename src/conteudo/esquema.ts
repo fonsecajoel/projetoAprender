@@ -31,7 +31,7 @@ export type Bloco = BlocoLeigo;
  *
  *  A forma **não** decide o que está dentro da prova: uma sondagem em forma
  *  de programa pode provar-se com blocos (`programa`) ou com um excerto de
- *  código que o aluno tem de ler (`texto`). São duas perguntas differentes —
+ *  código que o aluno tem de ler (`texto`). São duas perguntas diferentes —
  *  «isto corre?» e «isto quer dizer o que tu pensas?» — e a segunda é a que
  *  ensina a ler código. */
 export type Forma = 'programa' | 'consulta';

@@ -209,7 +209,7 @@ type Ranhura = { valor?: unknown; stack?: Bloco[]; bloco?: Bloco };
  *
  *  Uma sondagem que escrevesse um nome com acento passava despercebida se a
  *  busca fosse rasa, e a busca rasa é o que dá a ilusão de que se olhou
- *  tudo. Por isso a funcao desce a `stack` e a `bloco`, e não só ao primeiro
+ *  tudo. Por isso a função desce a `stack` e a `bloco`, e não só ao primeiro
  *  nível — e por isso recebe uma lista tanto como um bloco, porque os
  *  passos de uma lição são uma lista. */
 function varre(programa: Bloco | Bloco[] | null, achou: (nome: string) => void): void {

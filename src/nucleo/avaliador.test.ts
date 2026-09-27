@@ -305,9 +305,11 @@ describe('valores de entrada', () => {
     expect(a.trace.erros.length).toBe(0);
   });
 
+  it('um número é número', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: 3 }, 1).tipo).toBe('número');
   });
-  it('um booleano é lógico', () => {
+});
+it('um booleano é lógico', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: true }, 1).tipo).toBe('lógico');
   });
   it('{bloco} é avaliado recursivamente', () => {
@@ -389,7 +391,7 @@ describe('executar', () => {
 describe('partilha de Regra', () => {
   it('dois avaliadores com a mesma Regra veem as mesmas linhas', () => {
     // A linha tem de ser escrita por um `executar`, não por um `avaliar`
-    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` directo que
+    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` direto que
     // a deixa por abrir. A versão anterior deste teste escrevia a linha com
     // dois `avaliar` e depois jurava que os dois avaliadores a partilhavam —
     // e passava a testar que a `Regra` não partilha nada.

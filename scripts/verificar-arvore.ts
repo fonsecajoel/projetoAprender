@@ -2,7 +2,29 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const NUCLEO = 'src/nucleo';
-const PROIBIDO = /from\s+['"][^'"]*projecoes[^'"]*['"]/;
+
+/* O casamento é sobre o **caminho**, e não sobre a sintaxe do import.
+ *
+ *  A primeira versão casava `from '…'`, e isso deixava passar cinco furos que
+ *  uma revisão mediu um a um: o `await import('../projecoes/avaliar')`, que o
+ *  Vitest transforma numa chamada e que funciona; o `require('../projecoes/…')`;
+ *  e o `import 'projecoes/avaliar';` sem nome nenhum, que é um import
+ *  verdadeiro. Os três são a mesma coisa — um caminho para uma projeção escrito
+ *  num literal — e casar a sintaxe em vez do caminho é casar a metade que é
+ *  mais fácil e deixar passar a que interessa.
+ *
+ *  E `String s = 'a'; const t = "projecoes";` **também** é apanhado agora. É
+ *  um falso positivo, e é o preço certo: um ficheiro do núcleo que tem a
+ *  palavra `projecoes` num literal não tem motivo nenhum para a ter, e o
+ *  núcleo vive da promessa de não saber sintaxe nenhuma. */
+const PROIBIDO = /['"][^'"]*projecoes[^'"]*['"]/;
+
+/* As extensões são as que o `tsconfig` compila **e** as que um dia
+ *  alguém usaria para fugir ao verificador. Um `.mts` no núcleo não é
+ *  compilado por nada hoje, e por isso o ficheiro seria código morto — mas
+ *  «código morto que viola o invariante» é a pior das duas coisas, e o preço
+ *  de o fechar é uma palavra numa expressão. */
+const EXTENSOES = ['.ts', '.tsx', '.mts', '.cts', '.mjs', '.cjs'];
 
 /** Os comentários saem antes do casamento.
  *
@@ -26,7 +48,7 @@ function ficheiros(raiz: string): string[] {
   return readdirSync(raiz).flatMap((nome) => {
     const caminho = join(raiz, nome);
     if (statSync(caminho).isDirectory()) return ficheiros(caminho);
-    return caminho.endsWith('.ts') || caminho.endsWith('.tsx') ? [caminho] : [];
+    return EXTENSOES.some((e) => caminho.endsWith(e)) ? [caminho] : [];
   });
 }
 

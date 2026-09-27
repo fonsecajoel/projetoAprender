@@ -1,0 +1,250 @@
+/* O ecrã da lição.
+ *
+ * A folha é quase toda espaço: a lição é lida, e uma linha de texto que
+ * alguém está a tentar ler não pode estar a lutar com a largura do
+ * painel de blocos. A coluna de texto fica com uma medida — as «medidas» de
+ * leitura, umas setenta e cinco letras, que é onde os olhos cansam — e o
+ * painel de blocos fica com o que sobrar.
+ *
+ * As cores são as de `estilo.css` e não há mais nenhuma. Uma segunda
+ * paleta aqui dentro seria duas paletas a divergir no primeiro ecrã que
+ * alguém desenhasse. */
+
+.tela {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tela-cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--borda);
+  padding-bottom: 1rem;
+}
+
+.tela-cabecalho h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.tela-porque {
+  margin: 0;
+  max-width: 46rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.tela-progresso {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.passo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.passo-fase {
+  margin: 0;
+  align-self: flex-start;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+}
+
+.passo-porque {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.passo-palavra {
+  margin: 0;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: var(--aviso);
+  letter-spacing: -0.01em;
+}
+
+.sondas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.sonda-pergunta {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sonda-veredicto {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--ok);
+}
+
+.sonda-veredicto-falta {
+  color: var(--aviso);
+}
+
+.sonda-revelada {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-left: 3px solid var(--aviso);
+  padding-left: 0.75rem;
+}
+
+.sonda-revelada p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.sonda-revelada-aviso {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.passo-blocos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.passo-leitura {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ficha {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.ficha-nome {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: #7dd3fc;
+}
+
+.ficha-linhas {
+  margin: 0;
+  padding-left: 2.5rem;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.ficha-linha code {
+  white-space: pre;
+}
+
+.pergunta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.pergunta-texto {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pergunta label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.pergunta input {
+  min-width: 20rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--borda);
+  background: var(--fundo-escuro);
+  color: var(--texto);
+  font: inherit;
+}
+
+.pergunta-dica {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.erros {
+  border: 1px solid var(--erro);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.erros-titulo {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--erro);
+}
+
+.erros ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.erro p {
+  margin: 0.15rem 0;
+  line-height: 1.6;
+}
+
+.erro-classe {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+}
+
+.erro-remedio {
+  color: #cbd5e1;
+}
+
+.passo-progresso {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.passo-falta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--aviso);
+}
+
+.passo-acoes {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

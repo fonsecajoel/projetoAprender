@@ -25,12 +25,12 @@ describe('o registo', () => {
     expect(obter('python').policy.recusaNoTipo).toBe(false);
   });
 
-  it('obter devolve a projecão pedida', () => {
+  it('obter devolve a projeção pedida', () => {
     expect(obter('python').linguagem).toBe('python');
     expect(obter('java').linguagem).toBe('java');
   });
 
-  it('obter uma linguagem sem projecão diz qual falta, e não devolve indefinido', () => {
+  it('obter uma linguagem sem projeção diz qual falta, e não devolve indefinido', () => {
     expect(() => obter('go')).toThrow(/go/);
     expect(temProjecao('go')).toBe(false);
   });

@@ -3024,7 +3024,7 @@ Tres regras que os testes fixam e que se perdem facilmente:
 
 ---
 
-### Task 4: A interface `Projection`, o registo, e a projecão Python
+### Task 4: A interface `Projection`, o registo, e a projeção Python
 
 `emit` e `ler` são as duas únicas funções do sistema que conhecem sintaxe, e estão no mesmo objeto de propósito: quem escreve `total = 5` e quem lê `total = 5` é a mesma pessoa, e se divergirem a lição mente.
 
@@ -3060,7 +3060,7 @@ Blocos do primeiro conceito: `guardar`, `repetir`, `dizer`, `log`, `pilha`. **`d
 - Consumes: Task 1 — `Language`, `Tipo`, `Valor`, `Erro`, `restricao`, `MAX_ITERACOES`; Task 2 — `BlocoLeigo`, `identificador`, `pilhaDe`; Task 3 — `POLITICAS`, `EventoLido`, `AMOSTRA`.
 - Produces: `Familia`, `Projection`, `Gerado`, `Anotacao`, `LerResultado`, `REGISTO`, `obter(linguagem)`, `temProjecao(linguagem)`, `LINGUAGENS_COM_PROJECAO`, `python`, `BLOCOS_IMPERATIVOS`, `Emissor`, `NOMES_DE_CONTADOR`, `textoDe(e)`, `linhasDe(texto)`.
 
-- [ ] **Step 1: Escrever o teste falhado — a projecão Python**
+- [ ] **Step 1: Escrever o teste falhado — a projeção Python**
 
 `src/projecoes/python.test.ts`:
 ```typescript
@@ -3626,12 +3626,12 @@ describe('o registo', () => {
     expect(obter('python').policy.recusaNoTipo).toBe(false);
   });
 
-  it('obter devolve a projecão pedida', () => {
+  it('obter devolve a projeção pedida', () => {
     expect(obter('python').linguagem).toBe('python');
     expect(obter('java').linguagem).toBe('java');
   });
 
-  it('obter uma linguagem sem projecão diz qual falta, e não devolve indefinido', () => {
+  it('obter uma linguagem sem projeção diz qual falta, e não devolve indefinido', () => {
     expect(() => obter('go')).toThrow(/go/);
     expect(temProjecao('go')).toBe(false);
   });
@@ -4421,7 +4421,7 @@ Expected: PASS, `núcleo limpo`, e o typecheck mudo.
 
 ```bash
 git add -A
-git commit -m "feat: interface Projection, registo, e a projecao Python
+git commit -m "feat: interface Projection, registo, e a projeção Python
 
 emit e ler vivem no mesmo objeto de proposito: quem escreve total = 5
 e quem le total = 5 e a mesma pessoa, e se divergirem a licao mente.
@@ -4550,9 +4550,9 @@ porque diz isso em vez de dizer que a linha e invalida.
 
 ---
 
-### Task 5: A projecao Java — a que prova a costura
+### Task 5: A projeção Java — a que prova a costura
 
-Uma projecão só não prova nada: constrói-se qualquer coisa monolinguagem e chama-se-lhe invariância. Esta é a segunda, e o que ela tem dedemonstrar são três coisas que a de Python não podia mostrar:
+Uma projeção só não prova nada: constrói-se qualquer coisa monolinguagem e chama-se-lhe invariância. Esta é a segunda, e o que ela tem dedemonstrar são três coisas que a de Python não podia mostrar:
 
 1. O **mesmo** `BlocoLeigo` produz **outro** texto.
 2. O `emit` escreve o **tipo** (`int total = 5;`), porque em Java o tipo é escrito à mão e é essa a lição.
@@ -4585,7 +4585,7 @@ Em `src/projecoes/registo.test.ts`, substitua o primeiro `it` e acrescente este:
   });
 ```
 
-- [ ] **Step 2: Escrever o teste falhado — a projecão Java**
+- [ ] **Step 2: Escrever o teste falhado — a projeção Java**
 
 `src/projecoes/java.test.ts`:
 ```typescript
@@ -5605,7 +5605,7 @@ Expected: PASS, `núcleo limpo`, typecheck mudo.
 
 ```bash
 git add -A
-git commit -m "feat: projecao Java — a costura aguenta uma segunda linguagem
+git commit -m "feat: projeção Java — a costura aguenta uma segunda linguagem
 
 O mesmo BlocoLeigo produz 'total = 5' em Python e 'int total = 5;' em
 Java. O mesmo programa julgado pelas duas politicas da Recusa em Java e
@@ -5614,7 +5614,7 @@ uma linha de codigo duplicada para isso.
 
 ler() da Java recusa 'total = 5;' e diz que em Java o tipo escreve-se
 antes do nome. E a assim que a primeira falha de quem salta de uma
-projecao para a outra aparece com porque, e nao com um codigo de erro.
+projeção para a outra aparece com porque, e nao com um codigo de erro.
 "
 ```
 
@@ -6551,7 +6551,7 @@ Expected: PASS, `núcleo limpo`, typecheck mudo.
 git add -A
 git commit -m "feat: divergencia com tolerancia por linguagem, e avaliacao de texto em duas fases
 
-avaliarTexto() le com a projecao da linguagem escolhida e julga com o
+avaliarTexto() le com a projeção da linguagem escolhida e julga com o
 nucleo. A ordem e o que impede o erro grave: se o nucleo julgasse uma
 linha de Java com a politica de Python, o produto ensinaria Python a
 recusar coisas que nao recusa.
@@ -12230,215 +12230,2103 @@ que o motor escreveu.
 
 ### Task 12: O ecrã da lição e o seletor de linguagem
 
+> **O que esta tarefa custou a achar, e o que o plano tinha errado.**
+>
+> O plano original desta tarefa tinha um ecrã que não ligava a nada e um
+> seletor que era um `<select>`. Não era uma má ideia: era um desenho
+> diferente, e o desenho que o produto acabou por ter choca com ele em
+> dezoito sítios. A lista vale mais do que a soma, porque cada linha é uma
+> armadilha que se fecha.
+>
+> **A porta da importação.** Três ficheiros importavam `CARREGAR` de
+> `../../conteudo/carregar`. A porta é `../../conteudo`, e é só uma — a Task
+> 10 já tinha decidido isso e o plano da T12 não sabia.
+>
+> **`licao.referencia`.** A referência ao ficheiro é **por passo** e não por
+> lição: uma lição com dois ficheiros tem dois passos que os mandam ler. A
+> forma do esquema é `Passo.referencia`, e o `Licao` não tem o campo.
+>
+> **`<PainelRobo valores={…} />` com uma lista.** A Task 11 já tinha
+> resolvido isto — `Record<id da porta, Valor|undefined>`, e não `Valor[]` —
+> porque com duas portas de `número` «o último valor do tipo» punha o mesmo
+> número nas duas. O plano da T12 reescreveu a assinatura e trouxe o defeito
+> atrás.
+>
+> **`comparar(gerado, texto)`.** `divergir` recebe o **programa**; o texto
+> emitido é o que a projeção produz para comparar, não a coisa que se
+> compara. Passar-lhe o texto que ela acabou de escrever é dizer-lhe que o
+> que ela há de decidir já está decidido.
+>
+> **O `bateSonda` reimplementado.** `avaliar.ts` já exporta
+> `bate(esperado, erros)`. O plano escreve o seu, e o seu diverge do
+> existente num dia em que um dos dois muda.
+>
+> **`<Blocos>` sem a prop `linguagem`.** É obrigatória, e sem ela o painel
+> não sabe que blocos registar.
+>
+> **`verificar` no `PassoView`.** Codigo morto, e o `noUnusedLocals` do
+> `tsconfig` apanha-o. Worse: `aoAvancar={estado.proximo}` deixava a pessoa
+> presa no fim do último momento, porque `proximo()` avança o momento e não
+> o passo.
+>
+> **Dois botões com a mesma acção.** O `SondasView` do plano dava a
+> «Experimentar» e a «Ver a resposta» o mesmo `aoObservar`. Duas maneiras de
+> dizer a mesma coisa, e nenhuma delas é a experimentação — a experimentação
+> é carregar em «Correr o programa» e ver o que acontece.
+>
+> **O `catalogo.ts` não compilava.** `import { LINGUAGENS, NOMES }` e logo a
+> seguir `import { NOMES }`, e `Language` importado duas vezes. Erro do
+> `tsc`, não do `vitest`.
+>
+> **`getByRole('option', { name: /Java/ })`** encontra «Java» **e**
+> «JavaScript» e atira. Um teste que não corre não é um teste vermelho: é um
+> teste que não existe.
+>
+> **`UNSAFE_getByRole('option').click()` numa opção desativada.** O nome
+> `UNSAFE_` é o próprio teste a dizer que está a fazer algo que o navegador
+> não deixa fazer. Um teste mede um estado que dá para chegar; este mede um
+> que não dá.
+>
+> **`JSX.Element` no `main.tsx`.** O React 19 tirou o espaço de nomes `JSX`
+> global. Não é um detalhe de versão: é um ficheiro que não compila com a
+> dependência que o projecto declara.
+>
+> **`const CHAVE = 'variavel'` no `main.tsx`.** Uma segunda fonte de verdade
+> sobre que lições existem. O `entrada.test.tsx` mede isso: se a chave
+> viesse de uma constante, trocar a constante abriria uma lição inexistente.
+>
+> **Os erros num `useState` local do `PainelRobo`.** O `EstadoLicao` já
+> carrega `erros` e `definirErros`; um estado local ao lado é o mesmo dado em
+> dois sítios, e o que se vê no ecrã sai do que não é o estado.
+>
+> **O painel escolhido pela fase.** A lição tem `explicar` com blocos,
+> `nomear` com blocos e `fazer` que pode trazer o editor de texto. Escolher
+> pelo passo obriga a repetir a decisão e os dois sítios divergem no primeiro
+> passo que foge ao padrão. Quem escolhe é a **fonte do momento**.
+>
+> **A ficha com quinze campos e sem saída.** O plano esperava quinze campos
+> de resposta e a sondagem a marcá-los. Isso é um exame: quem não souber a
+> linha 14 fica trinta segundos e não passa. A ficha que ficou tem um campo
+> só, reusado de pergunta em pergunta, e uma fuga honesta em todo o ecrã.
+>
+> **Os testes com o texto da lição escritos à mão.** O plano escrevia a
+> pergunta de `guarda-um-numero` e o `esperado.porque` dela no ficheiro de
+> testes. Um teste que copia a lição é uma segunda lição, e as duas divergem
+> no primeiro parágrafo que alguém reescreva. E duas asserções do plano
+> falhavam por causa do embrulho do YAML: `getByText` com uma frase de
+> oitenta colunas não encontra a frase, e `getByText('    total = total + 1')`
+> não mede a indentação porque o `getByText` dobra os espaços nas pontas.
+>
+> **Um `saida` que não pode existir.** O painel de texto tinha um estado
+> `saida`; o `avaliarTexto` não produz valores, e o estado era
+> estruturalmente impossível de preencher.
+
+
 **Files:**
-- Create: `src/ui/lecao/PassoView.tsx`, `src/ui/lecao/SondasView.tsx`, `src/ui/lecao/Tela.tsx`, `src/ui/lecao/lecao.css`, `src/ui/lecao/SeletorLinguagem.tsx`, `src/ui/lecao/catalogo.ts`
+- Create: `src/ui/lecao/PassoView.tsx`, `src/ui/lecao/SondasView.tsx`, `src/ui/lecao/Tela.tsx`, `src/ui/lecao/lecao.css`, `src/ui/lecao/SeletorLinguagem.tsx`, `src/ui/lecao/catalogo.ts`, `src/ui/lecao/Aplicacao.tsx`
 - Modify: `src/main.tsx`
-- Test: `src/ui/lecao/tela.test.tsx`, `src/ui/lecao/seletor.test.tsx`
+- Test: `src/ui/lecao/tela.test.tsx`, `src/ui/lecao/entrada.test.tsx`
 
 **Interfaces:**
-- Consumes: Task 2 — `avaliador`, `BlocoLeigo`; Task 6 — `emitir`, `avaliarTexto`, `comparar`, `Divergencia`; Task 7 — `executarSonda`, `Licao`, `Passo`, `Sonda`; Task 9 — `Blocos`; Task 10 — `PainelTexto`, `useLicao`, `EstadoLicao`, `ROTULOS`; Task 11 — `PainelRobo`, `PORTA_ENTRADA`, `PORTA_SAIDA`; Task 1 — `Erro`, `Recusa`, `Valor`, `Language`, `LINGUAGENS`, `NOMES`.
-- Produces: `Tela`, `TelaProps`, `PassoView`, `SondasView`, `SeletorLinguagem`, `OpcaoLinguagem`, `CATALOGO`.
+- Consumes: Task 2 — `avaliador`, `BlocoLeigo`; Task 6 — `emitir`, `divergir`, `classificar`, `ClassesObservadas`; Task 7 — `Licao`, `Passo`, `Sonda`, `CARREGAR`, `TEXTOS`, `temLicao`; Task 9 — `Blocos`; Task 10 — `PainelTexto`, `useLicao`, `EstadoLicao`, `ROTULOS`; Task 11 — `PainelRobo`, `PORTA_ENTRADA`, `PORTA_SAIDA`; Task 1 — `Erro`, `Recusa`, `Valor`, `Language`, `LINGUAGENS`, `NOMES`; Task 4 — `temProjecao`.
+- Produces: `Tela`, `TelaProps`, `PassoView`, `PassoViewProps`, `SondasView`, `SondasViewProps`, `SeletorLinguagem`, `SeletorLinguagemProps`, `OpcaoLinguagem`, `CATALOGO`, `Aplicacao`.
 
-- [ ] **Step 1: Escrever o teste falhado**
+- [ ] **Step 1: O motor de blocos passou a dizer o mesmo que o motor de texto**
 
-`src/ui/lecao/tela.test.tsx`:
+A tela é a primeira coisa do projecto que obriga a correr um programa pelos
+**dois** motores do produto ao mesmo tempo: o `avaliador` de blocos, que é o
+que a pessoa corre ao arrastar coisas, e o `avaliarTexto`, que é o que julga
+o que a projeção escreveu. São duas implementações da mesma semântica, e uma
+implementação que discorda da outra não é uma implementação.
+
+E discordavam. O sintoma era o pior possível, porque as sondagens eram
+provadas pelo caminho do texto e a tela corre pelo caminho dos blocos: a
+sondagem `guarda-um-texto` esperava `Observacao` e a lição estava provada,
+mas a pessoa que fosse fazer o passo 1 batia com uma recusa de tipo em
+Python — e a §10 diz que em Python e em JavaScript a `Recusa` nunca
+acontece. Onze tarefas não viram isto porque cada uma provava o seu caminho
+e nenhuma comparava os dois.
+
+Quatro correcções ao `src/nucleo/avaliador.ts`:
+
+1. `valorDe` trata uma palavra escrita a direito como literal de texto. A
+   lição escreve `valor: olá`, a projeção de Python já emitia
+   `total = 'olá'`, e o avaliador recusava: duas metades do mesmo motor a
+   discordar.
+2. `guardar` aceita qualquer valor. A recusa estava escrita no avaliador de
+   blocos, e um avaliador de blocos não sabe em que linguagem vive — quem
+   recusa é a linguagem (§6.4). A §6.5 põe «escolhe o tipo certo / e se
+   guardares texto aqui?» como nível 2 da escada, e a §11.2 dá
+   `guardar-palavra-recusa` como exemplo de sondagem, o que situa a recusa
+   no `guardar` **em Java**, não no motor.
+3. `dizer` aceita qualquer valor, porque `print(5)` é legal em Python, e
+   deixa de acrescentar uma `Recusa` a um valor que já tinha falhado. O
+   resultado anterior eram duas frases no ecrã ao mesmo tempo sobre o mesmo
+   gesto — «a variável "fantasma" ainda não tem valor» e «este sítio só
+   aceita texto» — e quem lê as duas aprende que são dois problemas. São um,
+   e a segunda frase era falsa.
+4. A forma que o motor não sabe ler passou de `Recusa` sobre o tipo a
+   `FalhaRuntime` sobre a forma. A frase antiga dizia «este sítio só aceita
+   número. Recebeste número», que é uma frase que se nega a si mesma.
+
+Oito testes da Task 2 codificavam a regra antiga — e dois deles diziam que
+ela era o comportamento certo, com um comentário a explicar que o segundo
+erro era para não passar por engano. Não era engano: era a especificação do
+defeito. Todos reescritos, mais três novos.
+
+O teste que se desligou a si próprio pelo caminho vale a pena registar:
+«todo erro do motor tem porque e remedio não vazios» iterava a lista de
+erros, e com a correcção a lista ficou vazia. O `for` corria zero vezes e o
+teste passava a medir o nada. Tem agora um `expect` no meio a garantir que
+houve erro.
+
+`src/nucleo/avaliador.ts`:
+```typescript
+import { construir } from './trace';
+import type { TraceBuilder } from './trace';
+import { E, EXPLICACAO_VAZIA, MAX_ITERACOES, RANGE_INTEIROS, restricao } from './tipos';
+import type { Erro, FalhaRuntime, Origem, Tipo, Valor } from './tipos';
+import { identificador } from './blocos';
+import type { BlocoLeigo } from './blocos';
+
+export type { BlocoLeigo, CampoLeigo, EntradaLeiga } from './blocos';
+
+/** Contrato para persistir valores entre avaliações. O `passo` é explícito
+ *  porque o mesmo objeto é partilhado por vários avaliadores. */
+export interface Regra {
+  inicializa(passo: number): void;
+  obtém(nome: string, passo: number): Valor | null;
+  define(nome: string, passo: number, v: Valor): void;
+  existe(nome: string, passo: number): boolean;
+}
+
+export function regraDeLinhas(): Regra {
+  const linhas = new Map<number, Map<string, Valor>>();
+  return {
+    inicializa(passo) {
+      linhas.set(passo, new Map());
+    },
+    obtém(nome, passo) {
+      return linhas.get(passo)?.get(nome) ?? null;
+    },
+    define(nome, passo, v) {
+      // Atribuir **cria** a linha se ela não existir. A versão anterior
+      // ignorava a atribuição quando `inicializa` não tinha corrido, e isso
+      // tornava `avaliar('guardar', …)` avulso um no-op silencioso: o bloco
+      // "guardava" e nada ficava guardado, sem erro nenhum. Atribuir cria e
+      // ler o que não foi atribuído falha — que é a regra de toda a vida, e
+      // é a regra que o `executor` implementa chamando `inicializa` por linha.
+      const linha = linhas.get(passo) ?? new Map<string, Valor>();
+      linha.set(nome, v);
+      linhas.set(passo, linha);
+    },
+    existe(nome, passo) {
+      return linhas.get(passo)?.has(nome) ?? false;
+    },
+  };
+}
+
+export interface Entradas {
+  nome?: unknown;
+  ATOR?: unknown;
+  NOME?: unknown;
+  VALOR?: unknown;
+  PASSOS?: unknown;
+  CORPO?: BlocoLeigo[];
+}
+
+function origemDe(bloco: string, ranhura: number, passo: number): Origem {
+  return { bloco, ranhura, passo };
+}
+
+/** O valor mais cru que existe: um tipo, um `unknown` e nada mais. O nome
+ *  acaba em `Cru` porque `valorDe` é também o nome do método que resolve um
+ *  valor de entrada; dois nomes e um método com o mesmo nome obrigam quem lê
+ *  a parar em cada chamada para ver qual dos dois é que está a correr. */
+function valorCru(tipo: Tipo, valor: unknown, bloco: string, ranhura: number, passo: number): Valor {
+  return {
+    tipo,
+    valor,
+    explicacao: EXPLICACAO_VAZIA,
+    origem: origemDe(bloco, ranhura, passo),
+    recusado: false,
+  };
+}
+
+/** Um erro do motor. `remedio` é obrigatório e não pode ser vazio: a
+ *  linguagem que explica *quando* este programa rebenta é escrita pela
+ *  projeção, e o núcleo só diz o que fazer — porque o núcleo não conhece
+ *  nenhuma linguagem. */
+function falhar(passo: number, porque: string, remedio: string, bloco: string): FalhaRuntime {
+  return {
+    classe: 'FalhaRuntime',
+    porque,
+    passo,
+    remedio,
+    origem: origemDe(bloco, 0, passo),
+  };
+}
+
+function entradasDe(b: BlocoLeigo): Entradas {
+  return {
+    nome: b.fields?.nome?.valor,
+    ATOR: b.fields?.ATOR?.valor,
+    NOME: b.fields?.NOME?.valor,
+    VALOR: b.inputs?.VALOR?.valor,
+    PASSOS: b.inputs?.PASSOS?.valor,
+    CORPO: b.inputs?.CORPO?.stack,
+  };
+}
+
+export function pilhaDe(raiz: BlocoLeigo | null): BlocoLeigo[] {
+  if (!raiz) return [];
+  if (raiz.type === 'pilha') return raiz.inputs?.CORPO?.stack ?? [];
+  return [raiz];
+}
+
+export interface Avaliador {
+  readonly trace: TraceBuilder;
+  readonly regra: Regra;
+  executar(raiz: BlocoLeigo | null): void;
+  avaliar(tipo: string, e: Entradas, passo: number): Valor;
+}
+
+class AvaliadorImpl implements Avaliador {
+  readonly trace: TraceBuilder = construir();
+  readonly regra: Regra;
+
+  constructor(regra?: Regra) {
+    this.regra = regra ?? regraDeLinhas();
+  }
+
+  executar(raiz: BlocoLeigo | null): void {
+    const pilha = pilhaDe(raiz);
+    for (let i = 0; i < pilha.length; i += 1) {
+      const passo = i + 1;
+      const b = pilha[i]!;
+      this.regra.inicializa(passo);
+      this.trace.passo(passo, b.type);
+      this.avaliar(b.type, entradasDe(b), passo);
+      if (this.trace.erros.length > 0) break;
+    }
+    this.trace.fim();
+  }
+
+  avaliar(tipo: string, e: Entradas, passo: number): Valor {
+    switch (tipo) {
+      case 'guardar':
+        return this.guardar(e, passo);
+      case 'repetir':
+        return this.repetir(e, passo);
+      case 'dizer':
+        return this.dizer(e, passo);
+      case 'log':
+        return this.registar(e, passo);
+      case 'pressionar':
+        return this.pressionar(e, passo);
+      case 'dador_num':
+      case 'texto':
+      case 'logico':
+      case 'acts':
+        return this.valorDe(e.VALOR, passo, tipo, 0);
+      default:
+        this.trace.falha(
+          falhar(
+            passo,
+            `O bloco "${tipo}" ainda não faz nada. A lição 1 só usa "guardar" e "repetir".`,
+            `Usa um bloco que esta lição ensinou, ou espera pela lição que traz o bloco "${tipo}".`,
+            tipo,
+          ),
+        );
+        return { ...valorCru('número', undefined, tipo, 0, passo), recusado: true };
+    }
+  }
+
+  /** Resolve um valor de entrada: literal, referência, ou bloco aninhado. */
+  private valorDe(bruto: unknown, passo: number, bloco: string, ranhura: number): Valor {
+    const origem = origemDe(bloco, ranhura, passo);
+    if (bruto === null || bruto === undefined) {
+      this.trace.falha(
+        falhar(
+          passo,
+          'Falta o valor deste sítio.',
+          'Arrasta um valor para dentro deste sítio, ou escreve o número directamente no sítio.',
+          bloco,
+        ),
+      );
+      return { ...valorCru('número', undefined, bloco, ranhura, passo), recusado: true };
+    }
+    if (typeof bruto === 'number') {
+      if (Number.isFinite(bruto) && Math.abs(bruto) <= RANGE_INTEIROS) {
+        return valorCru('número', bruto, bloco, ranhura, passo);
+      }
+      const v: Valor = { ...valorCru('número', bruto, bloco, ranhura, passo), recusado: true };
+      this.trace.recusa({
+        ...E(restricao('número', 'o número'), v),
+        origem,
+        // O `remedio` do `E` é escrito a partir do par (esperado, obtido), e
+        // aqui os dois são `número`: "guarda lá um número em vez de número" não
+        // é um consolo, é uma frase sem sentido. O problema não é o tipo, é o
+        // tamanho, e o consolo tem de falar do tamanho.
+        remedio: `Este sítio só trabalha com números de ${RANGE_INTEIROS} para baixo, em qualquer sentido. Arranca o número para um valor mais pequeno, ou deixa de usar números tão grandes.`,
+      });
+      return v;
+    }
+    if (typeof bruto === 'boolean') {
+      return valorCru('lógico', bruto, bloco, ranhura, passo);
+    }
+    if (typeof bruto === 'string') {
+      // Uma palavra escrita a direito é um literal de texto, e é assim que a
+      // lição os escreve: `valor: olá`. A projeção já tratava uma palavra
+      // solta como texto — emitia `total = 'olá'` — e os dois lados precisam
+      // de dizer a mesma coisa do mesmo programa. Enquanto este ramo não
+      // existia, o mesmo `guardar nome = 'olá'` recebia dois veredictos
+      // diferentes conforme o caminho por onde entrava: `Observacao` quando
+      // vinha do texto, `Recusa` quando vinha dos blocos. Duas implementações
+      // da mesma semântica que discordam uma da outra é a forma mais cara de
+      // um produto ter sondas que não podem estar erradas.
+      return valorCru('texto', bruto, bloco, ranhura, passo);
+    }
+    if (typeof bruto === 'object') {
+      const o = bruto as { txt?: unknown; ref?: unknown; bloco?: BlocoLeigo };
+      if (typeof o.txt === 'string') return valorCru('texto', o.txt, bloco, ranhura, passo);
+      if (typeof o.ref === 'string') {
+        const chave = identificador(o.ref);
+        const v = this.regra.obtém(chave, passo);
+        if (v) return { ...v, origem };
+        this.trace.falha(
+          falhar(
+            passo,
+            `A variável "${o.ref}" ainda não tem valor nesta linha.`,
+            `Guarda o valor de "${o.ref}" numa linha **antes** desta, ou escreve o valor directamente aqui em vez do nome.`,
+            bloco,
+          ),
+        );
+        return { ...valorCru('número', undefined, bloco, ranhura, passo), recusado: true };
+      }
+      if (o.bloco) return this.avaliar(o.bloco.type, entradasDe(o.bloco), passo);
+    }
+    // Chegou aqui uma forma que nenhuma das formas de valor resolve: um
+    // array, ou um objeto sem `txt`, sem `ref` e sem bloco dentro. Isto **não
+    // é um tipo errado**, e a diferença é de texto e não de estilo: a
+    // mensagem antiga era `Este sítio só aceita número. Recebeste número`, que
+    // se contradiz a si mesma e não ensina nada. O que se diz é que o motor
+    // não sabe ler o que chegou — que é a verdade, e é uma falha de execução
+    // como a do `{ref}` que não existe, não uma recusa de tipo.
+    this.trace.falha(
+      falhar(
+        passo,
+        'O que está neste sítio não é um valor que eu saiba ler.',
+        `Um valor aqui é um número, uma palavra entre aspas, o nome de uma variável que já tenha valor, ou outro bloco. Recebi ${typeof bruto}, e isso não é nenhum dos quatro.`,
+        bloco,
+      ),
+    );
+    return {
+      ...valorCru(Array.isArray(bruto) ? 'lista' : 'texto', bruto, bloco, ranhura, passo),
+      recusado: true,
+    };
+  }
+
+  private guardar(e: Entradas, passo: number): Valor {
+    const bruto = String(e.nome ?? '').trim();
+    if (bruto.length === 0) {
+      this.trace.falha(
+        falhar(
+          passo,
+          'A tua variável não tem nome. O nome é o que te permite voltar a ela depois.',
+          'Escreve um nome para a tua variável. Um nome só, sem espaços, e que diga o que lá está guardado.',
+          'guardar',
+        ),
+      );
+      return { ...valorCru('número', undefined, 'guardar', 0, passo), recusado: true };
+    }
+    const nome = identificador(bruto);
+    const recebido = this.valorDe(e.VALOR, passo, 'guardar', 0);
+    if (recebido.recusado) {
+      this.regra.define(nome, passo, recebido);
+      return recebido;
+    }
+    const final: Valor = this.regra.existe(nome, passo)
+      ? {
+          ...recebido,
+          explicacao: {
+            ...recebido.explicacao,
+            porque: `Isto substitui o valor que "${bruto}" já tinha. Uma variável tem um só valor de cada vez.`,
+          },
+        }
+      : recebido;
+    this.regra.define(nome, passo, final);
+    this.trace.registar(passo, final);
+    return final;
+  }
+
+  /** O que decide se um número pode contar repetições: inteiro, não
+   *  negativo, e dentro de `MAX_ITERACOES`. */
+  private cabeComoContagem(n: number): boolean {
+    return Number.isInteger(n) && n >= 0 && n <= MAX_ITERACOES;
+  }
+
+  private repeticoesInvalidas(passo: number): FalhaRuntime {
+    return falhar(
+      passo,
+      `O número de repetições tem de ser um número inteiro de 0 a ${MAX_ITERACOES}.`,
+      'Escreve neste sítio um número redondo. Um número de repetições conta vezes inteiras: 3 ou 5, nunca 1,5 — ninguém repete uma coisa uma vez e meio.',
+      'repetir',
+    );
+  }
+
+  private repetir(e: Entradas, passo: number): Valor {
+    const bruto = e.PASSOS;
+
+    // A contagem de repetições é o único sítio do motor que olha para o
+    // número **antes** de o converter, e a razão não é performance: são dois
+    // limites diferentes. `RANGE_INTEIROS` diz que nenhum número acima de
+    // 1000 existe; `MAX_ITERACOES` diz que um laço não repete mais de 10000
+    // vezes. Se a decisão passasse por `valorDe`, quem escrevesse
+    // `repetir(10001)` lia "este número é grande demais" e nunca ficava a
+    // saber que o problema era o número de repetições. Cada limite tem a sua
+    // frase, e a do laço é a que ensina alguma coisa.
+    if (typeof bruto === 'number' && !this.cabeComoContagem(bruto)) {
+      this.trace.falha(this.repeticoesInvalidas(passo));
+      return { ...valorCru('lógico', undefined, 'repetir', 0, passo), recusado: true };
+    }
+
+    const valor = this.valorDe(bruto, passo, 'repetir', 0);
+    if (valor.recusado) {
+      // O `valorDe` já escreveu no `trace` a razão pela qual o valor não
+      // serve. Escrever um segundo erro para o mesmo número seria mostrar
+      // à mesma pessoa duas queixas sobre uma coisa só.
+      return { ...valorCru('lógico', undefined, 'repetir', 0, passo), recusado: true };
+    }
+    if (valor.tipo !== 'número' || typeof valor.valor !== 'number' || !this.cabeComoContagem(valor.valor)) {
+      this.trace.falha(this.repeticoesInvalidas(passo));
+      return { ...valorCru('lógico', undefined, 'repetir', 0, passo), recusado: true };
+    }
+    const vezes = valor.valor;
+
+    const corpo = e.CORPO ?? [];
+    for (let i = 0; i < vezes; i += 1) {
+      for (const filho of corpo) {
+        const passoInterno = passo + 1;
+        this.regra.inicializa(passoInterno);
+        this.trace.passo(passoInterno, filho.type);
+        this.avaliar(filho.type, entradasDe(filho), passoInterno);
+        if (this.trace.erros.length > 0) {
+          return valorCru('lógico', true, 'repetir', 0, passo);
+        }
+      }
+    }
+    return valorCru('lógico', true, 'repetir', 0, passo);
+  }
+
+  private dizer(e: Entradas, passo: number): Valor {
+    const recebido = this.valorDe(e.VALOR, passo, 'dizer', 0);
+    // `dizer` é o `print` de Python, e o `print` do Python aceita o que for.
+    // A recusa anterior — «O que dizes tem de ser uma palavra» — era uma
+    // mentira sobre a linguagem: `print(5)` é legal em Python, e a primeira
+    // lição conta precisamente a história de um `print` a imprimir um número.
+    //
+    // E o segundo efeito era pior do que a mentira. Um `{ref}` que ainda não
+    // tem valor já produz a sua `FalhaRuntime` dentro de `valorDe`, e `dizer`
+    // acrescentava uma `Recusa` por cima. Um erro, duas mensagens, e as duas
+    // no ecrã ao mesmo tempo a dizer coisas que não são ambas verdade — é o
+    // que T11 encontrou quando um `log` de uma variável que nunca foi
+    // guardada chegou ao robô.
+    if (recebido.recusado) return recebido;
+    this.trace.registar(passo, recebido);
+    return recebido;
+  }
+
+  private registar(e: Entradas, passo: number): Valor {
+    const recebido = this.valorDe(e.VALOR, passo, 'log', 0);
+    this.trace.registar(passo, recebido);
+    return recebido;
+  }
+
+  private pressionar(e: Entradas, passo: number): Valor {
+    const ator = typeof e.ATOR === 'string' && e.ATOR.length > 0 ? e.ATOR : 'coelho';
+    const nome = typeof e.NOME === 'string' && e.NOME.length > 0 ? e.NOME : 'executar';
+    const v = valorCru('actor', ator, 'pressionar', 0, passo);
+    return {
+      ...v,
+      explicacao: { porque: `O ${ator} vai ${nome}.`, remedio: '' },
+    };
+  }
+}
+
+export function avaliador(regra?: Regra): Avaliador {
+  return new AvaliadorImpl(regra);
+}
+
+export function errosDe(a: Avaliador): Erro[] {
+  return a.trace.erros;
+}
+```
+
+`src/nucleo/avaliador.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { Tela } from './Tela';
-import { CARREGAR } from '../../conteudo/carregar';
-import { NOMES } from '../../nucleo/tipos';
-import variavelYaml from '../../conteudo/python/variavel.yml?raw';
+import { avaliador, pilhaDe, regraDeLinhas } from './avaliador';
+import { MAX_ITERACOES, RANGE_INTEIROS } from './tipos';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { Avaliador } from './avaliador';
+import { identificador } from './blocos';
+import { dizer, guardar, guardarTexto, log, pilha, repetir } from './testes/dados';
 
-const licao = CARREGAR(variavelYaml, 'python');
+describe('identificador', () => {
+  it('mantém um nome simples', () => {
+    expect(identificador('total')).toBe('total');
+  });
+  it('remove acentos', () => {
+    expect(identificador('música')).toBe('musica');
+  });
+  it('prefixa nomes que começam por dígito', () => {
+    expect(identificador('1total')).toBe('v_1total');
+  });
+  it('sufixa palavras reservadas de Python', () => {
+    expect(identificador('class')).toBe('class_');
+  });
+  it('substitui caracteres inválidos', () => {
+    expect(identificador('meu-total')).toBe('meu_total');
+  });
+  it('devolve v_ para nome vazio', () => {
+    expect(identificador('')).toBe('v_');
+  });
+});
 
-/** Os passos de que estes testes precisam, derivados da lição e nunca
- *  escritos à mão. A vista deixou de ser um parâmetro — a vista é a fase do
- *  passo — e por isso o que o teste escolhe é *que passo*, e a fase vem
- *  junto. Um número escrito à mão aqui seria uma armadilha: bastava a lição
- *  ganhar um passo para o teste estar a testar outra coisa sem dar por isso.
- *  A exceção é `PASSO_DO_ROBO`, que precisa de um passo `fazer` que não
- *  seja a ficha, e é o mesmo que `PRIMEIRO_FAZER`. */
-const primeiro = (fase: 'explicar' | 'fazer' | 'nomear'): number => {
-  const i = licao.passos.findIndex((p) => p.fase === fase);
-  if (i < 0) throw new Error(`a lição de Python não tem nenhum passo de fase ${fase}`);
-  return i;
-};
-const PASSO_EXPLICAR = primeiro('explicar');
-const PASSO_FAZER = primeiro('fazer');
-const PASSO_NOMEAR = primeiro('nomear');
-const PASSO_DA_FICHA = licao.passos.findIndex((p) => p.referencia !== undefined);
-if (PASSO_DA_FICHA < 0) throw new Error('a lição de Python não tem nenhum passo de leitura');
-const NOMEADO = licao.passos[PASSO_NOMEAR]!.nomear!;
+describe('pilhaDe', () => {
+  it('devolve lista vazia para null', () => {
+    expect(pilhaDe(null)).toEqual([]);
+  });
+  it('desembrulha um bloco único', () => {
+    expect(pilhaDe(guardar('total', 1))).toHaveLength(1);
+  });
+  it('desembrulha uma pilha', () => {
+    expect(pilhaDe(pilha(guardar('total', 1), log(1)))).toHaveLength(2);
+  });
+});
 
-describe('Tela da lição', () => {
-  it('mostra o título da lição e o texto do passo', () => {
-    render(<Tela linguagem="python" licao={licao} />);
-    expect(screen.getByRole('heading', { name: 'O que é uma variável' })).toBeInTheDocument();
-    expect(screen.getByText(/O nome é teu, o valor é o que lá está/i)).toBeInTheDocument();
+describe('guardar', () => {
+  it('guarda um número e deixa-o disponível pelo nome', () => {
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: 5 }, 1);
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
+    expect(v.tipo).toBe('número');
+    expect(v.valor).toBe(5);
   });
 
-  it('um passo de explicar mostra o texto e não mostra blocos nem painel', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_EXPLICAR} />);
-    expect(screen.queryByTestId('area-blocos')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(`O teu código em ${NOMES.python}`)).not.toBeInTheDocument();
+  it('guardar texto guarda o texto, e não dá erro nenhum', () => {
+    // Este nome já foi escrito duas vezes a mentir sobre o que o motor
+    // fazia. Na primeira versão dizia «sem erro» num ficheiro em que o
+    // teste seguinte provava que havia uma `Recusa`; na segunda dizia que
+    // guardar texto «já é um erro». Nas duas o `guardar` recusava texto — e
+    // a primeira lição, que diz «guarda um número com o nome total. Depois
+    // guarda um texto com o nome nome», era impossível de fazer. Ninguém a
+    // completava.
+    //
+    // A recusa vinha do avaliador de blocos, e um avaliador de blocos não
+    // sabe em que linguagem vive: quem recusa é a linguagem (§6.4), e o
+    // Python não recusa nada disto. O que rebenta, e rebenta mais tarde, é
+    // o `log` de uma variável que nunca foi guardada — que é a história
+    // que a lição conta, e o que a §10 diz do Python.
+    const a = avaliador();
+    const v = a.avaliar('guardar', { nome: 'nome', VALOR: { txt: 'olá' } }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(v.valor).toBe('olá');
+    expect(v.recusado).toBe(false);
+    expect(a.trace.erros.length).toBe(0);
   });
 
-  it('um passo de fazer mostra blocos e robô, e não mostra painel de texto', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    expect(screen.getByTestId('area-blocos')).toBeInTheDocument();
-    expect(screen.getByLabelText('O robô')).toBeInTheDocument();
-    expect(screen.queryByLabelText(`O teu código em ${NOMES.python}`)).not.toBeInTheDocument();
+  it('o texto guardado volta pelo nome, e continua a ser texto', () => {
+    // A ida e a volta é o que interessa: uma variável que se lembra do que
+    // ficou lá dentro, e de que tipo esse conteúdo é. Sem a volta, o teste
+    // acima provava só que o `guardar` não se queixou — e não que o valor
+    // ficou guardado.
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'nome', VALOR: { txt: 'olá' } }, 1);
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'nome' } }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(v.valor).toBe('olá');
+    expect(a.trace.erros.length).toBe(0);
+  });
+  it('a única recusa que o motor ainda faz é um número grande demais', () => {
+    // Convém dizer isto em voz alta, porque é uma afirmação forte e é o
+    // estado real do motor depois desta mudança: nos blocos, **nenhum** tipo
+    // é recusado. Quem recusa é a linguagem (§6.4) — o Java escreve
+    // `int total = 'olá';` e recusa, e o Python escreve `total = 'olá';` e
+    // não recusa, e é essa diferença que o produto existe para mostrar. Um
+    // avaliador de blocos que recusasse tipos estaria a decidir por conta
+    // própria o que cada linguagem permite, e a lição passava a mentir
+    // sobre as seis.
+    //
+    // A recusa que fica é a do tamanho: um número acima de `RANGE_INTEIROS`
+    // não existe em nenhum número das linguagens, e recusá-lo é dizer a
+    // verdade sobre todas.
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: 1_000_000 }, 1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('Recusa');
+    expect(e && e.classe === 'Recusa' && e.esperado).toBe('número');
+    expect(e && e.remedio.length).toBeGreaterThan(0);
   });
 
-  it('um passo de fazer mostra a pergunta da sonda antes de a experiência', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    // A pergunta vem antes de qualquer botão, e é a única coisa da sonda que
-    // se lê sem fazer nada. É o que faz o aluno adivinhar antes de ver.
-    const pergunta = screen.getByText(/O que vai aparecer no ecrã\?/i);
-    expect(pergunta).toBeInTheDocument();
-    expect(screen.queryByText(/Guarda um número e não dá erro nenhum/i)).not.toBeInTheDocument();
+  it('recusa guardar um número fora de RANGE_INTEIROS', () => {
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: 1_000_000 }, 1);
+    expect(a.trace.erros[0]?.classe).toBe('Recusa');
   });
 
-  it('Continuar está desactivado enquanto o momento não for visto', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+  it('nome de variável duplicado substitui e explica — nunca cria fantasma', () => {
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: 1 }, 1);
+    a.avaliar('guardar', { nome: 'total', VALOR: 2 }, 1);
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
+    expect(v.valor).toBe(2);
+    const avisos = a.trace.valores.filter((x) => x.explicacao.porque.includes('substitui'));
+    expect(avisos.length).toBe(1);
   });
 
-  it('Ver a resposta mostra a revelação da sonda e nunca bloqueia', async () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Ver a resposta' }));
-    expect(screen.getByText(/Guarda um número e não dá erro nenhum/i)).toBeInTheDocument();
+  it('guardar sem nome é FalhaRuntime com porque', () => {
+    const a = avaliador();
+    a.avaliar('guardar', { nome: '', VALOR: 1 }, 1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.porque.length).toBeGreaterThan(0);
   });
 
-  it('Experimentar mostra a observação da sonda e activa Continuar', async () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Experimentar' }));
-    expect(screen.getByRole('button', { name: 'Continuar' })).toBeEnabled();
+  it('guardar sem valor é FalhaRuntime com porque', () => {
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total' }, 1);
+    expect(a.trace.erros[0]?.classe).toBe('FalhaRuntime');
   });
 
-  it('um passo de nomear mostra a palavra nomeada, e só a de nomear', () => {
-    const { unmount } = render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_NOMEAR} />);
-    expect(screen.getByText(NOMEADO)).toBeInTheDocument();
-    unmount();
-    // A mesma palavra não aparece num passo de explicar. Se aparecesse, a
-    // palavra nomeada deixava de ser o que distingue a fase `nomear` das
-    // outras duas — e a fase `nomear` deixava de existir.
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_EXPLICAR} />);
-    expect(screen.queryByText(NOMEADO)).not.toBeInTheDocument();
+  it('uma variável só existe na linha em que foi guardada', () => {
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: 5 }, 1);
+    a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 2);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.porque).toContain('total');
+  });
+});
+
+describe('a palavra do robô', () => {
+  it('guardar guarda 5 como número, e ninguém se queixa', () => {
+    const a = avaliador();
+    a.executar(pilha(guardar('total', 5)));
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
+    expect(v.tipo).toBe('número');
+    expect(v.valor).toBe(5);
+    expect(a.trace.erros.length).toBe(0);
   });
 
-  it('a ficha mostra o ficheiro com as quinze linhas numeradas', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_DA_FICHA} />);
-    expect(screen.getByText('variavel.py')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('15')).toBeInTheDocument();
-    // A linha 6, com a indentação dela. Se a ficha mostrasse as linhas
-    // pela ordem errada, o aluno leria a 6 e responderia pela 7 — e um
-    // teste que só contasse linhas passava na mesma.
-    expect(screen.getByText('    total = total + 1')).toBeInTheDocument();
+  it('guardarTexto guarda o mesmo 5 como palavra, e lê-se de volta uma palavra', () => {
+    // `guardarTexto` embrulha em `{txt: '5'}`. O `5` que a pessoa escreveu e
+    // uma palavra com dois algarismos dentro. Uma variável que guarda uma
+    // palavra guarda uma palavra, e o que muda quando se lê de volta é
+    // exatamente o que a pessoa escreveu: o valor, não o tipo de quem o
+    // escreveu. Este é o parágrafo do ficheiro de leitura que diz que em
+    // Python `5` e `'5'` são coisas diferentes, e é o que a sonda
+    // `texto-que-nao-e-numero` acaba por mostrar.
+    const a = avaliador();
+    a.executar(pilha(guardarTexto('total', 5)));
+    const guardado = a.trace.valores.find((v) => v.origem.bloco === 'guardar');
+    expect(guardado?.tipo).toBe('texto');
+    expect(guardado?.valor).toBe('5');
+    expect(a.trace.erros.length).toBe(0);
+  });
+});
+
+describe('repetir', () => {
+  it('repete o corpo o número de vezes pedido', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(3, [guardar('x', 1)])));
+    const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
+    expect(guardou.length).toBe(3);
   });
 
-  it('a ficha tem uma pergunta por linha, e são quinze', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_DA_FICHA} />);
-    // Uma pergunta por linha do ficheiro, e o ficheiro tem quinze linhas.
-    // Este número é o do ficheiro, não um número escolhido: se a lição
-    // escrevesse um ficheiro de doze linhas, este teste mandava corrigir a
-    // lição, e não o número.
-    expect(screen.getAllByLabelText(/a tua resposta/i)).toHaveLength(15);
+  it('aceita zero repetições e não executa o corpo', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(0, [guardar('x', 1)])));
+    expect(a.trace.valores.filter((v) => v.origem.bloco === 'guardar').length).toBe(0);
+    expect(a.trace.erros.length).toBe(0);
   });
 
-  it('a ficha aceita a resposta certa, e diz-te que viste', async () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_DA_FICHA} />);
-    const campos = screen.getAllByLabelText(/a tua resposta/i);
-    await userEvent.type(campos[0]!, 'guarda um número');
-    await userEvent.click(screen.getAllByRole('button', { name: 'Verificar' })[0]!);
-    expect(screen.getByText(/bem-vindo/i)).toBeInTheDocument();
+  it('um número de repetições acima do limite é FalhaRuntime com porque', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(MAX_ITERACOES + 1, [guardar('x', 1)])));
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.porque).toContain(String(MAX_ITERACOES));
   });
 
-  it('a ficha recusa uma resposta que não diz a palavra que a pergunta pedia', async () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_DA_FICHA} />);
-    const campos = screen.getAllByLabelText(/a tua resposta/i);
-    await userEvent.type(campos[0]!, 'banana');
-    await userEvent.click(screen.getAllByRole('button', { name: 'Verificar' })[0]!);
-    // A palavra é "Ainda não", e não "errado". O produto nunca diz que uma
-    // resposta está errada: diz que ainda não disse o que a pergunta pedia.
-    expect(screen.getByText(/Ainda não/i)).toBeInTheDocument();
+  it('um número de repetições não inteiro é FalhaRuntime com porque', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(1.5, [guardar('x', 1)])));
+    expect(a.trace.erros[0]?.classe).toBe('FalhaRuntime');
   });
 
-  it('a ficha não mostra blocos nem robô: um passo de leitura lê-se, não faz-se', () => {
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_DA_FICHA} />);
-    expect(screen.queryByTestId('area-blocos')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('O robô')).not.toBeInTheDocument();
+  it('não entra no ciclo quando o número de repetições é inválido', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(MAX_ITERACOES + 1, [guardar('x', 1)])));
+    expect(a.trace.valores.filter((v) => v.origem.bloco === 'guardar').length).toBe(0);
   });
 
-  it('o painel de texto aparece no passo que precisa dele, e só nesse', () => {
-    const { unmount } = render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    expect(screen.getByLabelText(`O teu código em ${NOMES.python}`)).toBeInTheDocument();
-    unmount();
-    render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_EXPLICAR} />);
-    expect(screen.queryByLabelText(`O teu código em ${NOMES.python}`)).not.toBeInTheDocument();
+  it('um número de repetições grande demais dá o erro do laço, não o do valor', () => {
+    // Dois limites, dois fatos. `RANGE_INTEIROS` diz que nenhum número
+    // acima de 1000 existe; `MAX_ITERACOES` diz que um laço não repete mais
+    // de 10000 vezes. Se o `repetir` decidisse pelo `valorDe`, quem escrevesse
+    // `repetir(10001)` lia "este número é grande demais" e nunca soube que o
+    // problema era o número de repetições. O teste abaixo é a razão de o
+    // `repetir` olhar para o valor cru antes de o converter.
+    const a = avaliador();
+    a.executar(pilha(repetir(MAX_ITERACOES + 1, [guardar('x', 1)])));
+    expect(a.trace.erros.length).toBe(1);
+    expect(a.trace.erros[0]?.classe).toBe('FalhaRuntime');
+    expect(a.trace.erros[0]?.porque).toContain('repetições');
   });
 
-  it('sem blocos ligados, Executar corre o teu texto e não finge uma comparação', async () => {
-    const { container } = render(<Tela linguagem="python" licao={licao} passoInicial={PASSO_FAZER} />);
-    const editor = screen.getByLabelText(`O teu código em ${NOMES.python}`);
-    await userEvent.clear(editor);
-    await userEvent.type(editor, 'total = "olá"');
-    expect(screen.getByRole('button', { name: 'Executar' })).toBeEnabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Executar' }));
-    // Sem blocos não há nada para comparar. Uma comparação contra o vazio
-    // produziria uma lista de divergências que o aluno não pode ver nem
-    // corrigir — e o produto a fingir que avaliou o que não avaliou.
-    expect(container.querySelector('.divergencias')).toBeNull();
+  it('repetir(1000) é aceite: está no alcance do número e dentro do laço', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(RANGE_INTEIROS, [guardar('x', 1)])));
+    expect(a.trace.erros.length).toBe(0);
+    expect(a.trace.valores.filter((v) => v.origem.bloco === 'guardar').length).toBe(
+      RANGE_INTEIROS,
+    );
+  });
+
+  it('um número de repetições negativo é FalhaRuntime', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(-1, [guardar('x', 1)])));
+    expect(a.trace.erros[0]?.classe).toBe('FalhaRuntime');
+  });
+
+  it('repetir aninhado executa o corpo interno vezes × vezes', () => {
+    const a = avaliador();
+    a.executar(pilha(repetir(2, [repetir(3, [guardar('x', 1)])])));
+    expect(a.trace.valores.filter((v) => v.origem.bloco === 'guardar').length).toBe(6);
+  });
+});
+
+describe('dizer', () => {
+  it('aceita texto', () => {
+    const a = avaliador();
+    const v = a.avaliar('dizer', { VALOR: { txt: 'olá' } }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(a.trace.erros.length).toBe(0);
+  });
+
+  it('aceita um número, porque o print do Python também aceita', () => {
+    // A recusa antiga dizia «O que dizes tem de ser uma palavra», e isso é
+    // falso: `print(5)` é legal em Python. A primeira lição conta
+    // precisamente a história de um `print` a imprimir um número — o
+    // ficheiro de leitura tem `print(total)` na sétima linha, e `total`
+    // vale 5 na segunda. Um motor que recusa aquele gesto ensina que o
+    // Python é uma linguagem que não o deixa.
+    const a = avaliador();
+    const v = a.avaliar('dizer', { VALOR: 5 }, 1);
+    expect(v.tipo).toBe('número');
+    expect(v.valor).toBe(5);
+    expect(a.trace.erros.length).toBe(0);
+  });
+
+  it('um valor que já falhou não ganha uma segunda mensagem pelo caminho', () => {
+    // Este teste já existia, e o que afirmava era o contrário do que devia:
+    // esperava **dois** erros e dizia que dois era a resposta certa, com um
+    // comentário a explicar que lia o último para não passar por engano.
+    // Não era engano: era a especificação do defeito.
+    //
+    // Um `{ref}` que ainda não tem valor já diz o seu erro dentro de
+    // `valorDe`, e o `dizer` acrescentava uma `Recusa` por cima. Um gesto, um
+    // erro, e no ecrã duas frases ao mesmo tempo: «a variável "fantasma" não
+    // tem valor» e «este sítio só aceita texto». Quem lê as duas aprende que
+    // são dois problemas, e são um — e a segunda frase era falsa, porque o
+    // que chegou não era um número nem uma palavra: era nada.
+    const a = avaliador();
+    a.avaliar('dizer', { VALOR: { ref: 'fantasma' } }, 1);
+    expect(a.trace.erros.length).toBe(1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e?.porque).toContain('fantasma');
+  });
+
+
+describe('valores de entrada', () => {
+  it('{txt} é texto', () => {
+    expect(avaliador().avaliar('dador_num', { VALOR: { txt: 'x' } }, 1).tipo).toBe('texto');
+  });
+  it('uma palavra escrita a direito é um literal de texto', () => {
+    // É assim que a lição escreve um texto: `valor: olá`, e não
+    // `valor: {txt: olá}`. A projeção já tratava a palavra solta como
+    // texto — emitia `total = 'olá'` — e o avaliador não: o mesmo programa
+    // recebia `Observacao` quando vinha do texto e `Recusa` quando vinha
+    // dos blocos. Duas implementações da mesma semântica a discordar uma da
+    // outra é a forma mais cara de um produto ter sondas que não podem
+    // estar erradas, e foi o que a Task 12 encontrou ao correr a lição da
+    // Task 8 pelos blocos.
+    const a = avaliador();
+    const v = a.avaliar('dador_num', { VALOR: 'olá' }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(v.valor).toBe('olá');
+    expect(a.trace.erros.length).toBe(0);
+  });
+
+    expect(avaliador().avaliar('dador_num', { VALOR: 3 }, 1).tipo).toBe('número');
+  });
+  it('um booleano é lógico', () => {
+    expect(avaliador().avaliar('dador_num', { VALOR: true }, 1).tipo).toBe('lógico');
+  });
+  it('{bloco} é avaliado recursivamente', () => {
+    const a = avaliador();
+    const v = a.avaliar('dador_num', { VALOR: { bloco: { type: 'dador_num', inputs: { VALOR: { valor: 9 } } } } }, 1);
+    expect(v.valor).toBe(9);
+  });
+  it('uma referência a variável inexistente é FalhaRuntime com porque', () => {
+    const a = avaliador();
+    a.avaliar('dador_num', { VALOR: { ref: 'fantasma' } }, 1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.porque).toContain('fantasma');
+  });
+  it('uma forma que o motor não sabe ler é FalhaRuntime, e diz que não sabe', () => {
+    // Não é um tipo errado: é uma forma que nenhuma das quatro formas de
+    // valor resolve. A versão antiga dizia «Este sítio só aceita número.
+    // Recebeste número» — uma frase que se nega a si mesma, e uma frase que
+    // se nega a si mesma não ensina o tipo de lado nenhum. O produto inteiro
+    // existe para trocar adivinhação por razão, e uma razão que se nega a si
+    // mesma é a pior das duas.
+    const a = avaliador();
+    a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.classe === 'FalhaRuntime' && e.porque.length).toBeGreaterThan(0);
+    expect(a.trace.erros.length).toBe(1);
+  });
+});
+
+describe('blocos não implementados', () => {
+  it('um bloco desconhecido é FalhaRuntime com porque e diz o que fazer', () => {
+    const a = avaliador();
+    a.avaliar('condicao', { VALOR: 1 }, 1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.porque).toContain('condicao');
+    expect(e && e.porque).toContain('lição 1');
+  });
+});
+
+describe('executar', () => {
+  it('uma pilha corre os blocos por ordem e para no primeiro erro', () => {
+    // O bloco que falha passou a ser um `log` de uma variável que nunca foi
+    // guardada. Era um `dizer` com um número dentro, e deixou de ser quando
+    // o `dizer` deixou de recusar números — que é o comportamento certo, e
+    // por isso o gatilho deste teste tinha de mudar. Um teste cujo gatilho
+    // desapareceu não se apaga: muda de gatilho, ou deixa de provar que a
+    // pilha para.
+    const a = avaliador();
+    a.executar(pilha(guardar('total', 1), log({ ref: 'fantasma' }), log(2)));
+    const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
+    expect(guardou.length).toBe(1);
+    expect(a.trace.erros.length).toBe(1);
+    expect(a.trace.erros[0]?.origem.bloco).toBe('log');
+  });
+
+  it('o bloco depois do erro não corre', () => {
+    const a = avaliador();
+    a.executar(pilha(guardar('total', 1), log({ ref: 'fantasma' }), guardar('outro', 2)));
+    const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
+    expect(guardou.length).toBe(1);
+  });
+
+  it('programa vazio não produz erros nem valores', () => {
+    const a = avaliador();
+    a.executar(null);
+    expect(a.trace.erros.length).toBe(0);
+    expect(a.trace.valores.length).toBe(0);
+  });
+
+  it('cada bloco de topo é uma linha nova, e as variáveis não atravessam linhas', () => {
+    const a = avaliador();
+    a.executar(pilha(guardar('total', 5), log({ ref: 'total' })));
+    expect(a.trace.erros.length).toBe(1);
+  });
+});
+
+describe('partilha de Regra', () => {
+  it('dois avaliadores com a mesma Regra veem as mesmas linhas', () => {
+    // A linha tem de ser escrita por um `executar`, não por um `avaliar`
+    // avulso: `inicializa` é o que abre a linha, e é o `avaliar` directo que
+    // a deixa por abrir. A versão anterior deste teste escrevia a linha com
+    // dois `avaliar` e depois jurava que os dois avaliadores a partilhavam —
+    // e passava a testar que a `Regra` não partilha nada.
+    const primeiro = avaliador();
+    const segundo = avaliador(primeiro.regra);
+    primeiro.executar(pilha(guardar('total', 5)));
+    const v = segundo.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
+    expect(v.valor).toBe(5);
+  });
+
+  it('atribuir abre uma linha que ninguém inicializou', () => {
+    // Atribuir cria; ler o que não foi atribuído falha. Se `define`
+    // ignorasse a linha por não existir, `avaliar('guardar', …)` avulso
+    // seria um no-op silencioso — e é assim que nasce um teste que passa
+    // sem estar a testar nada.
+    const r = regraDeLinhas();
+    const a = avaliador(r);
+    a.avaliar('guardar', { nome: 'total', VALOR: 7 }, 1);
+    expect(r.obtém('total', 1)?.valor).toBe(7);
+  });
+
+  it('inicializar a mesma linha de novo apaga o que lá estava', () => {
+    const r = regraDeLinhas();
+    const a = avaliador(r);
+    a.avaliar('guardar', { nome: 'total', VALOR: 7 }, 1);
+    r.inicializa(1);
+    expect(r.existe('total', 1)).toBe(false);
+  });
+});
+
+describe('o motor não conhece linguagens', () => {
+  it('nenhum erro do motor nomeia uma linguagem', () => {
+    // A spec §6.4: uma linguagem é a sua sintaxe, e a sintaxe é o que a
+    // projeção escreve. O `E`, o `restricao` e o `valor` vivem no núcleo e
+    // não podem trazer um nome de linguagem — quem aprende Go não há de ler
+    // "Python" numa mensagem sobre um número.
+    //
+    // Cada caso devolve o avaliador que usou, para que a leitura do `trace`
+    // seja feita no mesmo objeto que produziu o erro. Um caso que corre
+    // `avaliador()` internamente e devolve `void` obriga a refazer a mesma
+    // execução para poder olhar para o resultado — e um teste que repete a
+    // execução é um teste que pode passar na segunda vez e falhar na
+    // primeira.
+    const casos: Array<[string, () => Avaliador]> = [
+      ['guardar sem nome', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: '', VALOR: 1 }, 1);
+        return a;
+      }],
+      ['guardar fora de RANGE_INTEIROS', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'total', VALOR: 1_000_000 }, 1);
+        return a;
+      }],
+      ['guardar sem valor', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'total' }, 1);
+        return a;
+      }],
+      ['referência a uma variável que não existe', () => {
+        const a = avaliador();
+        a.avaliar('dador_num', { VALOR: { ref: 'fantasma' } }, 1);
+        return a;
+      }],
+      ['forma de valor desconhecida', () => {
+        const a = avaliador();
+        a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
+        return a;
+      }],
+      ['bloco não implementado', () => {
+        const a = avaliador();
+        a.avaliar('condicao', { VALOR: 1 }, 1);
+        return a;
+      }],
+      ['repetição não inteira', () => {
+        const a = avaliador();
+        a.executar(pilha(repetir(1.5, [guardar('x', 1)])));
+        return a;
+      }],
+      ['repetição acima do limite', () => {
+        const a = avaliador();
+        a.executar(pilha(repetir(MAX_ITERACOES + 1, [guardar('x', 1)])));
+        return a;
+      }],
+    ];
+
+    for (const [nome, caso] of casos) {
+      const a = caso();
+      expect(a.trace.erros.length, nome).toBeGreaterThan(0);
+      for (const e of a.trace.erros) {
+        const texto = e.porque + '\n' + ('remedio' in e ? e.remedio : '');
+        expect(texto, nome).not.toMatch(/Python|Java|Go|TypeScript|JavaScript|SQL/);
+      }
+    }
+  });
+
+  it('todo erro do motor tem porque e remedio não vazios', () => {
+    // A regra que a Task 1 fixou para `Recusa`, aplicada agora a todos os
+    // sítios onde o motor decide falhar. Um erro sem `remedio` é um erro
+    // que obriga o aluno a adivinhar, e o produto inteiro existe para
+    // trocar adivinhação por razão.
+    //
+    // O `expect` do meio não é decoração. Este teste itera uma lista de
+    // erros; se o motor deixar de dar erro nenhum, o `for` corre zero vezes
+    // e o teste passa a medir o nada. Passou a passar por cima de uma lista
+    // vazia até a Task 12 o fazer, e é o mesmo defecto que se viu três
+    // vezes nos testes de ecrã.
+    const a = avaliador();
+    a.avaliar('guardar', { nome: '', VALOR: 1 }, 1);
+    a.avaliar('dizer', { VALOR: { ref: 'fantasma' } }, 1);
+    a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
+    expect(a.trace.erros.length).toBeGreaterThan(0);
+    for (const e of a.trace.erros) {
+      expect(e.porque.length).toBeGreaterThan(0);
+      if ('remedio' in e) expect(e.remedio.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('nenhum destes gestos inventa um erro', () => {
+    // A lista de cima é a lista do que **tem** de dar erro. Esta é a lista
+    // do que **não** pode dar, e é tão importante como a outra: um motor
+    // que inventa recusas recusa a lição inteira, e o aluno nunca chega ao
+    // fim de um passo. Guardar texto, dizer um número e imprimir o que ficou
+    // guardado são gestos normais em Python, e nenhum deles pode ser uma
+    // recusa — e a palavra escrita a direito é a forma como a lição escreve
+    // um texto, que é a forma que a projeção também aceita.
+    const gestos: Array<[string, () => Avaliador]> = [
+      ['guardar um texto', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'nome', VALOR: { txt: 'olá' } }, 1);
+        return a;
+      }],
+      ['guardar um texto escrito a direito', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'nome', VALOR: 'olá' }, 1);
+        return a;
+      }],
+      ['dizer um número', () => {
+        const a = avaliador();
+        a.avaliar('dizer', { VALOR: 5 }, 1);
+        return a;
+      }],
+      ['dizer o que ficou guardado', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 't', VALOR: 5 }, 1);
+        a.avaliar('dizer', { VALOR: { ref: 't' } }, 1);
+        return a;
+      }],
+      ['três voltas a guardar e a dizer, o programa da ficha em blocos', () => {
+        // Um `guardar` e um `dizer` que não se olham um para o outro, porque
+        // cada bloco é a sua linha: o âmbito do motor é por bloco, não por
+        // pilha (a Task 2 fixou isso, e a ficha de leitura é lida e não
+        // executada). Este caso existe para cubrir o laço, a atribuição e o
+        // `dizer` ao mesmo tempo — e para que uma mudança futura no âmbito
+        // apareça aqui e não na lição.
+        const a = avaliador();
+        a.executar(repetir(3, [guardar('total', 5), dizer(5)]));
+        return a;
+      }],
+    ];
+
+    for (const [nome, gesto] of gestos) {
+      const a = gesto();
+      expect(a.trace.erros.length, nome).toBe(0);
+    }
+  });
+});
+
+// O `verificar-arvore.ts` já garante que `nucleo/` não *importa* `projecoes/`.
+// Isto é a outra metade: que o núcleo não *chame* para dentro de uma
+// projeção, nem pelo nome de uma função dela. A tentação é concreta e
+// silenciosa — `avaliarTexto` é o nome que toda a gente dá à função que
+// converte texto numa linguagem, e um dia um ficheiro do núcleo vai
+// `import { avaliarTexto } from '../projecoes/…'` e passar a tratar
+// sintaxe, que é a coisa que a spec §6.4 proíbe ao núcleo.
+//
+// Só os ficheiros de produção são lidos. Este ficheiro de teste menciona
+// `projecoes` e `avaliarTexto` nas próprias expressões regulares, e um
+// teste que se apanha a si próprio não verifica nada.
+describe('o núcleo não fala com as projeções', () => {
+  function producaoEm(raiz: string): string[] {
+    return readdirSync(raiz, { withFileTypes: true }).flatMap((e) => {
+      const caminho = join(raiz, e.name);
+      if (e.isDirectory()) return producaoEm(caminho);
+      if (!/\.tsx?$/.test(e.name)) return [];
+      return e.name.includes('.test.') ? [] : [caminho];
+    });
+  }
+
+  // O `cwd` do vitest é a raiz do projecto, que é onde a npm correu o
+  // comando. `import.meta.url` não serve: depois da transformação do
+  // vitest deixa de ser um URL `file:` e `fileURLToPath` rebenta — o que
+  // é um bom motivo para um teste de caminho de ficheiro não confiar em
+  // magia de bundler.
+  const NUCLEO = join(process.cwd(), 'src', 'nucleo');
+
+  it('nenhum ficheiro de produção menciona uma projeção ou chama o leitor de texto', () => {
+    const ficheiros = producaoEm(NUCLEO);
+    expect(ficheiros.length).toBeGreaterThan(0);
+    for (const f of ficheiros) {
+      // Os comentários saem antes do casamento. Um ficheiro do núcleo vai
+      // ter uma linha a explicar *porquê* que não chama `emitir` — e um
+      // teste que proíbe a palavra transformava a documenting do
+      // invariante numa razão para o invariante desaparecer. O que se
+      // proíbe é a chamada, não a lembrança dela.
+      const codigo = readFileSync(f, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1');
+      expect(codigo, f).not.toMatch(/projecoes/);
+      expect(codigo, f).not.toMatch(/avaliarTexto|\.ler\(|\bemitir\b/);
+    }
   });
 });
 ```
 
-- [ ] **Step 2: Correr e ver falhar**
+E o teste que fecha a porta atrás disto, e que é o mais importante do
+projecto inteiro — não por ser difícil, mas por medir a **tela**: para cada
+passo de cada lição, o programa que o ecrã põe no ecrã tem de dar o mesmo
+veredicto nos dois motores; para cada sondagem com programa, os dois motores
+concordam entre si e com o que a sondagem espera; todas as sondagens de
+todas as lições passam; e os nomes de variável das lições já saem como
+identificadores de verdade. Sai de `LICSOES` e de `TEXTOS`, nunca de uma
+lista escrita à mão.
+
+Quatro linhas de guarda contra coisas que já aconteceram: um ficheiro que
+percorre uma lista vazia passa; dois testes que repetiam o que o carregador
+já atira foram removidos, porque não podem ficar vermelhos; e a mutação
+que devia ter disparado o teste dos nomes não disparou, porque a mutação
+tinha sido feita no vocabulário do topo do YAML e não dentro de um passo.
+Feita dentro de um passo, disparou e disse `python: "total_é" vira "total_e"`.
+
+`src/conteudo/acordo.test.ts`:
+```typescript
+import { describe, expect, it } from 'vitest';
+import { CARREGAR, LICSOES, TEXTOS, executarSonda } from './index';
+import type { Licao } from './esquema';
+import { avaliador } from '../nucleo/avaliador';
+import { avaliarTexto, classificar, emitir } from '../projecoes/avaliar';
+import type { Bloco } from './esquema';
+import type { Language } from '../nucleo/tipos';
+import { identificador } from '../nucleo/blocos';
+
+/** Todas as lições que existem, com a linguagem de cada uma.
+ *
+ *  Sai de `LICSOES` e de `TEXTOS` e não de uma lista escrita à mão. Uma lista
+ *  escrita à mão é uma lista de intenções, e a segunda lição entra sem
+ *  ninguém se lembrar de a acrescentar aqui — que é exatamente o modo de
+ *  falha que este ficheiro existe para apanhar. */
+function licoes(): Array<{ linguagem: Language; licao: Licao }> {
+  return LICSOES.map((linguagem) => {
+    const chave = Object.keys(TEXTOS).find((k) => k.startsWith(`${linguagem}/`));
+    if (chave === undefined) throw new Error(`LICSOES tem ${linguagem} e o TEXTOS não`);
+    return { linguagem, licao: CARREGAR(TEXTOS[chave] as string, linguagem) };
+  });
+}
+
+/** O que o motor dá a um programa, pelos dois caminhos.
+ *
+ *  O produto tem **dois** motores para a mesma semântica: o avaliador de
+ *  blocos, que é o que o aluno corre ao arrastar coisas, e o avaliador de
+ *  texto, que é o que julga o que a projeção escreveu. São duas
+ *  implementações, e uma implementação que discorda da outra não é uma
+ *  implementação: é uma sorte.
+ *
+ *  E a sorte é invisível enquanto ninguém compara as duas. Foi o que
+ *  aconteceu com `guardar nome = 'olá'`: o caminho de texto dizia
+ *  `Observacao` — que é o que a sondagem `guarda-um-texto` provava — e o
+ *  caminho de blocos dizia `Recusa`, com a frase «este sítio só aceita
+ *  número. Recebeste número». A lição estava escrita, as sondagens passavam,
+ *  e a pessoa que fosse fazer aquele primeiro passo batia com uma parede.
+ */
+function veredito(programa: Bloco | null): string {
+  const pelosBlocos = avaliador();
+  pelosBlocos.executar(programa);
+  return classificar(pelosBlocos.trace.erros);
+}
+
+function vereditoDoTexto(linguagem: Language, programa: Bloco | null): string {
+  return classificar(avaliarTexto(linguagem, emitir(linguagem, programa).texto));
+}
+
+describe('os dois motores dizem a mesma coisa', () => {
+  it('existe pelo menos uma lição, ou este ficheiro não prova nada', () => {
+    // Um ficheiro de testes que percorre uma lista vazia passa. Esta linha
+    // é a que impede que este ficheiro passe a provar o nada no dia em que
+    // as lições mudarem de sítio — que é o mesmo defeito que já apareceu
+    // três vezes nos testes de ecrã e uma vez no do motor.
+    expect(licoes().length).toBeGreaterThan(0);
+  });
+
+  it('para cada passo, o programa que o ecrã põe no ecrã dá o mesmo nos dois motores', () => {
+    // Este é o teste mais importante do projecto, e não é sobre a lição: é
+    // sobre a **tela**. O ecrã carrega `passo.bloco` no painel de blocos e
+    // deixa a pessoa mexer; a sondagem que decide se o passo está feito foi
+    // provada pelo caminho do texto. Se os dois discordarem, a sondagem
+    // está a medir uma coisa e o ecrã a medir outra, e a pessoa nunca
+    // consegue satisfazer a sondagem com o programa que o ecrã lhe deu.
+    const divergencias: string[] = [];
+
+    for (const { linguagem, licao } of licoes()) {
+      licao.passos.forEach((passo, indice) => {
+        const pelosBlocos = veredito(passo.bloco);
+        const peloTexto = vereditoDoTexto(linguagem, passo.bloco);
+        if (pelosBlocos !== peloTexto) {
+          divergencias.push(
+            `${linguagem} passo ${indice} (${passo.fase}, sonda ${passo.sonda}): ` +
+              `nos blocos deu ${pelosBlocos}, no texto deu ${peloTexto}`,
+          );
+        }
+      });
+    }
+
+    expect(divergencias.join('\n')).toBe('');
+  });
+
+  it('para cada sondagem com programa, os dois motores concordam com o que ela espera', () => {
+    // As sondagens com `prova.texto` não têm blocos com que correr — o
+    // ficheiro de quinze linhas, por exemplo, é texto escrito à mão, e não
+    // há blocos que o produzam. Essas são julgadas pelo caminho do texto, e
+    // `executarSonda` é quem as julga (e tem o seu próprio teste). As
+    // sondagens com `prova.programa` têm as duas, e é aí que a divergência
+    // se esconde.
+    const divergencias: string[] = [];
+
+    for (const { linguagem, licao } of licoes()) {
+      for (const sonda of licao.sondas) {
+        if (sonda.prova.forma !== 'programa' || sonda.prova.programa === undefined) continue;
+        const pelosBlocos = veredito(sonda.prova.programa);
+        const peloTexto = vereditoDoTexto(linguagem, sonda.prova.programa);
+        const esperada = sonda.esperado.classe;
+        if (pelosBlocos !== peloTexto || pelosBlocos !== esperada) {
+          divergencias.push(
+            `${linguagem} sonda ${sonda.nome}: esperava ${esperada}, ` +
+              `nos blocos deu ${pelosBlocos}, no texto deu ${peloTexto}`,
+          );
+        }
+      }
+    }
+
+    expect(divergencias.join('\n')).toBe('');
+  });
+
+  it('nenhuma sondagem de bloco de uma lição sem blocos tem programa', () => {
+    // Uma sondagem que promete um programa e não o tem é uma sondagem
+    // vazia: `executarSonda` recusa-a, o que é certo, mas a recusa aparece
+    // em `executarSonda` e não aqui, e quem lê o erro tem de saber de que
+    // sondagem é que se trata. A lista abaixo é a lista do que este ficheiro
+    // está a olhar, e ela não pode estar vazia nem meter coisas que não
+    // são programas.
+    const contadas: string[] = [];
+    for (const { linguagem, licao } of licoes()) {
+      for (const sonda of licao.sondas) {
+        if (sonda.prova.forma !== 'programa') continue;
+        contadas.push(`${linguagem}/${sonda.nome}`);
+        // Uma sondagem da família dos blocos que não traz nem programa nem
+        // texto não prova nada, e o `executarSonda` recusa-a — mas o nome da
+        // sondagem no aviso tem de dizer de que linguagem é, senão o aviso
+        // de uma lição de Java parece o de uma de Python.
+        const temProva = sonda.prova.programa !== undefined || sonda.prova.texto !== undefined;
+        expect(temProva, `${linguagem}/${sonda.nome}`).toBe(true);
+      }
+    }
+    expect(contadas.length).toBeGreaterThan(0);
+  });
+});
+
+describe('as sondagens de todas as lições estão provadas', () => {
+  it('cada sondagem passa no motor, em todas as lições', () => {
+    // A promessa da §11.2 é que uma sondagem não pode estar errada, porque
+    // corre no mesmo motor que a vê. Este teste generaliza a promessa: até
+    // agora só a lição de Python a provava, e uma segunda lição de outra
+    // linguagem podia trazer uma sondagem errada sem que nada ficasse
+    // vermelho.
+    const falhas: string[] = [];
+    let quantas = 0;
+
+    for (const { linguagem, licao } of licoes()) {
+      for (const sonda of licao.sondas) {
+        quantas += 1;
+        const r = executarSonda(sonda, linguagem);
+        if (!r.ok) falhas.push(`${linguagem} ${sonda.nome}: ${r.erro ?? '?'}`);
+      }
+    }
+
+    expect(quantas).toBeGreaterThan(0);
+    expect(falhas.join('\n')).toBe('');
+  });
+
+  it('cada passo diz à pessoa o que tem de fazer', () => {
+    // O `porque` do passo é a instrução, e o `texto` do momento é a pergunta
+    // que fica à espera enquanto a pessoa trabalha. São as duas únicas frases
+    // que o ecrã mostra sem mais nada, e um passo com uma delas vazia é um
+    // ecrã com um bloco e um silêncio.
+    //
+    // Repara no que este teste **não** repete: que a sonda existe e que o
+    // passo tem momentos. O carregador já atira `ErroDeAutoria` nas duas
+    // coisas, e um teste que repete uma verificação que já está noutro sítio
+    // é um teste que nunca pode ficar vermelho — a pior sorte de teste, porque
+    // parece que cobre alguma coisa.
+    const mudos: string[] = [];
+    for (const { linguagem, licao } of licoes()) {
+      licao.passos.forEach((passo, indice) => {
+        const onde = `${linguagem} passo ${indice}`;
+        if (passo.porque.trim().length === 0) mudos.push(`${onde}: o passo não diz o que fazer`);
+        for (const momento of passo.momentos) {
+          if (momento.texto.trim().length === 0) mudos.push(`${onde}: o momento ${momento.id} está vazio`);
+        }
+      });
+    }
+    expect(mudos.join('\n')).toBe('');
+  });
+
+  it('todo nome de variável das lições é um identificador de verdade', () => {
+    // `identificador` é a função que decide o que o nome escrito pelo aluno
+    // vira no ficheiro: `class` vira `class_`, `1total` vira `v_1total`, e um
+    // nome com acento perde o acento. Se uma lição escrever um nome que o
+    // identificador muda, o ecrã mostra uma coisa e o ficheiro outra, e a
+    // comparação de divergências aponta para a linha errada. A lição tem de
+    // escrever o nome **já** com a forma que vai para o ficheiro.
+    const mudados: string[] = [];
+    for (const { linguagem, licao } of licoes()) {
+      const nomes = new Set<string>();
+      varre(licao.passos.map((p) => p.bloco), (nome) => nomes.add(nome));
+      for (const nome of nomes) {
+        if (identificador(nome) !== nome) {
+          mudados.push(`${linguagem}: "${nome}" vira "${identificador(nome)}"`);
+        }
+      }
+    }
+    expect(mudados.join('\n')).toBe('');
+  });
+});
+
+/** Uma ranhura tal como a lição a escreve: `valor` para o que entra
+ *  num sítio, `stack` para o corpo de um laço, e `bloco` dentro de `valor`
+ *  quando o que entra é outro bloco. Os três vivem no mesmo sítio e é a
+ *  distinção entre eles que faz a busca ser rasa ou completa. */
+type Ranhura = { valor?: unknown; stack?: Bloco[]; bloco?: Bloco };
+
+/** Todos os `fields.nome.valor` que aparecem num programa, a qualquer
+ *  profundidade.
+ *
+ *  Uma sondagem que escrevesse um nome com acento passava despercebida se a
+ *  busca fosse rasa, e a busca rasa é o que dá a ilusão de que se olhou
+ *  tudo. Por isso a funcao desce a `stack` e a `bloco`, e não só ao primeiro
+ *  nível — e por isso recebe uma lista tanto como um bloco, porque os
+ *  passos de uma lição são uma lista. */
+function varre(programa: Bloco | Bloco[] | null, achou: (nome: string) => void): void {
+  if (programa === null) return;
+  if (Array.isArray(programa)) {
+    for (const b of programa) varre(b, achou);
+    return;
+  }
+  const nome = programa.fields?.nome?.valor;
+  if (typeof nome === 'string' && nome.length > 0) achou(nome);
+  const inputs = programa.inputs;
+  if (inputs === undefined) return;
+  for (const ranhura of Object.values(inputs) as Ranhura[]) {
+    if (ranhura === undefined || ranhura === null) continue;
+    if (ranhura.stack !== undefined) for (const b of ranhura.stack) varre(b, achou);
+    const bruto = ranhura.valor;
+    if (bruto !== null && typeof bruto === 'object' && 'bloco' in bruto) {
+      varre((bruto as { bloco: Bloco }).bloco, achou);
+    }
+    if (ranhura.bloco !== undefined) varre(ranhura.bloco, achou);
+  }
+}
+```
+
+- [ ] **Step 2: Escrever o teste falhado**
+
+`src/ui/lecao/tela.test.tsx`:
+```typescript
+import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { Tela } from './Tela';
+import { CARREGAR } from '../../conteudo';
+import type { Bloco, Licao, Momento, Passo } from '../../conteudo/esquema';
+import { avaliador } from '../../nucleo/avaliador';
+import type { BlocoLeigo } from '../../nucleo/avaliador';
+import { classificar, divergir, emitir } from '../../projecoes/avaliar';
+import { ROTULOS } from '../tipos';
+
+/** A regra de todas as asserções de texto deste ficheiro.
+ *
+ *  Nenhuma pergunta de uma lição é escrita aqui. A lição é YAML, e o YAML
+ *  quebra as frases de `porque` em linhas de oitenta colunas e volta a
+ *  juntá-las; um `getByText` com uma frase tirada de uma linha do ficheiro
+ *  falha por causa do embrulho, e o ficheiro de testes acaba a ser uma
+ *  segunda cópia da lição que diverge no primeiro parágrafo que alguém
+ *  reescreva. Por isso a comparação é sempre sobre o `textContent` do
+ *  ecrã inteiro, que é o que a pessoa lê. */
+function textoDoEcran(): string {
+  return document.body.textContent ?? '';
+}
+
+function ecra(): HTMLElement {
+  const achado = document.querySelector('main.tela');
+  if (achado === null) throw new Error('a lição não está no ecrã');
+  return achado as HTMLElement;
+}
+
+let LICAO: Licao;
+
+beforeAll(async () => {
+  LICAO = await carregada();
+});
+
+async function carregada(): Promise<Licao> {
+  const { default: bruto } = await import('../../conteudo/python/variavel.yml?raw');
+  return CARREGAR(bruto, 'python');
+}
+
+/** O índice do primeiro passo que a sondagem deixa por satisfazer no
+ *  programa que o ecrã lhe dá. Existe porque o ecrã **tem** de ter um momento
+ *  em que a resposta ainda não é a esperada: sem ele, um ecrã que aceita
+ *  tudo passa nos mesmos testes que um ecrã que não sabe o que viu. */
+function passoQueNaoBasta(): { indice: number; passo: Passo } {
+  const achado = LICAO.passos.findIndex((p, i) => {
+    const sonda = LICAO.sondas.find((s) => s.nome === p.sonda);
+    if (sonda === undefined) return false;
+    return classificar(errosDe(p.bloco)) !== sonda.esperado.classe;
+  });
+  if (achado < 0) throw new Error('nenhum passo é um teste negativo');
+  return { indice: achado, passo: LICAO.passos[achado] as Passo };
+}
+
+/** O primeiro passo cujo programa já chega ao que a sondagem espera. */
+function passoQueBasta(): { indice: number; passo: Passo } {
+  const achado = LICAO.passos.findIndex((p) => {
+    const sonda = LICAO.sondas.find((s) => s.nome === p.sonda);
+    if (sonda === undefined) return false;
+    return classificar(errosDe(p.bloco)) === sonda.esperado.classe;
+  });
+  if (achado < 0) throw new Error('nenhum passo satisfaz a sua sondagem');
+  return { indice: achado, passo: LICAO.passos[achado] as Passo };
+}
+
+function errosDe(bloco: BlocoLeigo | null) {
+  const a = avaliador();
+  a.executar(bloco);
+  return a.trace.erros;
+}
+
+/** Clica em «Correr o programa» e devolve o que o ecrã disse. */
+function correr(): void {
+  const botao = screen.queryByRole('button', { name: 'Correr o programa' });
+  if (botao === null) throw new Error('não há botão de correr neste momento');
+  fireEvent.click(botao);
+}
+
+/** Clica no botão cujo nome começa por `nome`. Devolve o que estava lá, ou
+ *  atira, que é a mesma coisa: um botão que não existe quando se devia
+ *  existir é um defeito, e dizer qual faltou é o diagnóstico. */
+function carregar(nome: string): void {
+  const botao = screen.getByRole('button', { name: new RegExp(`^${nome}`) });
+  fireEvent.click(botao);
+}
+
+function abrir(indice: number): void {
+  render(<Tela linguagem="python" licao={LICAO} passoInicial={indice} />);
+}
+
+/** Quanto tempo um teste que monta o ecrã de cada passo precisa.
+ *
+ *  Montar o ecrã de um passo é montar o Blockly, e o Blockly não é rápido:
+ *  regista blocos, mede o SVG que o jsdom não sabe medir, e monta a
+ *  ferramenta. O produto nunca monta onze — monta um — mas um teste que
+ *  percorre a lição toda monta onze, e onze montagens em paralelo com os
+ *  outros ficheiros passam dos cinco segundos que é o limite por omissão.
+ *
+ *  O limite escreve-se à mão em vez de se subir o global, porque subir o
+ *  global é dizer que todos os testes são lentos quando este é lento por uma
+ *  razão que só este tem. */
+const PASSO_A_PASSO = 20_000;
+
+describe('O ecrã da lição', () => {
+  it('abre no primeiro passo, e não num ecrã vazio', () => {
+    // Uma pessoa que escolhe uma linguagem tem de aterrar em qualquer coisa
+    // que se possa ler. Um ecrã com o título e nada mais é um ecrã de erro
+    // que não parece de erro.
+    abrir(0);
+    expect(screen.getByRole('heading', { level: 1, name: LICAO.titulo })).toBeInTheDocument();
+    expect(textoDoEcran()).toContain(LICAO.porqueTitulo.trim());
+    expect(textoDoEcran()).toContain(LICAO.passos[0]?.porque.trim());
+  });
+
+  it('diz em que passo está e o que esse passo é', () => {
+    // Quem não sabe onde vai não sabe se já chegou. E o rótulo da fase é o
+    // que diz o que se espera de quem está ali: ler, fazer, ou dar nome.
+    abrir(3);
+    expect(textoDoEcran()).toContain(`Passo 4 de ${LICAO.passos.length}`);
+    expect(textoDoEcran()).toContain(ROTULOS[LICAO.passos[3]?.fase ?? 'fazer']);
+  });
+
+  it('cada passo mostra a sua instrução, e não a de outro', () => {
+    // A instrução é o `porque` do passo. Uma ecrã que mostrasse sempre o
+    // primeiro `porque` da lição pareceria funcionar: há texto, o texto é
+    // verdade, e a pessoa faz a coisa errada com a confiança de quem fez
+    // a coisa certa.
+    for (const [indice, passo] of LICAO.passos.entries()) {
+      const { unmount } = render(
+        <Tela linguagem="python" licao={LICAO} passoInicial={indice} />,
+      );
+      expect(textoDoEcran(), `passo ${indice}`).toContain(passo.porque.trim());
+      unmount();
+    }
+  }, PASSO_A_PASSO);
+
+  it('um passo de nomear mostra a palavra, e só um passo de nomear mostra', () => {
+    // `variável`, `atribuição` e `erro de execução` são as três palavras que
+    // esta lição quer que fiquem. Um passo que as mostra quando não deve
+    // está a dar a resposta antes de a pergunta.
+    const nomeares = LICAO.passos.filter((p) => p.fase === 'nomear');
+    expect(nomeares.length).toBeGreaterThan(0);
+    for (const [indice, passo] of LICAO.passos.entries()) {
+      const { unmount } = render(
+        <Tela linguagem="python" licao={LICAO} passoInicial={indice} />,
+      );
+      const ecraActual = ecra();
+      if (passo.fase === 'nomear') {
+        const palavra = ecraActual.querySelector('.passo-palavra');
+        expect(palavra?.textContent, `passo ${indice}`).toBe(passo.nomear);
+      } else {
+        expect(ecraActual.querySelector('.passo-palavra'), `passo ${indice}`).toBeNull();
+      }
+      unmount();
+    }
+  }, PASSO_A_PASSO);
+});
+
+describe('O painel segue a fonte do momento', () => {
+  it('um momento de blocos traz os blocos, o robô e o botão de correr', () => {
+    // A fonte é o que decide o painel, e não a fase. Há `explicar` com
+    // blocos e `nomear` com blocos, e há um `fazer` que vai trazer o editor
+    // de texto. Um ecrã que escolhesse pelo passo em vez do momento teria
+    // de repetir a decisão em mais sítio, e os dois sítios divergem.
+    abrir(0);
+    expect(screen.getByTestId('area-blocos')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'O robô' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Correr o programa' })).toBeInTheDocument();
+  });
+
+  it('a lição de Python não tem um único momento de texto, e o ecrã não finge que tem', () => {
+    // Este teste diz uma coisa verdadeira e chata: a primeira lição é toda de
+    // blocos e de leitura. O editor de texto existe, é usado pelo menos por
+    // um teste, e aparece em nenhum passo desta lição — e um teste que
+    // dissesse que aparece mentiria sobre a lição. A lição derivada abaixo
+    // é quem o exercita, e diz no seu nome porque é que existe.
+    const comTexto = LICAO.passos.flatMap((p) => p.momentos).filter((m) => m.fonte === 'texto');
+    expect(comTexto).toHaveLength(0);
+    abrir(0);
+    expect(screen.queryByLabelText(/O teu código em/)).not.toBeInTheDocument();
+  });
+
+  it('um momento de texto traz o editor e tira os blocos', () => {
+    // E o inverso do teste acima: quando o momento é de texto, o ecrã não
+    // mostra ao mesmo tempo o editor e a área de blocos. Mostrar os dois é
+    // oferecer duas maneiras de fazer a mesma coisa sem dizer qual é a
+    // certa, e a pessoa perde tempo a experimentar.
+    //
+    // A lição derivada é a única coisa montada neste teste. Com um ecrã de
+    // blocos do lado, o `not.toBeInTheDocument` media o ecrã do outro passo e
+    // passava sem dizer nada sobre o editor.
+    const derivada = comPrimeiroMomentoDeTexto();
+    render(<Tela linguagem="python" licao={derivada} />);
+    expect(screen.getByLabelText(/O teu código em/)).toBeInTheDocument();
+    expect(screen.queryByTestId('area-blocos')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('robo')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Correr o programa' })).not.toBeInTheDocument();
+  });
+
+  it('o editor diz em que linguagem se escreve, e escreve o que o passo traz', () => {
+    // O `id` do editor é `codigo-<linguagem>`, e o texto que lá está é o do
+    // passo. Um editor vazio num momento de texto é um editor que pede ao
+    // aluno para escrever o ficheiro inteiro antes de ele saber o que o
+    // ficheiro é.
+    const derivada = comPrimeiroMomentoDeTexto();
+    render(<Tela linguagem="python" licao={derivada} />);
+    const editor = screen.getByLabelText(/O teu código em/);
+    expect(editor).toHaveAttribute('id', 'codigo-python');
+  });
+});
+
+describe('O programa do passo já está no ecrã quando a pessoa chega', () => {
+  it('correr sem mexer em nada dá o mesmo veredicto que o bloco do passo', () => {
+    // Esta é a prova de que o ecrã carrega o programa do passo. Corre-se sem
+    // tocar em nada e compara-se com o que o motor diz desse mesmo programa
+    // fora do ecrã: se o painel abrisse vazio, o veredicto seria o de um
+    // programa vazio, e a diferença apareceria aqui em pelo menos um dos
+    // onze passos.
+    //
+    // A ficha fica de fora, e por uma razão que é a lição e não o teste: o
+    // passo que manda ler um ficheiro não tem blocos para correr, e o que
+    // se corre ali é o ficheiro — o que o painel de texto e a sondagem de
+    // texto medem, e é o objeto do passo oito. Um botão de «Correr» num
+    // passo de leitura correria o programa errado, e a pessoa acharia que
+    // tinha corrido o ficheiro.
+    for (const [indice, passo] of LICAO.passos.entries()) {
+      if (passo.momentos.some((m) => m.fonte !== 'blocos')) continue;
+      const { unmount } = render(
+        <Tela linguagem="python" licao={LICAO} passoInicial={indice} />,
+      );
+      const esperada = classificar(errosDe(passo.bloco));
+      const antes = ecra().querySelector('.sonda-veredicto')?.textContent ?? '';
+      // Antes de correr não há veredicto. Um ecrã que mostra um veredicto sem
+      // corrida está a dizer que a pessoa viu o que não viu.
+      expect(antes, `passo ${indice}, sem correr`).toBe('');
+      correr();
+      const dita = ecra().querySelector('.sonda-veredicto')?.textContent ?? '';
+      // O veredicto do ecrã é uma frase, e a frase tem de conter a classe
+      // que o motor deu ao bloco do passo — não a classe que a sondagem
+      // queria, que é uma coisa diferente e é o que o teste seguinte mede.
+      expect(dita, `passo ${indice}`).toContain(esperada);
+      unmount();
+    }
+  }, PASSO_A_PASSO);
+
+  it('quando o programa do passo já dá o erro, um único correr diz que viu', () => {
+    // O caso feliz do gate: o programa que o ecrã dá já é o que a sondagem
+    // queria, e a pessoa que carrega em «Correr» vê o que a lição promete.
+    const { indice } = passoQueBasta();
+    abrir(indice);
+    correr();
+    expect(ecra().querySelector('.sonda-veredicto')?.textContent ?? '').toContain('viste');
+  });
+
+  it('quando o programa do passo ainda não dá o erro, o ecrã diz o que aconteceu e não diz que viste', () => {
+    // O caso negativo, e é o que dá sentido ao primeiro. Sem ele, um ecrã
+    // que aceita tudo — ou que diz sempre «viste» — passava nos mesmos
+    // testes. Aqui o programa do passo ainda não chega ao que a sondagem
+    // espera, e o ecrã tem de dizer o que aconteceu em vez de dar a
+    // estória boa.
+    const { indice } = passoQueNaoBasta();
+    abrir(indice);
+    correr();
+    const veredicto = ecra().querySelector('.sonda-veredicto')?.textContent ?? '';
+    expect(veredicto).not.toContain('viste');
+    expect(veredicto).toMatch(/O que aconteceu|aconteceu/i);
+  });
+
+  it('quando não acontece nada, o ecrã diz que não aconteceu nada', () => {
+    // Passo 4 da lição: o programa que o ecrã dá é `total = 'olá'`, que em
+    // Python corre sem queixar-se, e a sondagem quer um erro. O ecrã não
+    // pode inventar uma falha para preencher o sítio — e o que honesto é
+    // dizer que o programa passou sem dar nada, porque é isso que aconteceu
+    // e é isso que a pessoa tem de preencher.
+    const { indice } = passoQueNaoBasta();
+    abrir(indice);
+    correr();
+    const veredicto = ecra().querySelector('.sonda-veredicto')?.textContent ?? '';
+    expect(veredicto).toMatch(/Observacao/);
+    expect(veredicto).toMatch(/não aconteceu nada|Nada aconteceu/i);
+  });
+});
+
+describe('O que o motor diz quando o programa falha', () => {
+  it('a razão e o conserto que o motor sugere aparecem no ecrã', () => {
+    // A sondagem é o que julga, mas quem escreve a razão é o motor, e é o
+    // motor que sabe qual das coisas correram. Um ecrã que dissesse só
+    // «errado» obriga a pessoa a adivinhar, e é o oposto do produto.
+    //
+    // A lição de Python é usada aqui derivada. Dos onze passos dela, os
+    // dois que divergem da sondagem não têm erro nenhum — o Python não se
+    // queixa, que é metade do que a lição ensina — e os que têm erro batem
+    // com a sondagem. Não há, portanto, nenhum passo da lição de verdade
+    // onde o ecrã tenha de mostrar uma falha: o caminho está por medir.
+    const derivada = comProgramaQueFalha();
+    const erros = errosDe(derivada.passos[0]?.bloco ?? null);
+    expect(erros.length).toBeGreaterThan(0);
+    const primeiro = erros[0];
+    render(<Tela linguagem="python" licao={derivada} />);
+    correr();
+    const painel = ecra().querySelector('.erros');
+    expect(painel, 'sem erros no ecrã').not.toBeNull();
+    if (primeiro !== undefined) {
+      expect(painel?.textContent ?? '').toContain(primeiro.porque);
+      if ('remedio' in primeiro) expect(painel?.textContent ?? '').toContain(primeiro.remedio);
+    }
+  });
+
+  it('o nome da variável que falta é dito à pessoa, e não só «erro»', () => {
+    // O ponto 3 do `Review Focus`. Um erro que não diz qual é a variável
+    // obriga a pessoa a ler o programa à procura de um nome, e o programa
+    // é a coisa que ela ainda está a aprender a ler.
+    const derivada = comProgramaQueFalha();
+    const primeiro = errosDe(derivada.passos[0]?.bloco ?? null)[0];
+    render(<Tela linguagem="python" licao={derivada} />);
+    correr();
+    const painel = ecra().querySelector('.erros')?.textContent ?? '';
+    expect(primeiro?.porque ?? '').toContain('total');
+    expect(painel).toContain('total');
+  });
+
+  it('os erros desaparecem quando o passo muda', () => {
+    // Um erro é o que aconteceu numa corrida. Mostrá-lo no passo seguinte
+    // é pôr no ecrã uma falha que já não é do programa que está lá, e a
+    // pessoa passa a depurar código que não é o dela.
+    const derivada = comProgramaQueFalha();
+    render(<Tela linguagem="python" licao={derivada} />);
+    correr();
+    expect(ecra().querySelector('.erros')).not.toBeNull();
+    carregar('Ver a resposta');
+    carregar('Continuar');
+    expect(ecra().querySelector('.erros')).toBeNull();
+  });
+});
+
+describe('Continuar', () => {
+  it('passa de um momento para o seguinte dentro do mesmo passo', () => {
+    // O passo da ficha tem quinze perguntas, uma por linha. Passar de
+    // pergunta é a coisa mais banal do ecrã e a que mais vezes se estraga.
+    const ficha = LICAO.passos.findIndex((p) => p.referencia !== undefined);
+    expect(ficha).toBeGreaterThanOrEqual(0);
+    abrir(ficha);
+    expect(textoDoEcran()).toContain(LICAO.passos[ficha]?.momentos[0]?.texto ?? 'x');
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(LICAO.passos[ficha]?.momentos[1]?.texto ?? 'x');
+  });
+
+  it('no último momento passa para o passo seguinte', () => {
+    // O botão que só avançava momento deixava a pessoa presa no fim do
+    // último momento, e não havia outro caminho: um ecrã onde se pode ficar
+    // sem saída é um ecrã onde se pode perder a lição.
+    const ficha = LICAO.passos.findIndex((p) => p.referencia !== undefined);
+    const passo = LICAO.passos[ficha];
+    if (passo === undefined) throw new Error('a lição não tem ficha');
+    abrir(ficha);
+    for (const momento of passo.momentos) {
+      // Cada linha pergunta uma coisa, e a pergunta não se responde sozinha.
+      // Sem isto o botão fica batendo na última pergunta sem sair, e o
+      // teste passava a medir uma coisa que a pessoa também não conseguiria.
+      fireEvent.change(screen.getByLabelText('A tua resposta'), {
+        target: { value: momento.palavras[0] ?? 'resposta' },
+      });
+      carregar('Continuar');
+    }
+    expect(textoDoEcran()).toContain(`Passo ${ficha + 2} de ${LICAO.passos.length}`);
+  });
+
+  it('num passo de um momento só, «Continuar» leva ao passo seguinte', () => {
+    // Dez dos onze passos são de um momento só. Se «Continuar» não atravessa
+    // um momento, não os atravessa.
+    abrir(0);
+    correr();
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(`Passo 2 de ${LICAO.passos.length}`);
+  });
+
+  it('não atravessa um momento que ainda não foi visto, e diz o que falta', () => {
+    // O probe decide se o momento está visto — mas o ecrã tem de dizer isso,
+    // não advance em silêncio e não fique à espera de um clique que não
+    // muda nada. Uma pessoa que clica e nada acontece não sabe se errou.
+    abrir(0);
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(`Passo 1 de ${LICAO.passos.length}`);
+    expect(textoDoEcran()).toMatch(/falta|não.*visto|correr/i);
+  });
+
+  it('uma corrida que não bate com a sondagem não abre a porta', () => {
+    // O teste acima mede o que o ecrã **diz**; este mede o que o ecrã
+    // **deixa fazer**. São coisas diferentes, e o buraco entre elas foi
+    // encontrado por mutação: com a sondagem a deixar de decidir quem viu —
+    // a pessoa fez o que fez e o momento ficou visto na mesma — todos os
+    // testes passavam. O que se vê é que a corrida não abre a porta, e a
+    // linha do que falta continua lá depois de correr.
+    const { indice } = passoQueNaoBasta();
+    abrir(indice);
+    correr();
+    expect(ecra().querySelector('.passo-falta'), 'a linha do que falta desapareceu').not.toBeNull();
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(`Passo ${indice + 1} de ${LICAO.passos.length}`);
+  });
+
+  it('uma corrida que bate com a sondagem abre a porta sem o reveal', () => {
+    // E o inverso, pelo mesmo caminho: sem isto, «a corrida não abre» podia
+    // passar porque a porta nunca abreva. Correr chega.
+    const { indice } = passoQueBasta();
+    abrir(indice);
+    correr();
+    expect(ecra().querySelector('.passo-falta'), 'o momento ficou por ver').toBeNull();
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(`Passo ${indice + 2} de ${LICAO.passos.length}`);
+  });
+
+  it('«Ver a resposta» marca o momento como visto e diz que foi revelada', () => {
+    // A fuga honesta. A sondagem é o que julga, mas uma pessoa que não
+    // consegue ver não fica presa: há uma saída, e a saída diz na cara que
+    // foi uma saída. Um botão que marcasse sem dizer seria a mesma
+    // mentira que a do probe silencioso, só que mais pequena.
+    abrir(0);
+    carregar('Ver a resposta');
+    expect(ecra().querySelector('.sonda-revelada')?.textContent ?? '').toMatch(
+      /revelad|não.*descobriste/i,
+    );
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(`Passo 2 de ${LICAO.passos.length}`);
+  });
+
+  it('a resposta revelada é a razão esperada pela sondagem, e não a do motor', () => {
+    // São duas fontes diferentes e é uma distinção que vale a pena manter
+    // no ecrã: `esperado.porque` é o que a lição quer que a pessoa veja, e
+    // a do motor é o que o programa fez. Misturar as duas punha no ecrã uma
+    // frase que ninguém escreveu.
+    const { indice, passo } = passoQueBasta();
+    const sonda = LICAO.sondas.find((s) => s.nome === passo.sonda);
+    abrir(indice);
+    carregar('Ver a resposta');
+    expect(textoDoEcran()).toContain((sonda?.esperado.porque ?? '').trim());
+  });
+});
+
+describe('A ficha de leitura', () => {
+  it('mostra as linhas do ficheiro com a indentação que ele tem', () => {
+    // A linha 6 do ficheiro está dentro de um laço e é essa indentação que
+    // diz à pessoa que ela corre três vezes. Um ecrã que a tirasse mostrava
+    // um ficheiro que não é o ficheiro, e a pergunta da linha 6 ficava sem
+    // resposta possível.
+    const ficha = LICAO.passos.findIndex((p) => p.referencia !== undefined);
+    const passo = LICAO.passos[ficha];
+    if (passo === undefined) throw new Error('a lição não tem ficha');
+    const sonda = LICAO.sondas.find((s) => s.nome === passo.sonda);
+    const linhas = (sonda?.prova.texto ?? '').trimEnd().split('\n');
+    abrir(ficha);
+    expect(ecra().querySelector('.ficha-nome')?.textContent).toBe(
+      passo.referencia?.nome,
+    );
+    expect(ecra().querySelectorAll('.ficha-linha')).toHaveLength(linhas.length);
+    // Linha 6, a que está dentro do laço. A comparação é sobre o
+    // `textContent` cru e não sobre o texto do ecrã, porque o `textContent`
+    // do ecrã tem a pergunta por cima.
+    const sexta = ecra().querySelector('[data-linha="6"]');
+    expect(sexta?.textContent).toBe(linhas[5]);
+    expect(sexta?.textContent?.startsWith('    ')).toBe(true);
+  });
+
+  it('pergunta linha a linha, e uma resposta com a palavra conta', () => {
+    // A palavra não é a única resposta certa: `palavras` é uma lista, e
+    // qualquer uma delas chega. Uma resposta que não tenha nenhuma das
+    // palavras não é «errada» — não é resposta nenhuma, e o ecrã diz o que
+    // falta sem dizer que a pessoa errou.
+    const ficha = LICAO.passos.findIndex((p) => p.referencia !== undefined);
+    const passo = LICAO.passos[ficha];
+    const momento = passo?.momentos[0] as Momento | undefined;
+    if (momento === undefined) throw new Error('a ficha não tem perguntas');
+    abrir(ficha);
+    const campo = screen.getByLabelText('A tua resposta');
+    fireEvent.change(campo, { target: { value: momento.palavras[0] ?? '' } });
+    carregar('Continuar');
+    expect(textoDoEcran()).toContain(passo?.momentos[1]?.texto ?? 'x');
+  });
+
+  it('uma resposta sem as palavras não é tratada como resposta, e o ecrã não diz «errado»', () => {
+    // A §11 do produto: não há respostas erradas, há respostas que não dizem
+    // o que a linha fazia. A diferença é entre o produto e um questionário,
+    // e o teste é «nenhum sítio do ecrã diz que a resposta está errada».
+    const ficha = LICAO.passos.findIndex((p) => p.referencia !== undefined);
+    abrir(ficha);
+    fireEvent.change(screen.getByLabelText('A tua resposta'), {
+      target: { value: 'asdkjhaskdjh' },
+    });
+    carregar('Continuar');
+    expect(textoDoEcran()).not.toMatch(/errad|incorreto|wrong/i);
+    expect(textoDoEcran()).toMatch(/falt|não.*cont/i);
+  });
+
+  it('a ficha só aparece no passo que a manda ler', () => {
+    // Nove dos onze passos não têm ficha. Uma ficha em todos seria um
+    // ficheiro a mais a ler, e a lição desta vez seria sobre um ficheiro
+    // que a lição não está a ensinar.
+    for (const [indice, passo] of LICAO.passos.entries()) {
+      const { unmount } = render(
+        <Tela linguagem="python" licao={LICAO} passoInicial={indice} />,
+      );
+      const fichaActual = ecra().querySelector('.ficha');
+      if (passo.referencia === undefined) {
+        expect(fichaActual, `passo ${indice}`).toBeNull();
+      } else {
+        expect(fichaActual, `passo ${indice}`).not.toBeNull();
+      }
+      unmount();
+    }
+  }, PASSO_A_PASSO);
+});
+
+describe('O painel de texto diz onde o texto se afasta dos blocos', () => {
+  it('escrever no editor mostra o que diverge do que os blocos escrevem', () => {
+    // A divergência é a T6: o que a pessoa escreveu ao dedo contra o que os
+    // blocos que ela viu produziriam. Sem esta linha, o editor de texto é um
+    // lugar onde se escreve e não se sabe se se escreveu bem.
+    //
+    // O botão «Executar» e não a espera pelo temporizador: o painel tem um
+    // atraso de duzentos e cinquenta milissegundos para não comparar a cada
+    // tecla, e um teste que espera por um relógio que não controla mede o
+    // relógio.
+    const derivada = comPrimeiroMomentoDeTexto();
+    const bloco = blocoDe(derivada);
+    const gerado = emitir('python', bloco).texto;
+    // Uma troca de nome, e não de um sinal. `total = 5` reescrito como
+    // `total += 5` são dois caracteres de diferença, e a tolerância de dois
+    // caracteres existe de propósito para apanhar quem escreve à pressa: essa
+    // reescrita **não** é divergência, e um teste que a tomasse por
+    // divergência estaria a mandar o ecrã gritar com quem só tropeçou.
+    const escrito = gerado.replace('total', 'preco');
+    const relatorio = divergir('python', bloco, escrito);
+    expect(relatorio.ok, 'o texto com outro nome devia divergir').toBe(false);
+    expect(
+      divergir('python', bloco, gerado.replace('=', '+=')).ok,
+      'uma troca de dois caracteres não é divergência',
+    ).toBe(true);
+    render(<Tela linguagem="python" licao={derivada} />);
+    fireEvent.change(screen.getByLabelText(/O teu código em/), { target: { value: escrito } });
+    fireEvent.click(screen.getByRole('button', { name: 'Executar' }));
+    const painel = ecra().querySelector('.divergencias');
+    expect(painel, 'sem divergências no ecrã').not.toBeNull();
+    for (const d of relatorio.divergencias) {
+      expect(painel?.textContent ?? '').toContain(d.porque);
+    }
+  });
+
+  it('escrever o que os blocos escreveriam não mostra divergência nenhuma', () => {
+    // E o inverso: um ecrã que mostra divergências quando não há nenhuma é
+    // um ecrã que não sabe quando calar-se, e é a mesma do que mostra
+    // «viste» sem ter visto. Este teste só vale se comparar pelo mesmo
+    // caminho do outro — daí o «Executar» nos dois.
+    const derivada = comPrimeiroMomentoDeTexto();
+    const bloco = blocoDe(derivada);
+    const gerado = emitir('python', bloco).texto;
+    expect(divergir('python', bloco, gerado).ok, 'o texto igual devia estar certo').toBe(true);
+    render(<Tela linguagem="python" licao={derivada} />);
+    fireEvent.change(screen.getByLabelText(/O teu código em/), { target: { value: gerado } });
+    fireEvent.click(screen.getByRole('button', { name: 'Executar' }));
+    expect(ecra().querySelector('.divergencias')).toBeNull();
+  });
+
+  it('o editor abre com o programa do passo já escrito, e não vazio', () => {
+    // Um editor vazio num momento de texto é um editor que pede à pessoa para
+    // escrever a linha antes de lhe terem ensinado o que a linha é. O texto
+    // vem da projeção — é a mesma linha de blocos, vista na linguagem.
+    const derivada = comPrimeiroMomentoDeTexto();
+    const esperado = emitir('python', blocoDe(derivada)).texto;
+    render(<Tela linguagem="python" licao={derivada} />);
+    expect((screen.getByLabelText(/O teu código em/) as HTMLTextAreaElement).value).toBe(esperado);
+  });
+});
+
+/** O bloco do primeiro passo, ou uma falha com o nome do ficheiro. */
+function blocoDe(licao: Licao): BlocoLeigo {
+  const bloco = licao.passos[0]?.bloco;
+  if (bloco === undefined) throw new Error('a lição não tem passos');
+  return bloco;
+}
+
+/** A primeira lição com um programa que falha e uma sondagem à espera de
+ *  outra coisa.
+ *
+ *  Serve para medir o painel de erros, e a medição é necessária: os onze
+ *  passos da lição de Python não têm nenhum caminho em que o programa que o
+ *  ecrã dá **falhe** e a sondagem espere outra coisa. Os dois que divergem não
+ *  têm erro nenhum — o Python aceita e segue, que é o que a lição ensina — e
+ *  os que têm erro batem com a sondagem. O painel de erros é, portanto, uma
+ *  parte do produto que a lição de verdade nunca chega a mostrar. */
+function comProgramaQueFalha(): Licao {
+  const passo = LICAO.passos[0] as Passo;
+  const falha: Bloco = {
+    type: 'log',
+    inputs: { VALOR: { valor: { ref: 'total' } } },
+  };
+  return { ...LICAO, passos: [{ ...passo, bloco: falha }, ...LICAO.passos.slice(1)] };
+}
+
+/** A primeira lição transformada: o primeiro momento passa a ser de texto.
+ *
+ *  Existe porque a lição de Python não tem um momento de texto nenhum, e o
+ *  editor de texto é uma parte do produto que precisa de ser exercitada. A
+ *  alternativa — escrever um momento de texto na lição de verdade — mudaria
+ *  a lição para caber num teste, e a lição é mais importante do que o
+ *  teste. O nome da função diz porque é que ela existe, para que ninguém
+ *  leia isto e conclua que a lição tem um momento de texto. */
+function comPrimeiroMomentoDeTexto(): Licao {
+  const passos = LICAO.passos.map((p, i) =>
+    i === 0
+      ? { ...p, momentos: p.momentos.map((m) => ({ ...m, fonte: 'texto' as const })) }
+      : p,
+  );
+  return { ...LICAO, passos };
+}
+```
+
+- [ ] **Step 3: Correr e ver falhar**
 
 Run: `npx vitest run src/ui/lecao/tela.test.tsx`
 Expected: FAIL com erro de resolução de `./Tela`.
 
-- [ ] **Step 3: Escrever `src/ui/lecao/SondasView.tsx`**
+- [ ] **Step 4: Escrever `src/ui/lecao/SondasView.tsx`**
 
 ```typescript
-import type { Sonda } from '../../conteudo/carregar';
-import type { Erro } from '../../nucleo/tipos';
+import type { Sonda } from '../../conteudo/esquema';
+import type { ClassesObservadas } from '../../projecoes/avaliar';
 
 export interface SondasViewProps {
+  /** A sondagem deste passo. `null` é um estado que o carregador torna
+   *  impossível — um passo sem sondagem é um passo em que a pessoa faz e não
+   *  sabe se acertou, e o carregador atira `ErroDeAutoria` — mas o ecrã
+   *  trata-o na mesma, e trata-o a mostrar o que falta em vez de mostrar
+   *  uma caixa vazia. */
   sonda: Sonda | null;
-  erros: Erro[];
-  observado: boolean;
-  aoObservar: () => void;
+  /** O que o motor deu da última corrida, ou `null` se ainda não correu
+   *  nada. Um ecrã que mostra um veredicto antes de haver corrida está a
+   *  dizer que a pessoa viu alguma coisa que não viu. */
+  observada: ClassesObservadas | null;
+  /** A razão que o motor deu, quando a corrida não bateu. */
+  motivo: string;
+  /** A pessoa carregou em «Ver a resposta». */
+  revelado: boolean;
+  aoRevelar: () => void;
 }
 
-export function SondasView({ sonda, erros, observado, aoObservar }: SondasViewProps) {
-  if (!sonda) return null;
-  return (
-    <section aria-label="Experiência" className="sonda">
-      <p className="sonda-pergunta">{sonda.pergunta}</p>
-      <div className="sonda-acoes">
-        <button type="button" onClick={aoObservar}>
-          Experimentar
-        </button>
-        <button type="button" onClick={aoObservar} className="sonda-revelar">
+/** A sondagem do passo: a pergunta, o que aconteceu, e a fuga.
+ *
+ *  A sondagem é o que decide se o momento fica visto. Não é o botão, não é o
+ *  clique, e não é ofacto de a pessoa ter mexido em algum bloco: é o
+ *  resultado que o motor deu ser o que a sondagem queria. Uma porta
+ *  Hogwarts que se abre com um gesto e uma porta que se abre com a coisa
+ *  certain estão a ensinar coisas diferentes, e o produto é a segunda.
+ *
+ *  O que aparece aqui é sempre o **nome da classe** que o motor deu, nos dois
+ *  sentidos. Mostrar a classe é o que faz a pessoa ver que a diferença
+ *  entre `Observacao` e `FalhaRuntime` é uma coisa que existe, e é
+ *  precisamente essa diferença que a lição anda a ensinar. */
+export function SondasView({ sonda, observada, motivo, revelado, aoRevelar }: SondasViewProps) {
+  if (sonda === null) {
+    return (
+      <section className="sondas">
+        <p className="aviso">
+          Este passo não tem sondagem, e portanto nada aqui está a ser julgado. O que
+          fizeste conta na mesma — o produto não tem opinião sobre o teu trabalho, só
+          tem sobre as sondagens.
+        </p>
+        <button type="button" onClick={aoRevelar}>
           Ver a resposta
         </button>
-      </div>
-      {observado ? (
-        <div className="sonda-observada">
-          <p>{sonda.esperado.porque}</p>
-          {erros.map((e) => (
-            <p key={`${e.classe}-${e.porque}`} className="sonda-erro">
-              {e.porque}
-            </p>
-          ))}
-        </div>
-      ) : (
-        <p className="sonda-resultado">Ainda não viste o que esta experiência mostra.</p>
+      </section>
+    );
+  }
+
+  const bateu = observada !== null && observada === sonda.esperado.classe;
+
+  return (
+    <section className="sondas">
+      <p className="sonda-pergunta">{sonda.pergunta}</p>
+      {observada === null ? null : (
+        <p className={bateu ? 'sonda-veredicto' : 'sonda-veredicto sonda-veredicto-falta'}>
+          {bateu
+            ? `Agora já viste o que a sondagem queria ver. Isto deu ${observada}.`
+            : `Ainda não. Isto deu ${observada}, e a sondagem estava à procura de ${sonda.esperado.classe}. ${motivo}`}
+        </p>
       )}
+      {revelado ? (
+        <div className="sonda-revelada">
+          <p className="sonda-revelada-porque">{sonda.esperado.porque.trim()}</p>
+          <p className="sonda-revelada-aviso">
+            Esta resposta foi revelada. Não a descobriste tu, e a lição conta o
+            momento como não-descobrimento.
+          </p>
+        </div>
+      ) : null}
+      <button type="button" onClick={aoRevelar}>
+        Ver a resposta
+      </button>
     </section>
   );
 }
@@ -12455,721 +14343,1177 @@ acabar, e quem corrigir é quem escreveu a sonda. Por isso o ecrã do aluno
 não tem nota de rodapé sobre o currículo: tem a pergunta, a experiência, e
 a explicação.
 
-- [ ] **Step 4: Escrever `src/ui/lecao/PassoView.tsx`**
+- [ ] **Step 5: Escrever `src/ui/lecao/PassoView.tsx`**
 
 ```typescript
-import { useState } from 'react';
-import type { Momento, Passo, Sonda } from '../../conteudo/carregar';
-import type { Erro } from '../../nucleo/tipos';
+import { Blocos } from '../painel-blocos';
+import { PORTA_ENTRADA, PORTA_SAIDA, PainelRobo } from '../robo';
+import { PainelTexto } from '../texto';
 import { ROTULOS } from '../tipos';
-import type { Fase } from '../../conteudo/carregar';
+import type { EstadoLicao } from '../estado';
 import { SondasView } from './SondasView';
+import type { BlocoLeigo } from '../../nucleo/avaliador';
+import type { Divergencia } from '../../nucleo/divergencia';
+import type { Language, Recusa, Valor } from '../../nucleo/tipos';
+import type { ClassesObservadas } from '../../projecoes/avaliar';
 
 export interface PassoViewProps {
-  passo: Passo;
-  fase: Fase;
-  indicePasso: number;
-  totalPassos: number;
-  momento: number;
-  momentoActual: Momento | null;
-  sonda: Sonda | null;
-  feito: Record<string, boolean>;
-  respostas: Record<string, string>;
-  erros: Erro[];
-  aoResponder: (texto: string) => boolean;
-  aoDefinirResposta: (momentoId: string, texto: string) => void;
-  aoObservar: () => void;
-  aoAvancar: () => void;
-  aoAnterior: () => void;
-  aoPasso: (passo: number) => void;
-  referencia?: { nome: string; linhas: string[] };
-  children?: React.ReactNode;
+  estado: EstadoLicao;
+  linguagem: Language;
+  /** O programa que está no painel de blocos agora mesmo. */
+  programa: BlocoLeigo | null;
+  /** Um valor por porta do robô, pela chave `id` da porta. */
+  valores: Readonly<Record<string, Valor | undefined>>;
+  recusa: Recusa | null;
+  observada: ClassesObservadas | null;
+  motivo: string;
+  revelado: boolean;
+  divergencias: Divergencia[];
+  /** O programa do passo escrito na linguagem escolhida. Vem de fora porque
+   *  a escrita é coisa da projeção, e `PasoView` não sabe nada de
+   *  projeções: sabe que lhe deram um texto para abrir o editor. */
+  textoInicial: string;
+  aoMudar: (programa: BlocoLeigo | null) => void;
+  aoCorrer: () => void;
+  aoComparar: (texto: string) => void;
+  aoResponder: (texto: string) => void;
+  aoRevelar: () => void;
+  aoContinuar: () => void;
+  aoVoltar: () => void;
 }
 
-export function PassoView(props: PassoViewProps) {
-  const { passo, fase, indicePasso, totalPassos, momento, momentoActual } = props;
-  const [erro, definirErro] = useState<string | null>(null);
-  const total = passo.momentos.length;
-  const momentoFeito = momentoActual ? !!props.feito[momentoActual.id] : false;
-  const tudoFeito = passo.momentos.every((m) => props.feito[m.id]);
-
-  /** "Voltar" aparece quando há para onde voltar dentro do passo, ou quando
-   *  o passo não é o primeiro. Antes não havia botão nenhum no primeiro
-   *  passo da lição, e o aluno ficava preso sem caminho de volta. */
-  const voltarVisivel = momento > 0 || indicePasso > 0;
-  const voltar = (): void => {
-    if (momento > 0) {
-      props.aoAnterior();
-      return;
-    }
-    props.aoPasso(indicePasso - 1);
-  };
-
-  const verificar = (): void => {
-    const ok = props.aoResponder(props.respostas[momentoActual?.id ?? ''] ?? '');
-    definirErro(ok ? null : 'Ainda não. Lê a pergunta outra vez e tenta com outras palavras.');
-    if (ok) props.aoAvancar();
-  };
+/** O corpo de um passo: o que a lição pede, o programa, e o que fica.
+ *
+ *  Tudo o que decide **qual** painel aparece está num `if` só, e o `if` lê a
+ *  `fonte` do momento. Não a fase, e não o índice do passo.
+ *
+ *  A distinção não é de estilo. A fase diz o que a pessoa está a fazer — ler,
+ *  fazer, dar nome — e a fonte diz de onde vem a resposta que o produto espera.
+ *  Um passo `explicar` pode trazer blocos (o passo 0 traz), um passo `nomear`
+ *  pode trazer blocos (o passo 5 traz), e um passo `fazer` pode trazer o
+ *  editor de texto. Escolher pelo passo obriga a repetir a decisão em mais um
+ *  sítio, e os dois sítios divergem no primeiro passo que foge ao padrão. */
+export function PassoView({
+  estado,
+  linguagem,
+  programa,
+  valores,
+  recusa,
+  observada,
+  motivo,
+  revelado,
+  divergencias,
+  textoInicial,
+  aoMudar,
+  aoCorrer,
+  aoComparar,
+  aoResponder,
+  aoRevelar,
+  aoContinuar,
+  aoVoltar,
+}: PassoViewProps) {
+  const { passo, momentoActual, referencia } = estado;
+  const fonte = momentoActual?.fonte ?? 'blocos';
+  const visto = momentoActual !== null && estado.feito[momentoActual.id] === true;
+  const nenhum = passo.momentos.length;
 
   return (
-    <section className="passo" aria-label="Passo">
-      <header className="passo-cabecalho">
-        <p className="passo-rotulo">
-          {ROTULOS[fase]} · passo {indicePasso + 1} de {totalPassos}
-        </p>
-        <h2 className="passo-objetivo">{ROTULOS[fase]}</h2>
-        {fase === 'nomear' && passo.nomear ? <p className="passo-nomeada">{passo.nomear}</p> : null}
-        <p className="passo-texto">{passo.porque}</p>
-      </header>
+    <section className="passo" aria-label="O passo">
+      <p className="passo-fase">{ROTULOS[passo.fase]}</p>
+      <p className="passo-porque">{passo.porque.trim()}</p>
+      {passo.nomear === undefined ? null : <p className="passo-palavra">{passo.nomear}</p>}
 
-      {referencia ? (
-        <figure className="ficha">
-          <figcaption className="ficha-nome">{referencia.nome}</figcaption>
-          <ol className="ficha-linhas">
-            {referencia.linhas.map((linha, i) => (
-              <li key={`${i}-${linha}`}>
-                <span className="ficha-numero">{i + 1}</span>
-                <code>{linha}</code>
-              </li>
-            ))}
-          </ol>
-        </figure>
-      ) : null}
+      <SondasView
+        sonda={estado.sonda}
+        observada={observada}
+        motivo={motivo}
+        revelado={revelado}
+        aoRevelar={aoRevelar}
+      />
 
-      {children}
-
-      {referencia ? (
-        <ol className="ficha-perguntas">
-          {passo.momentos.map((m, i) => (
-            <li key={m.id}>
-              <p className="ficha-pergunta">{m.texto}</p>
-              <label htmlFor={`resposta-${m.id}`}>A tua resposta — linha {i + 1}</label>
-              <input
-                id={`resposta-${m.id}`}
-                value={props.respostas[m.id] ?? ''}
-                onChange={(e) => props.aoDefinirResposta(m.id, e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const ok = props.aoResponder(props.respostas[m.id] ?? '');
-                  definirErro(ok ? null : 'Ainda não. Lê a pergunta outra vez e tenta com outras palavras.');
-                }}
-              >
-                Verificar
-              </button>
-              {props.feito[m.id] ? <p className="ficha-bem-vindo">Bem-vindo, viste.</p> : null}
-              <p className="ficha-progresso">
-                {i + 1} de {total}
-              </p>
-            </li>
-          ))}
-        </ol>
-      ) : momentoActual ? (
-        <div className="momento">
-          <p className="momento-contagem">
-            {momento + 1} de {total}
-          </p>
-          <p className="momento-texto">{momentoActual.texto}</p>
+      {fonte === 'blocos' ? (
+        <div className="passo-blocos">
+          <Blocos
+            aoMudar={aoMudar}
+            chave={`${estado.indicePasso}-${estado.momento}`}
+            linguagem={linguagem}
+            carregar={passo.bloco}
+          />
+          <PainelRobo
+            portas={[PORTA_ENTRADA, PORTA_SAIDA]}
+            valores={valores}
+            recusa={recusa}
+          />
+          <button type="button" onClick={aoCorrer}>
+            Correr o programa
+          </button>
         </div>
       ) : null}
 
-      {erro ? <p className="momento-erro">{erro}</p> : null}
-
-      {!referencia && momentoActual ? (
-        <SondasView sonda={props.sonda} erros={props.erros} observado={!!props.feito[momentoActual.id]} aoObservar={props.aoObservar} />
+      {fonte === 'texto' ? (
+        <PainelTexto
+          linguagem={linguagem}
+          resposta={textoInicial}
+          aoComparar={aoComparar}
+          divergencias={divergencias}
+        />
       ) : null}
 
-      <nav className="passo-navegacao">
-        {voltarVisivel ? (
-          <button type="button" onClick={voltar}>
-            Voltar
-          </button>
-        ) : null}
-        {referencia ? (
-          /* Na ficha não há botão Continuar: as perguntas são as quinze, e o
-             botão de cada uma é o Verificar. Um "Continuar" aqui saltaria
-             perguntas, e saltá-las é o que o produto diz não fazer. */
-          <button type="button" onClick={props.aoAvancar} disabled={!tudoFeito}>
-            Terminar a leitura
-          </button>
-        ) : (
-          <button type="button" onClick={props.aoAvancar} disabled={!momentoFeito}>
-            Continuar
-          </button>
-        )}
-        {indicePasso < totalPassos - 1 ? (
-          <button
-            type="button"
-            onClick={() => props.aoPasso(indicePasso + 1)}
-            disabled={!tudoFeito}
-          >
-            Passo seguinte
-          </button>
-        ) : null}
-      </nav>
+      {fonte === 'leitura' ? (
+        <div className="passo-leitura">
+          {referencia === undefined ? null : <Ficha referencia={referencia} />}
+          <Pergunta momento={momentoActual} resposta={estado.respostas} aoResponder={aoResponder} />
+        </div>
+      ) : null}
+
+      {estado.erros.length === 0 ? null : (
+        <div className="erros" role="alert">
+          <p className="erros-titulo">O que o programa fez</p>
+          <ul>
+            {estado.erros.map((erro, i) => (
+              <li key={`${erro.classe}-${i}`} className="erro">
+                <p className="erro-classe">{erro.classe}</p>
+                <p className="erro-porque">{erro.porque}</p>
+                <p className="erro-remedio">{erro.remedio}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="passo-progresso">{`Momento ${estado.momento + 1} de ${nenhum}`}</p>
+      {visto ? null : (
+        <p className="passo-falta">
+          {fonte === 'leitura'
+            ? 'Ainda falta este momento: responde com uma frase sobre a linha.'
+            : 'Ainda falta este momento: corre o programa e vê o que acontece.'}
+        </p>
+      )}
+
+      <div className="passo-acoes">
+        <button type="button" onClick={aoVoltar}>
+          Voltar
+        </button>
+        <button type="button" onClick={aoContinuar}>
+          Continuar
+        </button>
+      </div>
     </section>
+  );
+}
+
+/** O ficheiro que o passo manda ler.
+ *
+ *  As linhas vêm da sondagem nomeada em `referencia` e de mais lado nenhum —
+ *  a lição guarda o ficheiro num sítio só. A indentação é o que se vê e o
+ *  que se copia: a linha que está dentro do laço é a que está indented, e
+ *  deitá-la de fora mostraria um ficheiro que não é o ficheiro, e a pergunta
+ *  sobre essa linha ficaria sem resposta possível. Por isso cada linha vai
+ *  dentro de um elemento com a linha preservada tal e qual, e o teste
+ *  compara o `textContent` e não o texto do ecrã. */
+function Ficha({ referencia }: { referencia: { nome: string; linhas: string[] } }) {
+  return (
+    <div className="ficha">
+      <h2 className="ficha-nome">{referencia.nome}</h2>
+      <ol className="ficha-linhas">
+        {referencia.linhas.map((linha, i) => (
+          <li key={`${i}-${linha}`} className="ficha-linha" data-linha={i + 1}>
+            <code>{linha}</code>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** A pergunta do momento, e o sítio de responder.
+ *
+ *  O campo responde com uma frase, e nenhuma resposta é errada: uma resposta
+ *  que não tem as palavras que a pergunta pedia não é uma resposta que está
+ *  mal, é uma resposta que não diz o que a linha fazia. O ecrã diz o que
+ *  falta e não diz que a pessoa errou — a diferença entre este produto e um
+ *  questionário está exatamente nessa frase. */
+function Pergunta({
+  momento,
+  resposta,
+  aoResponder,
+}: {
+  momento: EstadoLicao['momentoActual'];
+  resposta: Record<string, string>;
+  aoResponder: (texto: string) => void;
+}) {
+  if (momento === null) return null;
+  const id = `resposta-${momento.id}`;
+  return (
+    <div className="pergunta">
+      <p className="pergunta-texto">{momento.texto}</p>
+      <label htmlFor={id}>A tua resposta</label>
+      <input
+        id={id}
+        type="text"
+        value={resposta[momento.id] ?? ''}
+        onChange={(e) => aoResponder(e.target.value)}
+      />
+      {momento.palavras.length === 0 ? null : (
+        <p className="pergunta-dica">
+          Pode ser uma frase. O que interessa é que diga o que a linha faz.
+        </p>
+      )}
+    </div>
   );
 }
 ```
 
-- [ ] **Step 5: Escrever `src/ui/lecao/Tela.tsx`**
+- [ ] **Step 6: Escrever `src/ui/lecao/Tela.tsx`**
 
 ```typescript
-import { useMemo, useState } from 'react';
-import type { Licao } from '../../conteudo/carregar';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PassoView } from './PassoView';
+import { useLicao } from '../estado';
+import type { EstadoLicao } from '../estado';
+import './lecao.css';
 import { avaliador } from '../../nucleo/avaliador';
 import type { BlocoLeigo } from '../../nucleo/avaliador';
-import { comparar } from '../../nucleo/divergencia';
 import type { Divergencia } from '../../nucleo/divergencia';
-import { avaliarTexto, classificar, emitir } from '../../projecoes/avaliar';
 import type { Erro, Language, Recusa, Valor } from '../../nucleo/tipos';
-import { Blocos } from '../painel-blocos';
-import { PainelRobo, PORTA_ENTRADA, PORTA_SAIDA } from '../robo';
-import { PainelTexto } from '../texto';
-import { useLicao } from '../estado';
-import { PassoView } from './PassoView';
-import './lecao.css';
+import { classificar, divergir as divergirNaLinguagem, emitir } from '../../projecoes/avaliar';
+import type { ClassesObservadas } from '../../projecoes/avaliar';
+import type { Licao } from '../../conteudo/esquema';
 
 export interface TelaProps {
-  /** A linguagem escolhida no seletor. A tela não a adivinha: é a decisão
-   *  que o utilizador tomou e é a que decide o que se ensina. */
   linguagem: Language;
   licao: Licao;
-  /** O passo a abrir. A vista não é um parâmetro: a vista é a fase do
-   *  passo, e quem escolhe a fase é quem escreveu a lição. */
+  /** O passo em que se abre. Existe para os testes poderem medir cada passo
+   *  sem fazer a pessoa chegar lá a carregar em botões — e é a mesma razão
+   *  pela qual a lição tem quinze passos e não quinze ecrãs. */
   passoInicial?: number;
 }
 
+/** O que a última corrida deu: a classe, a razão, e o que ficou no robô. */
+interface Corrida {
+  observada: ClassesObservadas;
+  motivo: string;
+  valores: Record<string, Valor | undefined>;
+  recusa: Recusa | null;
+}
+
+const SEM_CORRIDA: Corrida | null = null;
+
+/** O ecrã da lição.
+ *
+ *  Aqui é que se decide quem julga o quê, e a decisão vale mais do que o
+ *  ecrã todo: quem carrega em «Correr o programa» não é a pessoa que diz
+ *  que acertou — é o motor, e o que ele diz é a **classe** que a sondagem
+ *  esperava. A pessoa pode ter mexido em vinte blocos e acertado na mesma,
+ *  e pode não ter mexido em nada e falhado na mesma, e as duas coisas são
+ *  justas porque o que se julga é o programa e não a pessoa.
+ *
+ *  O programa que se julga é o que está no painel de blocos, e o painel é
+ *  de onde ele sai. Não há uma segunda cópia do programa algures — o que o
+ *  painel tem é o que o ecrã julga e o que a projeção escreve, e é por isso
+ *  que `acordo.test.ts` consegue exigir que os dois motores do produto
+ *  digam a mesma coisa sobre ele.
+ *
+ *  E o programa do passo entra no painel à partida. Um passo que manda
+ *  «guarda um número com o nome `total`» e abre o painel vazio obriga a
+ *  pessoa a saber a sintaxe antes de lhe terem ensinado nada, e o ficheiro
+ *  de lição tem a linha escrita para ser lida antes de ser montada. */
 export function Tela({ linguagem, licao, passoInicial = 0 }: TelaProps) {
   const estado = useLicao(licao, passoInicial);
   const [programa, definirPrograma] = useState<BlocoLeigo | null>(null);
-  const [erros, definirErros] = useState<Erro[]>([]);
-  const [valores, definirValores] = useState<Valor[]>([]);
+  const [corrida, definirCorrida] = useState<Corrida | null>(SEM_CORRIDA);
   const [divergencias, definirDivergencias] = useState<Divergencia[]>([]);
-  const [saida, definirSaida] = useState<string[]>([]);
-  const [texto, definirTexto] = useState('');
+  const [revelados, definirRevelados] = useState<Record<string, boolean>>({});
 
-  const momento = estado.momentoActual;
-  const fonte = momento?.fonte ?? 'blocos';
-  const gerado = useMemo(() => emitir(linguagem, programa), [linguagem, programa]);
+  // Um erro é o que aconteceu numa corrida, e uma corrida é de um passo.
+  // Deixá-lo no ecrã do passo seguinte é pôr ali uma falha que já não é do
+  // programa que está à vista, e a pessoa passa a depurar código que não é
+  // dela. Mudou o passo, mudaram-se as contas.
+  useEffect(() => {
+    estado.definirErros([]);
+  }, [estado.indicePasso]);
 
-  const recusaDe = (lista: Erro[]): Recusa | null => {
-    const e = lista.find((x) => x.classe === 'Recusa');
-    return e && e.classe === 'Recusa' ? e : null;
-  };
+  /** O programa do passo escrito na linguagem escolhida.
+   *
+   *  Sai da projeção, que é a única que sabe a sintaxe, e de mais lado
+   *  nenhum. A alternativa — um `texto` novo no esquema da lição — seria uma
+   *  segunda versão do mesmo programa, e as duas divergiriam no primeiro
+   *  bloco que alguém mudasse de um lado só. */
+  const textoInicial = useMemo(() => {
+    try {
+      return emitir(linguagem, estado.passo.bloco).texto;
+    } catch {
+      // Um bloco que a projeção não sabe escrever não pode partir o ecrã de
+      // quem está a ler. O editor abre vazio e a lição continua, que é
+      // infinitamente melhor do que uma página branca com um erro em
+      // letra miudinha.
+      return '';
+    }
+  }, [linguagem, estado.passo]);
 
-  const correrBlocos = (): void => {
+  const aoMudar = useCallback((novo: BlocoLeigo | null) => {
+    definirPrograma(novo);
+  }, []);
+
+  const correr = useCallback(() => {
     const a = avaliador();
     a.executar(programa);
-    definirErros(a.trace.erros);
-    definirValores(a.trace.valores);
-    definirSaida(a.trace.valores.map((v) => String(v.valor)));
-    const rel = comparar(gerado, texto);
-    definirDivergencias(rel.divergencias);
-    if (bateSonda(estado.sonda, a.trace.erros)) estado.observar();
-  };
+    const erros: Erro[] = [...a.trace.erros];
+    const observada = classificar(erros);
+    estado.definirErros(erros);
+    definirCorrida({
+      observada,
+      motivo: motivoDe(erros),
+      valores: valoresDaRobo(a.trace.valores),
+      recusa: erros.find((e): e is Recusa => e.classe === 'Recusa') ?? null,
+    });
+    // A sondagem é o que decide, e decide uma coisa só: se o que o motor
+    // deu é a classe que a sondagem queria. Não é um botão, não é o acto
+    // de mexer, e não é o que a pessoa escreveu no editor.
+    if (estado.sonda !== null && observada === estado.sonda.esperado.classe) {
+      estado.observar();
+    }
+  }, [programa, estado]);
 
-  const correrTexto = (valor: string): void => {
-    definirTexto(valor);
-    const lista = avaliarTexto(linguagem, valor);
-    definirErros(lista);
-    // Só há divergência quando existe um programa de blocos para comparar.
-    // No passo de texto não há blocos: correr o texto já é a resposta.
-    definirDivergencias(programa ? comparar(gerado, valor).divergencias : []);
-    definirSaida([]);
-    if (bateSonda(estado.sonda, lista)) estado.observar();
-  };
+  const comparar = useCallback(
+    (texto: string) => {
+      // A divergência é a pergunta «o teu texto faz o mesmo que estes
+      // blocos?», e é a pergunta mais útil que se pode fazer a quem está a
+      // passar de uma linguagem para outra: a diferença entre os dois
+      // projectos é quase sempre uma linha, e essa linha diz-se.
+      try {
+        // `divergir` recebe o **programa**, não o texto emitido: quem escreve
+        // é a projeção, e passar-lhe o texto que ela acabou de escrever é
+        // dizer-lhe que o que ela há de decidir já está decidido.
+        definirDivergencias(divergirNaLinguagem(linguagem, estado.passo.bloco, texto).divergencias);
+      } catch {
+        definirDivergencias([]);
+      }
+    },
+    [linguagem, estado.passo],
+  );
+
+  const responder = useCallback(
+    (texto: string) => {
+      if (estado.momentoActual !== null) estado.definirResposta(estado.momentoActual.id, texto);
+      estado.responder(texto);
+    },
+    [estado],
+  );
+
+  const revelar = useCallback(() => {
+    const momento = estado.momentoActual;
+    if (momento === null) return;
+    definirRevelados((r) => ({ ...r, [momento.id]: true }));
+    // Revelar marca o momento como visto. É uma fuga, e uma fuga que não
+    // destrava a porta não é uma fuga: é uma parede com uma janela. O que
+    // a distingue de ter visto é a linha do `SondasView` que diz na cara
+    // que a resposta foi revelada.
+    estado.observar();
+  }, [estado]);
+
+  const continuar = useCallback(() => {
+    if (estado.momento < estado.totalMomentos - 1) {
+      estado.proximo();
+      return;
+    }
+    estado.proximoPasso();
+  }, [estado]);
+
+  const voltar = useCallback(() => {
+    if (estado.momento > 0) {
+      estado.anterior();
+      return;
+    }
+    if (estado.indicePasso > 0) estado.irPara(estado.indicePasso - 1);
+  }, [estado]);
+
+  const revelado = estado.momentoActual !== null && (revelados[estado.momentoActual.id] ?? false);
 
   return (
     <main className="tela">
-      <h1>{licao.titulo}</h1>
+      <Cabecalho estado={estado} />
       <PassoView
-        passo={estado.passo}
-        fase={estado.fase}
-        indicePasso={estado.indicePasso}
-        totalPassos={licao.passos.length}
-        momento={estado.momento}
-        momentoActual={momento}
-        sonda={estado.sonda}
-        feito={estado.feito}
-        respostas={estado.respostas}
-        erros={erros}
-        aoResponder={estado.responder}
-        aoDefinirResposta={estado.definirResposta}
-        aoObservar={estado.observar}
-        aoAvancar={estado.proximo}
-        aoAnterior={estado.anterior}
-        aoPasso={estado.irPara}
-        referencia={licao.referencia}
-      >
-        <div className="tela-grelha">
-          {fonte === 'blocos' ? (
-            <div className="tela-grelha-blocos">
-              <Blocos
-                chave={`${estado.indicePasso}-${estado.momento}`}
-                aoMudar={definirPrograma}
-                carregar={programa}
-              />
-              <PainelRobo
-                portas={[PORTA_ENTRADA, PORTA_SAIDA]}
-                valores={valores}
-                recusa={recusaDe(erros)}
-              />
-              <button type="button" onClick={correrBlocos} disabled={!programa}>
-                Correr o programa
-              </button>
-            </div>
-          ) : null}
-          {fonte === 'texto' ? (
-            <PainelTexto
-              linguagem={linguagem}
-              resposta={gerado.texto}
-              aoComparar={correrTexto}
-              divergencias={divergencias}
-              semBlocos={!programa}
-              saida={saida}
-            />
-          ) : null}
-          {estado.fase === 'nomear' ? (
-            <section aria-label={`O teu código em ${NOMES[linguagem]}`} className="painel-texto">
-              <label htmlFor="codigo-gerado">O teu código em {NOMES[linguagem]}</label>
-              <pre id="codigo-gerado" className="saida">
-                {gerado.texto || '(ainda não há blocos)'}
-              </pre>
-              {gerado.anotacoes.map((a) => (
-                <p key={a.linha} className="anotacao">
-                  <strong>Linha {a.linha}:</strong> {a.porque}
-                </p>
-              ))}
-            </section>
-          ) : null}
-        </div>
-      </PassoView>
+        estado={estado}
+        linguagem={linguagem}
+        programa={programa}
+        textoInicial={textoInicial}
+        valores={corrida?.valores ?? {}}
+        recusa={corrida?.recusa ?? null}
+        observada={corrida?.observada ?? null}
+        motivo={corrida?.motivo ?? ''}
+        revelado={revelado}
+        divergencias={divergencias}
+        aoMudar={aoMudar}
+        aoCorrer={correr}
+        aoComparar={comparar}
+        aoResponder={responder}
+        aoRevelar={revelar}
+        aoContinuar={continuar}
+        aoVoltar={voltar}
+      />
     </main>
   );
 }
 
-function bateSonda(sonda: { esperado: { classe: string } } | null, erros: Erro[]): boolean {
-  if (!sonda) return false;
-  return classificar(erros) === sonda.esperado.classe;
+/** Onde está, e o que esta lição é. */
+function Cabecalho({ estado }: { estado: EstadoLicao }) {
+  return (
+    <header className="tela-cabecalho">
+      <h1>{estado.licao.titulo}</h1>
+      <p className="tela-porque">{estado.licao.porqueTitulo.trim()}</p>
+      <p className="tela-progresso">
+        {`Passo ${estado.indicePasso + 1} de ${estado.totalPassos}`}
+      </p>
+    </header>
+  );
+}
+
+/** A frase que vai por baixo do veredicto quando a corrida não bateu.
+ *
+ *  Sai do motor e não de um dicionário do ecrã. A diferença é que o motor
+ *  sabe o que aconteceu e o ecrã só sabe o que costuma acontecer: um
+ *  dicionário é uma lista de frases para os erros que se previa, e o
+ *  primeiro erro que não estiver na lista fica sem explicação nenhuma — que
+ *  é a pior coisa que se pode fazer a quem está a tentar perceber. */
+function motivoDe(erros: readonly Erro[]): string {
+  // As três classes de `Erro` têm `remedio` — é a regra que a Task 1 fixou
+  // para `Recusa` e que o teste do motor estende a todas. Um `in` aqui dava
+  // um ramo que nunca corre, e a assinatura do TypeScript punia o
+  // código com um `never` onde devia estar a regra.
+  const primeiro = erros[0];
+  if (primeiro === undefined) return 'Não aconteceu nada que se pudesse ver.';
+  return `${primeiro.porque} ${primeiro.remedio}`;
+}
+
+/** O que o robô mostra depois da corrida.
+ *
+ *  Só entra na porta o que o motor registou, e o registo é do `log` e do
+ *  `dizer` — as duas coisas que num programa são a voz. O `dizer` é o
+ *  `print` do Python e não sai do programa: sai do ecrã, e é por isso que
+ *  ele também conta. */
+function valoresDaRobo(valores: readonly Valor[]): Record<string, Valor | undefined> {
+  const ditos = valores.filter((v) => v.origem.bloco === 'log' || v.origem.bloco === 'dizer');
+  const ultimo = ditos[ditos.length - 1];
+  return { entrada: undefined, saida: ultimo };
 }
 ```
 
-- [ ] **Step 6: Escrever `src/ui/lecao/lecao.css`**
+- [ ] **Step 7: Escrever `src/ui/lecao/lecao.css`**
 
 ```css
+/* O ecrã da lição.
+ *
+ * A folha é quase toda espaço: a lição é lida, e uma linha de texto que
+ * alguém está a tentar ler não pode estar a lutar com a largura do
+ * painel de blocos. A coluna de texto fica com uma medida — as «medidas» de
+ * leitura, umas setenta e cinco letras, que é onde os olhos cansam — e o
+ * painel de blocos fica com o que sobrar.
+ *
+ * As cores são as de `estilo.css` e não há mais nenhuma. Uma segunda
+ * paleta aqui dentro seria duas paletas a divergir no primeiro ecrã que
+ * alguém desenhasse. */
+
 .tela {
-  max-width: 78rem;
+  max-width: 72rem;
   margin: 0 auto;
-  padding: 2rem 1rem 4rem;
-}
-
-.tela h1 {
-  font-size: 1.1rem;
-  color: #94a3b8;
-  margin: 0 0 1.5rem;
-}
-
-.passo-cabecalho {
-  max-width: 44rem;
-}
-
-.passo-rotulo {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.7rem;
-  color: #64748b;
-  margin: 0 0 0.35rem;
-}
-
-.passo-objetivo {
-  font-size: 1.35rem;
-  margin: 0 0 0.75rem;
-}
-
-.passo-texto {
-  line-height: 1.65;
-  color: #cbd5e1;
-  white-space: pre-line;
-  margin: 0;
-}
-
-.tela-grelha {
-  margin: 1.5rem 0;
-}
-
-.tela-grelha-blocos {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
-  gap: 1rem;
-  align-items: start;
-}
-
-.area-blocos {
-  min-height: 22rem;
-  background: var(--fundo-escuro);
-  border: 1px solid var(--borda);
-  border-radius: 0.5rem;
-}
-
-.momento {
-  border: 1px solid var(--borda);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  max-width: 34rem;
-  margin: 1.5rem 0 0;
-}
-
-.momento-contagem,
-.ficha-progresso {
-  font-size: 0.7rem;
-  color: #64748b;
-  margin: 0 0 0.4rem;
-}
-
-.momento-texto {
-  margin: 0;
-  line-height: 1.55;
-}
-
-.momento-erro {
-  color: var(--erro);
-  font-size: 0.9rem;
-}
-
-.sonda {
-  border: 1px solid var(--borda);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  max-width: 34rem;
-  margin: 1rem 0 0;
-}
-
-.sonda-experiencia,
-.sonda-pergunta {
-  margin: 0 0 0.4rem;
-}
-
-.sonda-pergunta {
-  font-weight: 600;
-}
-
-.sonda-acoes {
+  padding: 1.5rem 1rem 4rem;
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0.5rem 0;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.sonda-revelar {
-  background: transparent;
+.tela-cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--borda);
+  padding-bottom: 1rem;
 }
 
-.sonda-observada {
-  border-left: 3px solid var(--ok);
+.tela-cabecalho h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.tela-porque {
+  margin: 0;
+  max-width: 46rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.tela-progresso {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.passo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.passo-fase {
+  margin: 0;
+  align-self: flex-start;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+}
+
+.passo-porque {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.passo-palavra {
+  margin: 0;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: var(--aviso);
+  letter-spacing: -0.01em;
+}
+
+.sondas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.sonda-pergunta {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sonda-veredicto {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--ok);
+}
+
+.sonda-veredicto-falta {
+  color: var(--aviso);
+}
+
+.sonda-revelada {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-left: 3px solid var(--aviso);
   padding-left: 0.75rem;
 }
 
-.sonda-observada p {
-  margin: 0.2rem 0;
-  line-height: 1.55;
-  white-space: pre-line;
+.sonda-revelada p {
+  margin: 0;
+  line-height: 1.6;
 }
 
-.sonda-erro {
-  color: var(--erro);
+.sonda-revelada-aviso {
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
-.sonda-resultado {
-  color: #64748b;
-  font-size: 0.9rem;
+.passo-blocos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
-.sonda-aviso {
-  color: var(--aviso);
-  font-size: 0.85rem;
+.passo-leitura {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .ficha {
-  background: var(--fundo-escuro);
+  background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: 0.5rem;
   padding: 1rem;
-  overflow-x: auto;
-  max-width: 44rem;
-  margin: 1.5rem 0;
 }
 
 .ficha-nome {
-  font-family: ui-monospace, Menlo, monospace;
-  color: #94a3b8;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: #7dd3fc;
 }
 
 .ficha-linhas {
   margin: 0;
   padding-left: 2.5rem;
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
   font-size: 0.9rem;
-  line-height: 1.8;
+  line-height: 1.6;
+}
+
+.ficha-linha code {
   white-space: pre;
 }
 
-.ficha-perguntas {
-  max-width: 40rem;
-  padding-left: 1.25rem;
+.pergunta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
 }
 
-.ficha-perguntas li {
-  margin-bottom: 1.25rem;
+.pergunta-texto {
+  margin: 0;
+  font-size: 1rem;
 }
 
-.ficha-pergunta {
-  margin: 0 0 0.4rem;
-}
-
-.ficha-perguntas label {
-  display: block;
-  font-size: 0.75rem;
+.pergunta label {
+  font-size: 0.8rem;
   color: #94a3b8;
-  margin-bottom: 0.25rem;
 }
 
-.ficha-perguntas input {
-  display: block;
-  width: 100%;
-  padding: 0.4rem 0.6rem;
+.pergunta input {
+  min-width: 20rem;
+  padding: 0.45rem 0.6rem;
   border-radius: 0.25rem;
   border: 1px solid var(--borda);
   background: var(--fundo-escuro);
   color: var(--texto);
-  margin-bottom: 0.5rem;
   font: inherit;
 }
 
-.ficha-bem-vindo {
-  color: var(--ok);
-  font-size: 0.9rem;
-  margin: 0.25rem 0 0;
+.pergunta-dica {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
-.anotacao {
+.erros {
+  border: 1px solid var(--erro);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.erros-titulo {
+  margin: 0 0 0.5rem;
   font-size: 0.9rem;
-  line-height: 1.55;
+  color: var(--erro);
+}
+
+.erros ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.erro p {
+  margin: 0.15rem 0;
+  line-height: 1.6;
+}
+
+.erro-classe {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+}
+
+.erro-remedio {
   color: #cbd5e1;
 }
 
-.passo-navegacao {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-  flex-wrap: wrap;
+.passo-progresso {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 62rem) {
-  .tela-grelha-blocos {
-    grid-template-columns: 1fr;
-  }
+.passo-falta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--aviso);
+}
+
+.passo-acoes {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 ```
 
-- [ ] **Step 7: Correr e ver passar**
+- [ ] **Step 8: Correr e ver passar**
 
 Run: `npx vitest run src/ui/lecao/tela.test.tsx`
-Expected: PASS. O teste `a ficha tem uma pergunta por linha, e são quinze` espera **15** campos — confirma que o YAML tem `l1` a `l15`, e que a sonda `o-que-o-ficheiro-diz` tem quinze linhas. Se o número não bater, o problema está no YAML da Task 8 e não aqui: a ficha tira as linhas da sonda e as perguntas são uma por linha, por construção.
+Expected: PASS. O teste `mostra as linhas do ficheiro com a indentação que ele tem` é o que confirma que a ficha existe e que mostra o ficheiro: compara o `textContent` cru da linha 6 com a linha 6 da sondagem, e a linha 6 é a que está dentro do laço. Se as linhas não batem, o problema está no YAML da Task 8 e não aqui.
 
-- [ ] **Step 8: O seletor de linguagem — Review Focus 5**
+O teste `a ficha só aparece no passo que a manda ler` percorre os onze passos e diz, passo a passo, se há ficha ou não. É o teste que impede a ficha de aparecer onde ninguém a mandou ler — e a lista de passos **não** é escrita à mão: sai de `LICAO.passos`, que vem do `CARREGAR` a ler o YAML.
+
+- [ ] **Step 9: O seletor de linguagem — Review Focus 5**
 
 O seletor tem de mostrar **três linhas reais** de cada linguagem (spec §6.5), e só as que têm projeção **e** lição. As restantes aparecem com a razão, nunca desaparecem em silêncio — e escolher uma que não está pronta não pode dar um ecrã em branco.
 
-`src/ui/lecao/SeletorLinguagem.tsx` recebe, além das projeções, um mapa `porLinguagem` com o estado de cada uma:
+O plano original desta tarefa escrevia um `<select>` com seis `<option>`, e **não pode ser assim por duas razões que não são de gosto**. A primeira é que um `<option>` não sabe mostrar três linhas de código: a sua altura é a de uma linha, e a spec §6.5 pede o exemplo inteiro ou não cumpre nada. A segunda é mais séria: um `<option>` desativado não pode levar um botão, e quem clica numa opção desativada não recebe explicação nenhuma — a pessoa vê uma lista e um número de trinta e não fica a saber porquê. Um cartão pode. Por isso o seletor são **cartões**, e um cartão bloqueado não tem botão nenhum: não há nada para carregar, e a razão está escrita à vista.
 
+O teste vem primeiro, e é um ficheiro à parte do `tela.test.tsx` porque mede uma coisa diferente: o `tela.test.tsx` mede a lição, este mede a **entrada no produto**. Um ficheiro de testes que mede duas coisas não se divide sozinho — divide-se quando as duas coisas precisam de contextos diferentes, e aqui um precisa do `CATALOGO` e do `render` do produto inteiro, e o outro precisa da lição carregada.
+
+`src/ui/lecao/entrada.test.tsx`:
 ```typescript
-export interface OpcaoLinguagem {
-  linguagem: Language;
-  nome: string;
-  /** Três linhas verdadeiras desta linguagem. Nunca uma descrição. */
-  exemplo: string[];
-  pronta: boolean;
-  /** Quando não está pronta, porque é que não está. Vazio quando está. */
-  falta: string;
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { CATALOGO } from './catalogo';
+import { SeletorLinguagem } from './SeletorLinguagem';
+import { Aplicacao } from './Aplicacao';
+import { LINGUAGENS, NOMES } from '../../nucleo/tipos';
+import type { Language } from '../../nucleo/tipos';
+import { temLicao } from '../../conteudo';
+import { temProjecao } from '../../projecoes/registo';
+
+/** O cartão de uma linguagem. As asserções são sobre *qual* cartão
+ *  mostra o quê: uma busca no ecrã inteiro mediria o produto errado,
+ *  porque duas das seis opções partilham de propósito uma linha — a mesma
+ *  atribuição em Python e em Go é a comparação que a pessoa está a fazer. */
+function cartaoDe(container: HTMLElement, linguagem: Language): HTMLElement {
+  const achado = container.querySelector(`[data-linguagem="${linguagem}"]`);
+  if (achado === null) throw new Error(`o seletor não mostra o cartão de ${linguagem}`);
+  return achado as HTMLElement;
 }
+
+describe('O catálogo de linguagens', () => {
+  it('traz as seis, pela ordem do produto, todas visíveis', () => {
+    // Uma opção que desaparece em silêncio é a forma mais barata de mentir
+    // sobre um produto. As seis estão no ecrã desde o primeiro momento, e as
+    // cinco que não estão prontas dizem porquê.
+    expect(CATALOGO).toHaveLength(LINGUAGENS.length);
+    expect(CATALOGO.map((o) => o.linguagem)).toEqual([...LINGUAGENS]);
+    expect(CATALOGO.map((o) => o.nome)).toEqual(LINGUAGENS.map((l) => NOMES[l]));
+  });
+
+  it('a prontidão vem da projeção e da lição, e não de uma lista escrita à mão', () => {
+    // **Este é o teste que responde ao ponto 5 do `Review Focus`.** O plano
+    // escrevia `pronta: true` e `pronta: false` à mão em cada uma das seis,
+    // e uma lista escrita à mão diverge do ficheiro no dia em que a
+    // projeção de Go chega: o ecrã continuaria a dizer «Ainda não há
+    // projeção de Go» com a projeção instalada e os testes a passar.
+    //
+    // Aqui a afirmação é a igualdade com o estado real do produto, calculada
+    // a partir de `temProjecao` e de `temLicao`. Se um dia a projeção de Go
+    // entrar, este teste fica vermelho a dizer que a opção devia estar
+    // pronta — que é a frase que alguém precisa de ler.
+    for (const opcao of CATALOGO) {
+      expect(opcao.pronta).toBe(
+        temProjecao(opcao.linguagem) && temLicao(opcao.linguagem),
+      );
+    }
+  });
+
+  it('só uma está pronta no primeiro corte, e é a do Python', () => {
+    const prontas = CATALOGO.filter((o) => o.pronta);
+    expect(prontas.map((o) => o.linguagem)).toEqual(['python']);
+  });
+
+  it('cada opção mostra três linhas verdadeiras, e nenhuma é uma descrição', () => {
+    for (const opcao of CATALOGO) {
+      expect(opcao.exemplo).toHaveLength(3);
+      for (const linha of opcao.exemplo) {
+        expect(linha.trim()).not.toBe('');
+        // A pergunta que o seletor faz ao aluno é «isto?», e uma linha que
+        // descreve em vez de mostrar não deixa ninguém responder.
+        expect(linha).not.toMatch(/linguagem|bloco|programa|exemplo/i);
+      }
+    }
+    // E não são as mesmas três linhas para todas: seis opções com o mesmo
+    // texto seriam uma opção só, escrita seis vezes.
+    const exemplos = new Set(CATALOGO.map((o) => o.exemplo.join('\n')));
+    expect(exemplos.size).toBe(CATALOGO.length);
+  });
+
+  it('cada opção bloqueada diz o que falta, e uma opção pronta não diz nada', () => {
+    for (const opcao of CATALOGO) {
+      if (opcao.pronta) {
+        expect(opcao.falta).toBe('');
+        continue;
+      }
+      // A razão **nomeia a linguagem**: «Ainda não está escrito» sem dizer
+      // o quê nem onde é uma frase que serve para seis opções e não informa
+      // sobre nenhuma.
+      expect(opcao.falta).toContain(NOMES[opcao.linguagem]);
+      // E diz **qual das duas** falta, porque são duas coisas diferentes com
+      // consequências diferentes: sem projeção a opção nem existe; com
+      // projeção e sem lição é uma lição por escrever, e o motor já está
+      // verificado por trás.
+      const semProjecao = !temProjecao(opcao.linguagem);
+      const semLicao = !temLicao(opcao.linguagem);
+      expect(opcao.falta).toMatch(semProjecao && semLicao ? /projeção/ : /lição/);
+    }
+  });
+});
+
+describe('O seletor de linguagem', () => {
+  it('mostra as seis, com o nome e as três linhas de cada uma', () => {
+    // Cada linha é procurada **dentro do cartão da sua linguagem**, e não no
+    // ecrã inteiro. `total = total + 1` é uma linha verdadeira de Python e
+    // uma linha verdadeira de Go — a mesma escrita, e é essa a comparação
+    // que a pessoa faz ao escolher. Uma busca no ecrã inteiro encontraria as
+    // duas e atirava uma exceção, e o teste passava a medir a ambiguidade
+    // em vez do ecrã.
+    const { container } = render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
+    for (const opcao of CATALOGO) {
+      const cartao = cartaoDe(container, opcao.linguagem);
+      expect(within(cartao).getByRole('heading', { name: NOMES[opcao.linguagem] })).toBeInTheDocument();
+      // As três linhas vivem num `<pre>` só, e o `getByText` compara o texto
+      // todo do elemento depois de dobrar os espaços: `total = 5` nunca
+      // iguala `total = 5\nprint(total)\ntotal = total + 1`, e o teste
+      // atirava com a mensagem «não achei o texto» sobre um ecrã que estava
+      // certo. O que interessa é linha a linha, e uma linha é uma linha da
+      // lista do catálogo — daí a comparação ser feita sobre as linhas.
+      const exemplo = cartao.querySelector('.seletor-exemplo');
+      const escritas = (exemplo?.textContent ?? '').split('\n');
+      expect(escritas).toEqual(opcao.exemplo);
+    }
+  });
+
+  it('só habilita a que está pronta, e nenhuma das outras tem botão de escolha', () => {
+    render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
+    // A forma do teste importa: `getByRole('button', { name: 'Go' })` casa
+    // com «Go» e não com «Google» porque aqui não há «Google», mas o plano
+    // antigo escrevia `/Java/` e esse padrão casa com **«Java» e
+    // «JavaScript» ao mesmo tempo** — dois elementos, e o `getBy` atira
+    // uma exceção em vez de testar o que diz. Por isso a comparação é pelo
+    // id da linguagem, que é uma coisa só.
+    const botoes = screen.getAllByRole('button');
+    expect(botoes).toHaveLength(CATALOGO.filter((o) => o.pronta).length);
+    for (const opcao of CATALOGO.filter((o) => o.pronta)) {
+      const botao = screen.getByRole('button', { name: `Começar ${NOMES[opcao.linguagem]}` });
+      expect(botao).toBeEnabled();
+    }
+  });
+
+  it('cada opção bloqueada mostra a razão, e nenhuma desaparece em silêncio', () => {
+    const { container } = render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
+    for (const opcao of CATALOGO) {
+      if (opcao.pronta) continue;
+      // A razão está no ecrã **antes** de qualquer clique, e não aparece
+      // depois de uma tentativa falhada. Um aluno que chegue ao fim da lista
+      // tem de saber o que está a ver e porquê, sem descobrir que não pode
+      // escolher.
+      expect(cartaoDe(container, opcao.linguagem).textContent).toContain(opcao.falta);
+    }
+  });
+
+  it('escolher a pronta entrega a linguagem ao ecrã', () => {
+    const aoEscolher = vi.fn<(l: Language) => void>();
+    render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={aoEscolher} />);
+    fireEvent.click(screen.getByRole('button', { name: `Começar ${NOMES.python}` }));
+    expect(aoEscolher).toHaveBeenCalledWith('python');
+  });
+
+  it('não há caminho para um ecrã em branco: as bloqueadas não têm botão nenhum', () => {
+    // Um `<option disabled>` não se pode clicar — nem a pessoa, nem um
+    // teste, sem `UNSAFE_`. O plano antigo testava o que acontecia ao clicar
+    // numa opção desabilitada com `UNSAFE_getByRole`, que é um estado que o
+    // browser não permite alcançar. A garantia real não é «o clique é
+    // inofensivo»: é que **não existe o botão**. Se não existe, não há
+    // caminho para o ecrã em branco, e não há estado escondido à espera de
+    // um clique.
+    render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
+    for (const opcao of CATALOGO.filter((o) => !o.pronta)) {
+      expect(
+        screen.queryByRole('button', { name: `Começar ${NOMES[opcao.linguagem]}` }),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('a opção que não tem botão tem a razão legível, não uma imagem', () => {
+    // A razão é texto, e não um `title` nem uma cor. Uma cor não se lê com
+    // um leitor de ecrã, e um `title` só aparece com o rato em cima.
+    render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
+    const opcao = CATALOGO.find((o) => !o.pronta)!;
+    expect(screen.getByText(opcao.falta)).toBeInTheDocument();
+  });
+});
+
+describe('A entrada do produto', () => {
+  it('começa no seletor, e não numa lição', () => {
+    // A escolha vem primeiro. Um `main.tsx` com a linguagem escrita à mão é
+    // um produto que finge ter seis linguagens e ensina uma.
+    render(<Aplicacao />);
+    expect(screen.getByRole('heading', { name: NOMES.python })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: NOMES.java })).toBeInTheDocument();
+    expect(screen.queryByText('O que é uma variável')).not.toBeInTheDocument();
+  });
+
+  it('escolher Python abre a lição dessa linguagem', () => {
+    render(<Aplicacao />);
+    fireEvent.click(screen.getByRole('button', { name: `Começar ${NOMES.python}` }));
+    // O título da lição é o da lição **dessa** linguagem, e não o de uma
+    // lição qualquer: é a escolha que decidiu o que se ensina (§0).
+    expect(screen.getByRole('heading', { name: 'O que é uma variável' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: NOMES.python })).not.toBeInTheDocument();
+  });
+
+  it('não escreve o nome de nenhuma lição à mão', () => {
+    // A chave da lição sai do `TEXTOS`, e não de uma constante no ecrã. Uma
+    // constante 'variavel' escrita no `main.tsx` é uma segunda fonte de
+    // verdade sobre que lições existem, e diverge do `TEXTOS` no dia em que
+    // se escreve a segunda.
+    render(<Aplicacao />);
+    fireEvent.click(screen.getByRole('button', { name: `Começar ${NOMES.python}` }));
+    // Se a chave viesse de uma constante, trocar a constante abriria uma
+    // lição inexistente e o ecrã mostraria o aviso de «Ainda não há lição».
+    expect(screen.queryByText(/Ainda não há lição/)).not.toBeInTheDocument();
+  });
+});
 ```
 
 O catálogo vive em `src/ui/lecao/catalogo.ts`, com os exemplos escritos à
 mão — são texto de ecrã, e texto de ecrã não se gera. São **as seis**, todas
 presentes, porque uma opção que desaparece em silêncio é a forma mais
-barata de mentir sobre um produto. As quatro que não estão prontas dizem
+barata de mentir sobre um produto. As cinco que não estão prontas dizem
 isso e dizem porquê.
 
+O `pronta` é **calculado**, e não escrito à mão: `temProjecao(linguagem) && temLicao(linguagem)`. Escrever `pronta: true` ao lado de cada opção é uma segunda fonte de verdade sobre o que o produto tem, e essa segunda fonte é a que fica desatualizada. O `falta` diz **qual** das duas falta, e não «não está pronta» — «a projeção está e a lição não» e «a lição está e a projeção não» são estados diferentes, com correções diferentes, e uma pessoa que saiba qual deles é já vai ao sítio certo.
+
+`src/ui/lecao/catalogo.ts`:
 ```typescript
 import { LINGUAGENS, NOMES } from '../../nucleo/tipos';
 import type { Language } from '../../nucleo/tipos';
-import { NOMES } from '../../nucleo/tipos';
-import type { Language } from '../../nucleo/tipos';
+import { temLicao } from '../../conteudo';
+import { temProjecao } from '../../projecoes/registo';
 import type { OpcaoLinguagem } from './SeletorLinguagem';
 
-/** O que cada opção mostra e porquê está como está. Escrito à mão porque é
- *  texto para o utilizador ler, e um texto de ecrã não se gera. */
-const ESCRITO: Record<Language, Pick<OpcaoLinguagem, 'exemplo' | 'pronta' | 'falta'>> = {
-  python: {
-    exemplo: ['total = 5', 'print(total)', 'total = total + 1'],
-    pronta: true,
-    falta: '',
-  },
-  java: {
-    exemplo: ['int total = 5;', 'System.out.println(total);', 'total = total + 1;'],
-    pronta: false,
-    falta: 'A lição de Java ainda não está escrita. A projeção está pronta e os testes passam.',
-  },
-  go: {
-    exemplo: ['total := 5', 'fmt.Println(total)', 'total = total + 1'],
-    pronta: false,
-    falta: 'Ainda não há projeção de Go. A lição vem depois dela, nunca antes.',
-  },
-  typescript: {
-    exemplo: ['let total: number = 5;', 'console.log(total);', 'total = total + 1;'],
-    pronta: false,
-    falta: 'Ainda não há projeção de TypeScript. A lição vem depois dela, nunca antes.',
-  },
-  javascript: {
-    exemplo: ['let total = 5;', 'console.log(total);', 'total = total + 1;'],
-    pronta: false,
-    falta: 'Ainda não há projeção de JavaScript. A lição vem depois dela, nunca antes.',
-  },
-  sql: {
-    exemplo: ['SELECT total FROM vendas;', 'WHERE total > 10', 'ORDER BY total;'],
-    pronta: false,
-    falta: 'O SQL é o Plano C, e o seu primeiro conceito não é uma variável. Fica para quando as outras cinco estiverem escritas.',
-  },
+/** As três linhas que cada opção mostra, escritas à mão.
+ *
+ *  São texto de ecrã, e texto de ecrã não se genera: a pergunta que o
+ *  seletor faz ao aluno é «isto?», e uma linha que descreve em vez de
+ *  mostrar não deixa ninguém responder. São três, e não uma, porque uma
+ *  linha isolada é um desonesto — a mesma atribuição em duas linguagens
+ *  parece a mesma coisa, e não é. */
+const EXEMPLOS: Record<Language, string[]> = {
+  python: ['total = 5', 'print(total)', 'total = total + 1'],
+  java: ['int total = 5;', 'System.out.println(total);', 'total = total + 1;'],
+  go: ['total := 5', 'fmt.Println(total)', 'total = total + 1'],
+  typescript: ['let total: number = 5;', 'console.log(total);', 'total = total + 1;'],
+  javascript: ['let total = 5;', 'console.log(total);', 'total = total + 1;'],
+  sql: ['SELECT total FROM vendas;', 'WHERE total > 10', 'ORDER BY total;'],
 };
 
-/** As seis, pela ordem de `LINGUAGENS`, com o nome vindo do núcleo. */
+/** O que falta a uma linguagem para poder ser escolhida, escrito a partir do
+ *  estado real do produto.
+ *
+ *  Este é o ponto 5 do `Review Focus`, e a decisão que o resolve é uma só: a
+ *  prontidão **não é escrita à mão**. Um `pronta: false` escrito no catálogo
+ *  continua a dizer a verdade até ao dia em que a projeção de Go entra — e
+ *  nesse dia o ecrã mente para metade das pessoas que abrirem o produto, sem
+ *  nenhum teste ficar vermelho. Aqui a resposta vem de `temProjecao` e de
+ *  `temLicao`, e o `Record` de exemplos continua a ser a verificação de que
+ *  nenhuma das sete linguagens de amanhã ficou sem linhas.
+ *
+ *  E a razão **diz qual das duas** falta, porque são duas coisas diferentes:
+ *  sem projeção a opção ainda não existe; com projeção e sem lição há um
+ *  ecrã inteiro por escrever, e o motor por trás já está verificado por
+ *  testes. Dizer «ainda não» sem dizer qual das duas é uma frase que serve
+ *  para as seis e não informa sobre nenhuma. */
+function faltaDe(linguagem: Language): { pronta: boolean; falta: string } {
+  const nome = NOMES[linguagem];
+  if (!temProjecao(linguagem)) {
+    return {
+      pronta: false,
+      falta: `Ainda não há projeção de ${nome}. A lição vem depois da projeção, nunca antes.`,
+    };
+  }
+  if (!temLicao(linguagem)) {
+    return {
+      pronta: false,
+      falta: `A projeção de ${nome} está pronta e verificada por testes. A lição ainda não está escrita.`,
+    };
+  }
+  return { pronta: true, falta: '' };
+}
+
+/** As seis, pela ordem de `LINGUAGENS`, com o nome vindo do núcleo.
+ *
+ *  Nenhuma sai da lista e nenhuma desaparece em silêncio: uma opção que se
+ *  vai embora parece um produto com uma linguagem a menos, e o produto tem
+ *  seis, quatro das quais ainda por escrever. */
 export const CATALOGO: OpcaoLinguagem[] = LINGUAGENS.map((linguagem) => ({
   linguagem,
   nome: NOMES[linguagem],
-  ...ESCRITO[linguagem],
+  exemplo: EXEMPLOS[linguagem],
+  ...faltaDe(linguagem),
 }));
 ```
 
-O `Record<Language, ...>` não é indireta: se amanhã entrar uma sétima linguagem
-e alguém se esquecer do `ESCRITO`, isto não compila. Um array de literais
-deixava passar em silêncio, e a sétima aparecia no seletor sem exemplo e
-sem razão — que é exatamente o bug que o `Review Focus` nr. 5 persegue.
-
-E o teste do ponto 5 do `Review Focus`:
-
+`src/ui/lecao/SeletorLinguagem.tsx`:
 ```typescript
-it('o catálogo traz as seis, todas visíveis', () => {
-  expect(CATALOGO).toHaveLength(6);
-  expect(CATALOGO.map((o) => o.nome)).toEqual([
-    'Python', 'Java', 'Go', 'TypeScript', 'JavaScript', 'SQL',
-  ]);
-});
+import type { Language } from '../../nucleo/tipos';
 
-it('o seletor mostra as seis e só habilita a que está pronta', () => {
-  render(<SeletorLinguagem opcoes={CATALOGO} />);
-  expect(screen.getAllByRole('option')).toHaveLength(6);
-  expect(screen.getByRole('option', { name: /Python/ })).toBeEnabled();
-  for (const nome of [/Java/, /Go/, /TypeScript/, /JavaScript/, /SQL/]) {
-    expect(screen.getByRole('option', { name: nome })).toBeDisabled();
-  }
-});
-
-it('cada opção bloqueada diz porquê, e nenhuma desaparece em silêncio', () => {
-  for (const o of CATALOGO.filter((x) => !x.pronta)) {
-    const { unmount } = render(<SeletorLinguagem opcoes={CATALOGO} />);
-    expect(screen.getByText(new RegExp(escapa(o.falta.slice(0, 28)), 'i'))).toBeInTheDocument();
-    unmount();
-  }
-});
-
-it('o nome de cada opção vem do núcleo, e é o mesmo em todo o lado', () => {
-  for (const o of CATALOGO) expect(o.nome).toBe(NOMES[o.linguagem]);
-});
-
-it('uma opção pronta não tem razão de falta', () => {
-  for (const o of CATALOGO.filter((x) => x.pronta)) expect(o.falta).toBe('');
-});
-
-/** O `falta` é texto com acentos e pontuação; a regex precisa de um
- *  `escape`. Sem isto o teste passa por acidente para a opção errada. */
-function escapa(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export interface OpcaoLinguagem {
+  linguagem: Language;
+  nome: string;
+  /** Três linhas verdadeiras desta linguagem. Nunca uma descrição. */
+  exemplo: string[];
+  /** Verdadeiro quando há projeção **e** lição. Calculado, nunca escrito. */
+  pronta: boolean;
+  /** Quando não está pronta, o que é que falta. Vazio quando está. */
+  falta: string;
 }
 
-it('uma opção bloqueada mostra porque é que está bloqueada', () => {
-  render(<SeletorLinguagem opcoes={CATALOGO} />);
-  expect(screen.getByText(/lição de Java ainda não está escrita/)).toBeInTheDocument();
-});
+export interface SeletorLinguagemProps {
+  opcoes: readonly OpcaoLinguagem[];
+  aoEscolher: (linguagem: Language) => void;
+}
 
-it('cada opção mostra três linhas verdadeiras, não uma descrição', () => {
-  const java = CATALOGO.find((o) => o.linguagem === 'java')!;
-  expect(java.exemplo).toHaveLength(3);
-  expect(java.exemplo[1]).toBe('System.out.println(total);');
-  expect(java.exemplo.join('\n')).not.toMatch(/linguagem|bloque|programa/i);
-});
-
-it('escolher uma linguagem bloqueada não muda o ecrã e não rebenta', () => {
-  const { UNSAFE_getByRole } = render(<SeletorLinguagem opcoes={CATALOGO} />);
-  UNSAFE_getByRole('option', { name: /Java/ }).click();
-  expect(screen.getByRole('status').textContent).toMatch(/ainda não está escrita/);
-});
+/** O seletor de linguagem.
+ *
+ *  Não é um `<select>`, e a razão é de conteúdo e não de estilo: a pergunta
+ *  que este ecrã faz ao aluno é «isto?», e um `<option>` não cabe três
+ *  linhas de código nem uma frase que explique porque é que não se pode
+ *  escolher. São cartões, e cada cartão traz o nome, as três linhas e — quando
+ *  não está pronto — a razão.
+ *
+ *  A opção que não está pronta **não tem botão nenhum**, e não tem um botão
+ *  desabilitado. Um botão desabilitado é uma promessa e um beco sem saída: a
+ *  pessoa vê ali uma coisa para carregar, carrega, e nada acontece, e não
+ *  sabe se foi ela ou o produto. Sem botão, a leitura é a mesma para todos —
+ *  a pessoa lê o cartão, lê a razão, e segue em frente. */
+export function SeletorLinguagem({ opcoes, aoEscolher }: SeletorLinguagemProps) {
+  return (
+    <main className="seletor">
+      <h1>Qual linguagem queres ler?</h1>
+      <p className="seletor-pergunta">
+        Escolhe uma. Vais aprender só essa, e a próxima vez que abrires um
+        ficheiro dela vais saber o que está a ser lido.
+      </p>
+      <ul className="seletor-lista">
+        {opcoes.map((opcao) => (
+          <li key={opcao.linguagem} className="seletor-cartao" data-linguagem={opcao.linguagem}>
+            <h2>{opcao.nome}</h2>
+            <pre className="seletor-exemplo">{opcao.exemplo.join('\n')}</pre>
+            {opcao.pronta ? (
+              <button
+                type="button"
+                onClick={() => aoEscolher(opcao.linguagem)}
+              >
+                {`Começar ${opcao.nome}`}
+              </button>
+            ) : (
+              <p className="seletor-falta">{opcao.falta}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
 ```
 
-Run: `npx vitest run src/ui/lecao/SeletorLinguagem.test.tsx`
-Expected: PASS.
+A aplicação em si — os dois estados, o seletor primeiro e a lição depois —
+vive no seu próprio ficheiro e não no `main.tsx`. A razão é uma só e é de
+teste: um `main.tsx` chama `createRoot` no momento em que é importado, e
+importá-lo num teste monta o produto inteiro no `document` do jsdom sem
+ninguém pedir. Um ficheiro que se importa tem de ser um ficheiro que se
+pode montar, e `main.tsx` deixa de se poder importar.
 
-- [ ] **Step 9: Ligar em `src/main.tsx` — o seletor primeiro, a lição depois**
+O que este ficheiro **não** decide: não sabe o que é uma projeção, não sabe
+o que é uma lição, e não tem uma lista de linguagens escrita à mão. As três
+coisas vêm do `CATALOGO`, que por sua vez vem de `LINGUAGENS`, e a chave da
+lição vem de `TEXTOS` e não de uma constante. Se amanhã entrar uma sétima
+linguagem, este ficheiro não muda — e é esse o teste de que a arquitectura
+está no sítio.
 
-`main.tsx` é o único sítio do produto que conhece o catálogo, e é o lugar
-onde a escolha do utilizador vive. Escreve-se **depois** do seletor e nunca
-antes: um `main.tsx` com a linguagem escrita à mão é um produto que finge
-ter seis linguagens e ensina uma.
+`src/ui/lecao/Aplicacao.tsx`:
+```typescript
+import { useState } from 'react';
+import { CARREGAR, TEXTOS, temLicao } from '../../conteudo';
+import { NOMES } from '../../nucleo/tipos';
+import type { Language } from '../../nucleo/tipos';
+import { CATALOGO } from './catalogo';
+import { SeletorLinguagem } from './SeletorLinguagem';
+import { Tela } from './Tela';
 
-```tsx
-import { StrictMode, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { CARREGAR, TEXTOS, temLicao } from './conteudo';
-import { CATALOGO } from './ui/lecao/catalogo';
-import { SeletorLinguagem } from './ui/lecao/SeletorLinguagem';
-import { Tela } from './ui/lecao/Tela';
-import { NOMES } from './nucleo/tipos';
-import type { Language } from './nucleo/tipos';
-import './ui/estilo.css';
+/** A chave da primeira lição que existe para esta linguagem.
+ *
+ *  Sai do `TEXTOS` e não de uma constante. Uma constante `'variavel'` escrita
+ *  aqui seria uma segunda fonte de verdade sobre que lições existem, e
+ *  divergiria do `TEXTOS` no dia em que se escreve a segunda — sem teste
+ *  nenhum ficar vermelho, porque as duas fontes continuariam a compilar. */
+function chaveDaLicao(linguagem: Language): string | undefined {
+  return Object.keys(TEXTOS)
+    .filter((chave) => chave.startsWith(`${linguagem}/`))
+    .sort()[0];
+}
 
-const raiz = document.getElementById('raiz');
-if (!raiz) throw new Error('Falta #raiz no index.html');
-
-const CHAVE = 'variavel';
-
-function Aplicacao(): JSX.Element {
+/** O produto inteiro, em dois estados.
+ *
+ *  Primeiro a escolha, depois a lição. Não ao contrário e não as duas ao
+ *  mesmo tempo: antes de escolher não há ecrã, porque a lição é sobre uma
+ *  linguagem e não sobre um conceito solto, e uma pessoa que vai ler
+ *  TypeScript e uma pessoa que vai ler SQL não podem ver a mesma coisa com
+ *  palavras diferentes — é o que a §0 do produto é.
+ *
+ *  Repara no que este ficheiro **não** decide: não sabe o que é uma
+ *  projeção, não sabe o que é uma lição, e não tem uma lista de linguagens
+ *  escrita à mão. As três coisas vêm do `CATALOGO`, que por sua vez vem de
+ *  `LINGUAGENS`. Se amanhã entrar uma sétima linguagem, este ficheiro não
+ *  muda — e é esse o teste de que a arquitectura está no sítio. */
+export function Aplicacao() {
   const [linguagem, definirLinguagem] = useState<Language | null>(null);
 
-  // A escolha vem primeiro. Antes de escolher não há lição, porque a lição
-  // é sobre uma linguagem e não sobre um conceito solto.
   if (linguagem === null) {
     return <SeletorLinguagem opcoes={CATALOGO} aoEscolher={definirLinguagem} />;
   }
 
-  const bruto = TEXTOS[`${linguagem}/${CHAVE}`];
+  const chave = chaveDaLicao(linguagem);
+  const bruto = chave === undefined ? undefined : TEXTOS[chave];
   if (bruto === undefined || !temLicao(linguagem)) {
-    // Não chega aqui se o seletor só habilita o que está pronto. Está aqui
-    // para que, se alguma vez chegar, o ecrã diga o que falta em vez de
-    // ser um ecrã em branco — que é a diferença entre um produto que falha
-    // e um produto que mente.
+    // Não se chega aqui pelo caminho normal: o seletor só dá botão ao que
+    // tem projeção e lição. Está aqui para que, se alguma vez se chegar, o
+    // ecrã diga o que falta em vez de ser um ecrã em branco — que é a
+    // diferença entre um produto que falha e um produto que mente.
     return (
       <main className="tela">
         <h1>{NOMES[linguagem]}</h1>
-        <p className="aviso">Ainda não há lição &quot;{CHAVE}&quot; escrita para {NOMES[linguagem]}.</p>
+        <p className="aviso">
+          {`Ainda não há uma lição escrita para ${NOMES[linguagem]}.`}
+        </p>
       </main>
     );
   }
 
   return <Tela linguagem={linguagem} licao={CARREGAR(bruto, linguagem)} />;
 }
+```
 
+- [ ] **Step 10: Ligar em `src/main.tsx` — o seletor primeiro, a lição depois**
+
+`main.tsx` passa a ter três linhas de conteúdo e uma de arranque. Tudo o
+que ele fazia antes — o estado da linguagem, o catálogo, a chave da lição — foi
+para o `Aplicacao.tsx`, e o ficheiro ficou com o que lhe é próprio: montar
+o produto. E sem `JSX.Element` no tipo de retorno: o React 19 tirou o
+espaço de nomes `JSX` global, e um tipo de retorno anotado com ele não
+compila num projecto com `@types/react` da versão 19.
+
+`src/main.tsx`:
+```tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Aplicacao } from './ui/lecao/Aplicacao';
+
+const raiz = document.getElementById('raiz');
+if (!raiz) throw new Error('o index.html precisa de #raiz');
 createRoot(raiz).render(
   <StrictMode>
     <Aplicacao />
@@ -13177,13 +15521,7 @@ createRoot(raiz).render(
 );
 ```
 
-Repara no que este ficheiro **não** faz: não verifica se a projeção existe,
-não decide se a lição está pronta, e não tem uma lista de linguagens
-escrita à mão. As três coisas vêm do `CATALOGO`, que por sua vez vem de
-`LINGUAGENS`. Se amanhã entrar uma sétima linguagem, este ficheiro não
-muda — e é esse o teste de que a architecture está no sítio.
-
-- [ ] **Step 10: Typecheck, suite completa e commit**
+- [ ] **Step 11: Typecheck, suite completa e commit**
 
 ```bash
 npm run typecheck
@@ -13192,11 +15530,16 @@ npm run arvore
 git add -A
 git commit -m "feat: tela da licao, ficha de leitura, sondas e o seletor de linguagem
 
-O seletor vem antes do ecrã e main.tsx nao escreve nenhuma linguagem a
+O seletor vem antes do ecra e main.tsx nao escreve nenhuma linguagem a
 mao. A escolha do utilizador decide o que se ensina, e o catalogo diz
 com honestidade quais das seis ainda nao tem licao — todas as seis
-visiveis, nenhuma a desaparecer em silencio."
+visiveis, nenhuma a desaparecer em silencio.
+
+O painel segue a fonte do momento e nao a fase do passo, e a sondagem e
+o que decide se o momento fica visto. Ha uma fuga honesta em todo o
+ecra, e a fuga diz na cara que foi uma fuga."
 ```
+
 ### Task 13: Aceitacao da fatia
 
 Isto nao e um teste. E o portao que decide se o Plano A existe, e sobe a historia de **por que e que a costura do `Projection` e uma tese e nao uma promessa**.
@@ -13423,12 +15766,12 @@ git add -A
 git commit -m \"test: aceitacao da fatia — a costura e uma tese, nao uma promessa
 
 emit e ler sao inversos uma da outra nas duas linguagens: o que a
-projecao escreve, a mesma projecao le sem erro de sintaxe. E o mesmo
+projeção escreve, a mesma projeção le sem erro de sintaxe. E o mesmo
 programa julgado pelas duas politicas da Recusa em Java e silencio em
 Python, sem uma linha de codigo duplicada.
 
 O portao tambem diz em voz alta o que falta: quatro linguagens sem
-projecao, e a projecao de Java pronta sem licao escrita. Um produto que
+projeção, e a projeção de Java pronta sem licao escrita. Um produto que
 anuncia seis linguagens quando tem duas projecoes e uma licao esta a
 mentir, e o teste existe para isso nao acontecer sem querer.
 \"
@@ -13444,12 +15787,12 @@ Depois do portão, uma de duas coisas é verdadeira. **Escreve-se num commit, n�
 git commit --allow-empty -m \"decisao: o formato da sonda esta certo, o Plano B pode comecar
 
 A licao de variavel em Python levou [X] a autorar. A costura aguentou a
-segunda projecao sem uma linha de codigo duplicada. Os sete passos do
+segunda projeção sem uma linha de codigo duplicada. Os sete passos do
 portao manual passaram.
 
 Segue-se a licao de Java, e depois o Plano B: Go, TypeScript, JavaScript
 e as suas licoes. O SQL fica para o Plano C, porque o vocabulario
-declarativo e um salto real e nao uma projecao a mais.\"
+declarativo e um salto real e nao uma projeção a mais.\"
 ```
 
 **Se algum dos sete passos falhou, ou a lição levou mais de uma tarde:** pára. O problema não é a lição, é o formato — e corrigir o formato depois de escrever duas lições custa o dobro de o corrigir agora. Escreve-se o que falhou, e só se decide depois:

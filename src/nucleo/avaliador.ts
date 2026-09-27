@@ -191,6 +191,18 @@ class AvaliadorImpl implements Avaliador {
     if (typeof bruto === 'boolean') {
       return valorCru('lógico', bruto, bloco, ranhura, passo);
     }
+    if (typeof bruto === 'string') {
+      // Uma palavra escrita a direito é um literal de texto, e é assim que a
+      // lição os escreve: `valor: olá`. A projeção já tratava uma palavra
+      // solta como texto — emitia `total = 'olá'` — e os dois lados precisam
+      // de dizer a mesma coisa do mesmo programa. Enquanto este ramo não
+      // existia, o mesmo `guardar nome = 'olá'` recebia dois veredictos
+      // diferentes conforme o caminho por onde entrava: `Observacao` quando
+      // vinha do texto, `Recusa` quando vinha dos blocos. Duas implementações
+      // da mesma semântica que discordam uma da outra é a forma mais cara de
+      // um produto ter sondas que não podem estar erradas.
+      return valorCru('texto', bruto, bloco, ranhura, passo);
+    }
     if (typeof bruto === 'object') {
       const o = bruto as { txt?: unknown; ref?: unknown; bloco?: BlocoLeigo };
       if (typeof o.txt === 'string') return valorCru('texto', o.txt, bloco, ranhura, passo);
@@ -210,14 +222,25 @@ class AvaliadorImpl implements Avaliador {
       }
       if (o.bloco) return this.avaliar(o.bloco.type, entradasDe(o.bloco), passo);
     }
-    const v: Valor = { ...valorCru('número', bruto, bloco, ranhura, passo), recusado: true };
-    this.trace.recusa({
-      ...E(restricao('número', 'o valor'), v),
-      origem,
-      remedio:
-        'O que chegou a este sítio não é um número, nem uma palavra, nem o nome de uma variável que já tenha valor.',
-    });
-    return v;
+    // Chegou aqui uma forma que nenhuma das formas de valor resolve: um
+    // array, ou um objeto sem `txt`, sem `ref` e sem bloco dentro. Isto **não
+    // é um tipo errado**, e a diferença é de texto e não de estilo: a
+    // mensagem antiga era `Este sítio só aceita número. Recebeste número`, que
+    // se contradiz a si mesma e não ensina nada. O que se diz é que o motor
+    // não sabe ler o que chegou — que é a verdade, e é uma falha de execução
+    // como a do `{ref}` que não existe, não uma recusa de tipo.
+    this.trace.falha(
+      falhar(
+        passo,
+        'O que está neste sítio não é um valor que eu saiba ler.',
+        `Um valor aqui é um número, uma palavra entre aspas, o nome de uma variável que já tenha valor, ou outro bloco. Recebi ${typeof bruto}, e isso não é nenhum dos quatro.`,
+        bloco,
+      ),
+    );
+    return {
+      ...valorCru(Array.isArray(bruto) ? 'lista' : 'texto', bruto, bloco, ranhura, passo),
+      recusado: true,
+    };
   }
 
   private guardar(e: Entradas, passo: number): Valor {
@@ -238,16 +261,6 @@ class AvaliadorImpl implements Avaliador {
     if (recebido.recusado) {
       this.regra.define(nome, passo, recebido);
       return recebido;
-    }
-    if (recebido.tipo !== 'número') {
-      this.trace.recusa({
-        ...E(restricao('número', 'o que guardas'), recebido),
-        origem: origemDe('guardar', 0, passo),
-        remedio: `Uma variável que guarda um número não pode receber a palavra "${String(recebido.valor)}". Ou guardas um número, ou mudas o valor que entra — e uma palavra é uma palavra escrita entre aspas, não um número.`,
-      });
-      const guardado: Valor = { ...recebido, recusado: true };
-      this.regra.define(nome, passo, guardado);
-      return guardado;
     }
     const final: Valor = this.regra.existe(nome, passo)
       ? {
@@ -324,14 +337,18 @@ class AvaliadorImpl implements Avaliador {
 
   private dizer(e: Entradas, passo: number): Valor {
     const recebido = this.valorDe(e.VALOR, passo, 'dizer', 0);
-    if (recebido.recusado || recebido.tipo !== 'texto') {
-      this.trace.recusa({
-        ...E(restricao('texto', 'o que dizes'), recebido),
-        origem: origemDe('dizer', 0, passo),
-        remedio: `O que dizes tem de ser uma palavra. Se tens um número e queres dizê-lo, escreve-o entre aspas — é assim que se escreve uma palavra que tem algarismos dentro.`,
-      });
-      return { ...recebido, recusado: true };
-    }
+    // `dizer` é o `print` de Python, e o `print` do Python aceita o que for.
+    // A recusa anterior — «O que dizes tem de ser uma palavra» — era uma
+    // mentira sobre a linguagem: `print(5)` é legal em Python, e a primeira
+    // lição conta precisamente a história de um `print` a imprimir um número.
+    //
+    // E o segundo efeito era pior do que a mentira. Um `{ref}` que ainda não
+    // tem valor já produz a sua `FalhaRuntime` dentro de `valorDe`, e `dizer`
+    // acrescentava uma `Recusa` por cima. Um erro, duas mensagens, e as duas
+    // no ecrã ao mesmo tempo a dizer coisas que não são ambas verdade — é o
+    // que T11 encontrou quando um `log` de uma variável que nunca foi
+    // guardada chegou ao robô.
+    if (recebido.recusado) return recebido;
     this.trace.registar(passo, recebido);
     return recebido;
   }

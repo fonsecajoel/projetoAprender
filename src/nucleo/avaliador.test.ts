@@ -49,27 +49,59 @@ describe('guardar', () => {
     expect(v.valor).toBe(5);
   });
 
-  it('guardar texto dá um valor de texto, e isso já é um erro', () => {
-    // O nome antigo deste teste dizia "sem erro", e o teste seguinte — que
-    // existe — diz que é uma `Recusa`. O nome mentia sobre o comportamento
-    // que o ficheiro está a descrever. Um teste cujo nome é falso ensina o
-    // leitor a ignorar o teste, e é o primeiro sítio onde se aprende a não
-    // confiar em testes.
+  it('guardar texto guarda o texto, e não dá erro nenhum', () => {
+    // Este nome já foi escrito duas vezes a mentir sobre o que o motor
+    // fazia. Na primeira versão dizia «sem erro» num ficheiro em que o
+    // teste seguinte provava que havia uma `Recusa`; na segunda dizia que
+    // guardar texto «já é um erro». Nas duas o `guardar` recusava texto — e
+    // a primeira lição, que diz «guarda um número com o nome total. Depois
+    // guarda um texto com o nome nome», era impossível de fazer. Ninguém a
+    // completava.
+    //
+    // A recusa vinha do avaliador de blocos, e um avaliador de blocos não
+    // sabe em que linguagem vive: quem recusa é a linguagem (§6.4), e o
+    // Python não recusa nada disto. O que rebenta, e rebenta mais tarde, é
+    // o `log` de uma variável que nunca foi guardada — que é a história
+    // que a lição conta, e o que a §10 diz do Python.
     const a = avaliador();
-    const v = a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
+    const v = a.avaliar('guardar', { nome: 'nome', VALOR: { txt: 'olá' } }, 1);
     expect(v.tipo).toBe('texto');
-    expect(v.recusado).toBe(true);
-    expect(a.trace.erros.length).toBe(1);
+    expect(v.valor).toBe('olá');
+    expect(v.recusado).toBe(false);
+    expect(a.trace.erros.length).toBe(0);
   });
 
-  it('recusa guardar texto, com porque não vazio', () => {
+  it('o texto guardado volta pelo nome, e continua a ser texto', () => {
+    // A ida e a volta é o que interessa: uma variável que se lembra do que
+    // ficou lá dentro, e de que tipo esse conteúdo é. Sem a volta, o teste
+    // acima provava só que o `guardar` não se queixou — e não que o valor
+    // ficou guardado.
     const a = avaliador();
-    a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
+    a.avaliar('guardar', { nome: 'nome', VALOR: { txt: 'olá' } }, 1);
+    const v = a.avaliar('dador_num', { VALOR: { ref: 'nome' } }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(v.valor).toBe('olá');
+    expect(a.trace.erros.length).toBe(0);
+  });
+  it('a única recusa que o motor ainda faz é um número grande demais', () => {
+    // Convém dizer isto em voz alta, porque é uma afirmação forte e é o
+    // estado real do motor depois desta mudança: nos blocos, **nenhum** tipo
+    // é recusado. Quem recusa é a linguagem (§6.4) — o Java escreve
+    // `int total = 'olá';` e recusa, e o Python escreve `total = 'olá';` e
+    // não recusa, e é essa diferença que o produto existe para mostrar. Um
+    // avaliador de blocos que recusasse tipos estaria a decidir por conta
+    // própria o que cada linguagem permite, e a lição passava a mentir
+    // sobre as seis.
+    //
+    // A recusa que fica é a do tamanho: um número acima de `RANGE_INTEIROS`
+    // não existe em nenhum número das linguagens, e recusá-lo é dizer a
+    // verdade sobre todas.
+    const a = avaliador();
+    a.avaliar('guardar', { nome: 'total', VALOR: 1_000_000 }, 1);
     const e = a.trace.erros[0];
     expect(e?.classe).toBe('Recusa');
-    expect(e && e.porque.length).toBeGreaterThan(0);
     expect(e && e.classe === 'Recusa' && e.esperado).toBe('número');
-    expect(e && e.classe === 'Recusa' && e.obtido).toBe('texto');
+    expect(e && e.remedio.length).toBeGreaterThan(0);
   });
 
   it('recusa guardar um número fora de RANGE_INTEIROS', () => {
@@ -122,22 +154,20 @@ describe('a palavra do robô', () => {
     expect(a.trace.erros.length).toBe(0);
   });
 
-  it('guardarTexto guarda o mesmo 5 como palavra, e isso é recusado', () => {
+  it('guardarTexto guarda o mesmo 5 como palavra, e lê-se de volta uma palavra', () => {
     // `guardarTexto` embrulha em `{txt: '5'}`. O `5` que a pessoa escreveu e
-    // o `5` que o robô disse não são o mesmo valor: um é número, o outro é
-    // uma palavra com dois algarismos dentro. Uma variável de número não
-    // aceita a segunda forma, e é essa recusa — não um erro qualquer — que a
-    // lição da variável precisa de mostrar. A versão anterior deste par
-    // dizia o contrário, e o `vitest` apanhou-o.
+    // uma palavra com dois algarismos dentro. Uma variável que guarda uma
+    // palavra guarda uma palavra, e o que muda quando se lê de volta é
+    // exatamente o que a pessoa escreveu: o valor, não o tipo de quem o
+    // escreveu. Este é o parágrafo do ficheiro de leitura que diz que em
+    // Python `5` e `'5'` são coisas diferentes, e é o que a sonda
+    // `texto-que-nao-e-numero` acaba por mostrar.
     const a = avaliador();
     a.executar(pilha(guardarTexto('total', 5)));
-    const v = a.avaliar('dador_num', { VALOR: { ref: 'total' } }, 1);
-    expect(v.tipo).toBe('texto');
-    expect(v.valor).toBe('5');
-    const e = a.trace.erros[0];
-    expect(e?.classe).toBe('Recusa');
-    expect(e && e.classe === 'Recusa' && e.esperado).toBe('número');
-    expect(e && e.classe === 'Recusa' && e.obtido).toBe('texto');
+    const guardado = a.trace.valores.find((v) => v.origem.bloco === 'guardar');
+    expect(guardado?.tipo).toBe('texto');
+    expect(guardado?.valor).toBe('5');
+    expect(a.trace.erros.length).toBe(0);
   });
 });
 
@@ -220,36 +250,61 @@ describe('dizer', () => {
     expect(a.trace.erros.length).toBe(0);
   });
 
-  it('recusa um número, com porque não vazio', () => {
+  it('aceita um número, porque o print do Python também aceita', () => {
+    // A recusa antiga dizia «O que dizes tem de ser uma palavra», e isso é
+    // falso: `print(5)` é legal em Python. A primeira lição conta
+    // precisamente a história de um `print` a imprimir um número — o
+    // ficheiro de leitura tem `print(total)` na sétima linha, e `total`
+    // vale 5 na segunda. Um motor que recusa aquele gesto ensina que o
+    // Python é uma linguagem que não o deixa.
     const a = avaliador();
-    a.avaliar('dizer', { VALOR: 5 }, 1);
-    const e = a.trace.erros[0];
-    expect(e?.classe).toBe('Recusa');
-    expect(e && e.classe === 'Recusa' && e.esperado).toBe('texto');
-    expect(e && e.classe === 'Recusa' && e.obtido).toBe('número');
+    const v = a.avaliar('dizer', { VALOR: 5 }, 1);
+    expect(v.tipo).toBe('número');
+    expect(v.valor).toBe(5);
+    expect(a.trace.erros.length).toBe(0);
   });
 
-  it('recusa um valor que já tinha sido recusado a chegar a dizer', () => {
-    // São dois erros, não um: o do `guardar` (palavra num slot de número) e o
-    // do `dizer` (a variável recusada a chegar a um sítio de texto). A
-    // versão anterior lia `erros[0]` — o do `guardar` — e por isso passava
-    // mesmo que o `dizer` aceitasse o valor. Lê o último.
+  it('um valor que já falhou não ganha uma segunda mensagem pelo caminho', () => {
+    // Este teste já existia, e o que afirmava era o contrário do que devia:
+    // esperava **dois** erros e dizia que dois era a resposta certa, com um
+    // comentário a explicar que lia o último para não passar por engano.
+    // Não era engano: era a especificação do defeito.
+    //
+    // Um `{ref}` que ainda não tem valor já diz o seu erro dentro de
+    // `valorDe`, e o `dizer` acrescentava uma `Recusa` por cima. Um gesto, um
+    // erro, e no ecrã duas frases ao mesmo tempo: «a variável "fantasma" não
+    // tem valor» e «este sítio só aceita texto». Quem lê as duas aprende que
+    // são dois problemas, e são um — e a segunda frase era falsa, porque o
+    // que chegou não era um número nem uma palavra: era nada.
     const a = avaliador();
-    a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
-    a.avaliar('dizer', { VALOR: { ref: 'total' } }, 1);
-    expect(a.trace.erros.length).toBe(2);
-    const e = a.trace.erros[1];
-    expect(e?.classe).toBe('Recusa');
-    expect(e?.origem.bloco).toBe('dizer');
-    expect(e && e.porque.length).toBeGreaterThan(0);
+    a.avaliar('dizer', { VALOR: { ref: 'fantasma' } }, 1);
+    expect(a.trace.erros.length).toBe(1);
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e?.porque).toContain('fantasma');
   });
-});
+
 
 describe('valores de entrada', () => {
   it('{txt} é texto', () => {
     expect(avaliador().avaliar('dador_num', { VALOR: { txt: 'x' } }, 1).tipo).toBe('texto');
   });
-  it('um número é número', () => {
+  it('uma palavra escrita a direito é um literal de texto', () => {
+    // É assim que a lição escreve um texto: `valor: olá`, e não
+    // `valor: {txt: olá}`. A projeção já tratava a palavra solta como
+    // texto — emitia `total = 'olá'` — e o avaliador não: o mesmo programa
+    // recebia `Observacao` quando vinha do texto e `Recusa` quando vinha
+    // dos blocos. Duas implementações da mesma semântica a discordar uma da
+    // outra é a forma mais cara de um produto ter sondas que não podem
+    // estar erradas, e foi o que a Task 12 encontrou ao correr a lição da
+    // Task 8 pelos blocos.
+    const a = avaliador();
+    const v = a.avaliar('dador_num', { VALOR: 'olá' }, 1);
+    expect(v.tipo).toBe('texto');
+    expect(v.valor).toBe('olá');
+    expect(a.trace.erros.length).toBe(0);
+  });
+
     expect(avaliador().avaliar('dador_num', { VALOR: 3 }, 1).tipo).toBe('número');
   });
   it('um booleano é lógico', () => {
@@ -267,10 +322,19 @@ describe('valores de entrada', () => {
     expect(e?.classe).toBe('FalhaRuntime');
     expect(e && e.porque).toContain('fantasma');
   });
-  it('uma forma desconhecida é Recusa com porque', () => {
+  it('uma forma que o motor não sabe ler é FalhaRuntime, e diz que não sabe', () => {
+    // Não é um tipo errado: é uma forma que nenhuma das quatro formas de
+    // valor resolve. A versão antiga dizia «Este sítio só aceita número.
+    // Recebeste número» — uma frase que se nega a si mesma, e uma frase que
+    // se nega a si mesma não ensina o tipo de lado nenhum. O produto inteiro
+    // existe para trocar adivinhação por razão, e uma razão que se nega a si
+    // mesma é a pior das duas.
     const a = avaliador();
     a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
-    expect(a.trace.erros[0]?.classe).toBe('Recusa');
+    const e = a.trace.erros[0];
+    expect(e?.classe).toBe('FalhaRuntime');
+    expect(e && e.classe === 'FalhaRuntime' && e.porque.length).toBeGreaterThan(0);
+    expect(a.trace.erros.length).toBe(1);
   });
 });
 
@@ -287,17 +351,23 @@ describe('blocos não implementados', () => {
 
 describe('executar', () => {
   it('uma pilha corre os blocos por ordem e para no primeiro erro', () => {
+    // O bloco que falha passou a ser um `log` de uma variável que nunca foi
+    // guardada. Era um `dizer` com um número dentro, e deixou de ser quando
+    // o `dizer` deixou de recusar números — que é o comportamento certo, e
+    // por isso o gatilho deste teste tinha de mudar. Um teste cujo gatilho
+    // desapareceu não se apaga: muda de gatilho, ou deixa de provar que a
+    // pilha para.
     const a = avaliador();
-    a.executar(pilha(guardar('total', 1), dizer(5), log({ ref: 'total' })));
+    a.executar(pilha(guardar('total', 1), log({ ref: 'fantasma' }), log(2)));
     const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
     expect(guardou.length).toBe(1);
     expect(a.trace.erros.length).toBe(1);
-    expect(a.trace.erros[0]?.origem.bloco).toBe('dizer');
+    expect(a.trace.erros[0]?.origem.bloco).toBe('log');
   });
 
   it('o bloco depois do erro não corre', () => {
     const a = avaliador();
-    a.executar(pilha(guardar('total', 1), dizer(5), guardar('outro', 2)));
+    a.executar(pilha(guardar('total', 1), log({ ref: 'fantasma' }), guardar('outro', 2)));
     const guardou = a.trace.valores.filter((v) => v.origem.bloco === 'guardar');
     expect(guardou.length).toBe(1);
   });
@@ -364,11 +434,6 @@ describe('o motor não conhece linguagens', () => {
     // execução é um teste que pode passar na segunda vez e falhar na
     // primeira.
     const casos: Array<[string, () => Avaliador]> = [
-      ['guardar texto num slot de número', () => {
-        const a = avaliador();
-        a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
-        return a;
-      }],
       ['guardar sem nome', () => {
         const a = avaliador();
         a.avaliar('guardar', { nome: '', VALOR: 1 }, 1);
@@ -382,17 +447,6 @@ describe('o motor não conhece linguagens', () => {
       ['guardar sem valor', () => {
         const a = avaliador();
         a.avaliar('guardar', { nome: 'total' }, 1);
-        return a;
-      }],
-      ['dizer um número', () => {
-        const a = avaliador();
-        a.avaliar('dizer', { VALOR: 5 }, 1);
-        return a;
-      }],
-      ['dizer um valor já recusado', () => {
-        const a = avaliador();
-        a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
-        a.avaliar('dizer', { VALOR: { ref: 'total' } }, 1);
         return a;
       }],
       ['referência a uma variável que não existe', () => {
@@ -437,11 +491,69 @@ describe('o motor não conhece linguagens', () => {
     // sítios onde o motor decide falhar. Um erro sem `remedio` é um erro
     // que obriga o aluno a adivinhar, e o produto inteiro existe para
     // trocar adivinhação por razão.
+    //
+    // O `expect` do meio não é decoração. Este teste itera uma lista de
+    // erros; se o motor deixar de dar erro nenhum, o `for` corre zero vezes
+    // e o teste passa a medir o nada. Passou a passar por cima de uma lista
+    // vazia até a Task 12 o fazer, e é o mesmo defecto que se viu três
+    // vezes nos testes de ecrã.
     const a = avaliador();
-    a.avaliar('guardar', { nome: 'total', VALOR: { txt: 'olá' } }, 1);
+    a.avaliar('guardar', { nome: '', VALOR: 1 }, 1);
+    a.avaliar('dizer', { VALOR: { ref: 'fantasma' } }, 1);
+    a.avaliar('dador_num', { VALOR: { qqq: 1 } }, 1);
+    expect(a.trace.erros.length).toBeGreaterThan(0);
     for (const e of a.trace.erros) {
       expect(e.porque.length).toBeGreaterThan(0);
       if ('remedio' in e) expect(e.remedio.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('nenhum destes gestos inventa um erro', () => {
+    // A lista de cima é a lista do que **tem** de dar erro. Esta é a lista
+    // do que **não** pode dar, e é tão importante como a outra: um motor
+    // que inventa recusas recusa a lição inteira, e o aluno nunca chega ao
+    // fim de um passo. Guardar texto, dizer um número e imprimir o que ficou
+    // guardado são gestos normais em Python, e nenhum deles pode ser uma
+    // recusa — e a palavra escrita a direito é a forma como a lição escreve
+    // um texto, que é a forma que a projeção também aceita.
+    const gestos: Array<[string, () => Avaliador]> = [
+      ['guardar um texto', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'nome', VALOR: { txt: 'olá' } }, 1);
+        return a;
+      }],
+      ['guardar um texto escrito a direito', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 'nome', VALOR: 'olá' }, 1);
+        return a;
+      }],
+      ['dizer um número', () => {
+        const a = avaliador();
+        a.avaliar('dizer', { VALOR: 5 }, 1);
+        return a;
+      }],
+      ['dizer o que ficou guardado', () => {
+        const a = avaliador();
+        a.avaliar('guardar', { nome: 't', VALOR: 5 }, 1);
+        a.avaliar('dizer', { VALOR: { ref: 't' } }, 1);
+        return a;
+      }],
+      ['três voltas a guardar e a dizer, o programa da ficha em blocos', () => {
+        // Um `guardar` e um `dizer` que não se olham um para o outro, porque
+        // cada bloco é a sua linha: o âmbito do motor é por bloco, não por
+        // pilha (a Task 2 fixou isso, e a ficha de leitura é lida e não
+        // executada). Este caso existe para cubrir o laço, a atribuição e o
+        // `dizer` ao mesmo tempo — e para que uma mudança futura no âmbito
+        // apareça aqui e não na lição.
+        const a = avaliador();
+        a.executar(repetir(3, [guardar('total', 5), dizer(5)]));
+        return a;
+      }],
+    ];
+
+    for (const [nome, gesto] of gestos) {
+      const a = gesto();
+      expect(a.trace.erros.length, nome).toBe(0);
     }
   });
 });

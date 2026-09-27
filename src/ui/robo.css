@@ -1,0 +1,87 @@
+.robo {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.robo h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.portas {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.porta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  border: 2px solid #475569;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  min-width: 6rem;
+}
+
+.porta-nome {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.porta-tipo {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.porta-valor {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.porta[data-tipo='número'] {
+  border-color: #3b82f6;
+}
+
+.porta[data-tipo='texto'] {
+  border-color: #10b981;
+}
+
+.porta[data-tipo='lógico'] {
+  border-color: #a855f7;
+}
+
+.porta[data-tipo='lista'] {
+  border-color: #f59e0b;
+}
+
+.recusa {
+  margin-top: 1rem;
+  border-left: 3px solid var(--erro);
+  padding-left: 0.75rem;
+}
+
+.recusa p {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+}
+
+.recusa-quem {
+  font-weight: 600;
+  color: var(--erro);
+}
+
+.recusa-porque {
+  font-weight: 600;
+}
+
+.recusa-remedio {
+  color: var(--ok);
+}

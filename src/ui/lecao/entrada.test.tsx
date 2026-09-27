@@ -8,6 +8,25 @@ import type { Language } from '../../nucleo/tipos';
 import { temLicao } from '../../conteudo';
 import { temProjecao } from '../../projecoes/registo';
 
+/** O tecto de tempo deste ficheiro, escrito à mão e posto em todos os testes.
+ *
+ *  Montar o ecrã é montar o Blockly, e o Blockly não é rápido: regista
+ *  blocos, mede um SVG que o jsdom não sabe medir, e monta a ferramenta.
+ *  Sozinho este ficheiro corre em menos de dois segundos por teste; a correr
+ *  ao lado dos outros, que é como o `npm test` o corre, passa dos cinco e o
+ *  teste morre de tempo esgotado sem que nada esteja errado. Já aconteceu
+ *  três vezes em três voltas, em três testes diferentes, e num commit que
+ * eria verde.
+ *
+ *  O tecto escreve-se à mão em vez de se subir o global, porque subir o
+ *  global é dizer que todos os testes são lentos quando estes são lentos por
+ *  uma razão que só estes têm. E vai em **todos** os testes do ficheiro, e
+ *  não numa lista dos lentos: essa lista seria uma segunda fonte de verdade
+ *  que divergiria no primeiro teste novo, e o teste novo morreria de tempo
+ *  esgotado sem ninguém saber porquê. */
+const PASSO_A_PASSO = 20_000;
+
+
 /** O cartão de uma linguagem. As asserções são sobre *qual* cartão
  *  mostra o quê: uma busca no ecrã inteiro mediria o produto errado,
  *  porque duas das seis opções partilham de propósito uma linha — a mesma
@@ -26,7 +45,7 @@ describe('O catálogo de linguagens', () => {
     expect(CATALOGO).toHaveLength(LINGUAGENS.length);
     expect(CATALOGO.map((o) => o.linguagem)).toEqual([...LINGUAGENS]);
     expect(CATALOGO.map((o) => o.nome)).toEqual(LINGUAGENS.map((l) => NOMES[l]));
-  });
+  }, PASSO_A_PASSO);
 
   it('a prontidão vem da projeção e da lição, e não de uma lista escrita à mão', () => {
     // **Este é o teste que responde ao ponto 5 do `Review Focus`.** O plano
@@ -44,12 +63,12 @@ describe('O catálogo de linguagens', () => {
         temProjecao(opcao.linguagem) && temLicao(opcao.linguagem),
       );
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('só uma está pronta no primeiro corte, e é a do Python', () => {
     const prontas = CATALOGO.filter((o) => o.pronta);
     expect(prontas.map((o) => o.linguagem)).toEqual(['python']);
-  });
+  }, PASSO_A_PASSO);
 
   it('cada opção mostra três linhas verdadeiras, e nenhuma é uma descrição', () => {
     for (const opcao of CATALOGO) {
@@ -65,7 +84,7 @@ describe('O catálogo de linguagens', () => {
     // texto seriam uma opção só, escrita seis vezes.
     const exemplos = new Set(CATALOGO.map((o) => o.exemplo.join('\n')));
     expect(exemplos.size).toBe(CATALOGO.length);
-  });
+  }, PASSO_A_PASSO);
 
   it('cada opção bloqueada diz o que falta, e uma opção pronta não diz nada', () => {
     for (const opcao of CATALOGO) {
@@ -85,7 +104,7 @@ describe('O catálogo de linguagens', () => {
       const semLicao = !temLicao(opcao.linguagem);
       expect(opcao.falta).toMatch(semProjecao && semLicao ? /projeção/ : /lição/);
     }
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('O seletor de linguagem', () => {
@@ -110,7 +129,7 @@ describe('O seletor de linguagem', () => {
       const escritas = (exemplo?.textContent ?? '').split('\n');
       expect(escritas).toEqual(opcao.exemplo);
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('só habilita a que está pronta, e nenhuma das outras tem botão de escolha', () => {
     render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
@@ -126,7 +145,7 @@ describe('O seletor de linguagem', () => {
       const botao = screen.getByRole('button', { name: `Começar ${NOMES[opcao.linguagem]}` });
       expect(botao).toBeEnabled();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('cada opção bloqueada mostra a razão, e nenhuma desaparece em silêncio', () => {
     const { container } = render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
@@ -138,14 +157,14 @@ describe('O seletor de linguagem', () => {
       // escolher.
       expect(cartaoDe(container, opcao.linguagem).textContent).toContain(opcao.falta);
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('escolher a pronta entrega a linguagem ao ecrã', () => {
     const aoEscolher = vi.fn<(l: Language) => void>();
     render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={aoEscolher} />);
     fireEvent.click(screen.getByRole('button', { name: `Começar ${NOMES.python}` }));
     expect(aoEscolher).toHaveBeenCalledWith('python');
-  });
+  }, PASSO_A_PASSO);
 
   it('não há caminho para um ecrã em branco: as bloqueadas não têm botão nenhum', () => {
     // Um `<option disabled>` não se pode clicar — nem a pessoa, nem um
@@ -161,7 +180,7 @@ describe('O seletor de linguagem', () => {
         screen.queryByRole('button', { name: `Começar ${NOMES[opcao.linguagem]}` }),
       ).not.toBeInTheDocument();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('a opção que não tem botão tem a razão legível, não uma imagem', () => {
     // A razão é texto, e não um `title` nem uma cor. Uma cor não se lê com
@@ -169,7 +188,7 @@ describe('O seletor de linguagem', () => {
     render(<SeletorLinguagem opcoes={CATALOGO} aoEscolher={() => {}} />);
     const opcao = CATALOGO.find((o) => !o.pronta)!;
     expect(screen.getByText(opcao.falta)).toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('A entrada do produto', () => {
@@ -180,7 +199,7 @@ describe('A entrada do produto', () => {
     expect(screen.getByRole('heading', { name: NOMES.python })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: NOMES.java })).toBeInTheDocument();
     expect(screen.queryByText('O que é uma variável')).not.toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 
   it('escolher Python abre a lição dessa linguagem', () => {
     render(<Aplicacao />);
@@ -189,7 +208,7 @@ describe('A entrada do produto', () => {
     // lição qualquer: é a escolha que decidiu o que se ensina (§0).
     expect(screen.getByRole('heading', { name: 'O que é uma variável' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: NOMES.python })).not.toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 
   it('não escreve o nome de nenhuma lição à mão', () => {
     // A chave da lição sai do `TEXTOS`, e não de uma constante no ecrã. Uma
@@ -201,5 +220,5 @@ describe('A entrada do produto', () => {
     // Se a chave viesse de uma constante, trocar a constante abriria uma
     // lição inexistente e o ecrã mostraria o aviso de «Ainda não há lição».
     expect(screen.queryByText(/Ainda não há lição/)).not.toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 });

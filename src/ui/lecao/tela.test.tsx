@@ -110,7 +110,7 @@ describe('O ecrã da lição', () => {
     expect(screen.getByRole('heading', { level: 1, name: LICAO.titulo })).toBeInTheDocument();
     expect(textoDoEcran()).toContain(LICAO.porqueTitulo.trim());
     expect(textoDoEcran()).toContain(LICAO.passos[0]?.porque.trim());
-  });
+  }, PASSO_A_PASSO);
 
   it('diz em que passo está e o que esse passo é', () => {
     // Quem não sabe onde vai não sabe se já chegou. E o rótulo da fase é o
@@ -118,7 +118,7 @@ describe('O ecrã da lição', () => {
     abrir(3);
     expect(textoDoEcran()).toContain(`Passo 4 de ${LICAO.passos.length}`);
     expect(textoDoEcran()).toContain(ROTULOS[LICAO.passos[3]?.fase ?? 'fazer']);
-  });
+  }, PASSO_A_PASSO);
 
   it('cada passo mostra a sua instrução, e não a de outro', () => {
     // A instrução é o `porque` do passo. Uma ecrã que mostrasse sempre o
@@ -166,7 +166,7 @@ describe('O painel segue a fonte do momento', () => {
     expect(screen.getByTestId('area-blocos')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'O robô' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Correr o programa' })).toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 
   it('a lição de Python não tem um único momento de texto, e o ecrã não finge que tem', () => {
     // Este teste diz uma coisa verdadeira e chata: a primeira lição é toda de
@@ -178,7 +178,7 @@ describe('O painel segue a fonte do momento', () => {
     expect(comTexto).toHaveLength(0);
     abrir(0);
     expect(screen.queryByLabelText(/O teu código em/)).not.toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 
   it('um momento de texto traz o editor e tira os blocos', () => {
     // E o inverso do teste acima: quando o momento é de texto, o ecrã não
@@ -195,7 +195,7 @@ describe('O painel segue a fonte do momento', () => {
     expect(screen.queryByTestId('area-blocos')).not.toBeInTheDocument();
     expect(screen.queryByTestId('robo')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Correr o programa' })).not.toBeInTheDocument();
-  });
+  }, PASSO_A_PASSO);
 
   it('o editor diz em que linguagem se escreve, e escreve o que o passo traz', () => {
     // O `id` do editor é `codigo-<linguagem>`, e o texto que lá está é o do
@@ -206,7 +206,7 @@ describe('O painel segue a fonte do momento', () => {
     render(<Tela linguagem="python" licao={derivada} />);
     const editor = screen.getByLabelText(/O teu código em/);
     expect(editor).toHaveAttribute('id', 'codigo-python');
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('O programa do passo já está no ecrã quando a pessoa chega', () => {
@@ -250,7 +250,7 @@ describe('O programa do passo já está no ecrã quando a pessoa chega', () => {
     abrir(indice);
     correr();
     expect(ecra().querySelector('.sonda-veredicto')?.textContent ?? '').toContain('viste');
-  });
+  }, PASSO_A_PASSO);
 
   it('quando o programa do passo ainda não dá o erro, o ecrã diz o que aconteceu e não diz que viste', () => {
     // O caso negativo, e é o que dá sentido ao primeiro. Sem ele, um ecrã
@@ -264,7 +264,7 @@ describe('O programa do passo já está no ecrã quando a pessoa chega', () => {
     const veredicto = ecra().querySelector('.sonda-veredicto')?.textContent ?? '';
     expect(veredicto).not.toContain('viste');
     expect(veredicto).toMatch(/O que aconteceu|aconteceu/i);
-  });
+  }, PASSO_A_PASSO);
 
   it('quando não acontece nada, o ecrã diz que não aconteceu nada', () => {
     // Passo 4 da lição: o programa que o ecrã dá é `total = 'olá'`, que em
@@ -278,7 +278,7 @@ describe('O programa do passo já está no ecrã quando a pessoa chega', () => {
     const veredicto = ecra().querySelector('.sonda-veredicto')?.textContent ?? '';
     expect(veredicto).toMatch(/Observacao/);
     expect(veredicto).toMatch(/não aconteceu nada|Nada aconteceu/i);
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('O que o motor diz quando o programa falha', () => {
@@ -304,7 +304,7 @@ describe('O que o motor diz quando o programa falha', () => {
       expect(painel?.textContent ?? '').toContain(primeiro.porque);
       if ('remedio' in primeiro) expect(painel?.textContent ?? '').toContain(primeiro.remedio);
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('o nome da variável que falta é dito à pessoa, e não só «erro»', () => {
     // O ponto 3 do `Review Focus`. Um erro que não diz qual é a variável
@@ -317,7 +317,7 @@ describe('O que o motor diz quando o programa falha', () => {
     const painel = ecra().querySelector('.erros')?.textContent ?? '';
     expect(primeiro?.porque ?? '').toContain('total');
     expect(painel).toContain('total');
-  });
+  }, PASSO_A_PASSO);
 
   it('os erros desaparecem quando o passo muda', () => {
     // Um erro é o que aconteceu numa corrida. Mostrá-lo no passo seguinte
@@ -330,7 +330,7 @@ describe('O que o motor diz quando o programa falha', () => {
     carregar('Ver a resposta');
     carregar('Continuar');
     expect(ecra().querySelector('.erros')).toBeNull();
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('Continuar', () => {
@@ -343,7 +343,7 @@ describe('Continuar', () => {
     expect(textoDoEcran()).toContain(LICAO.passos[ficha]?.momentos[0]?.texto ?? 'x');
     carregar('Continuar');
     expect(textoDoEcran()).toContain(LICAO.passos[ficha]?.momentos[1]?.texto ?? 'x');
-  });
+  }, PASSO_A_PASSO);
 
   it('no último momento passa para o passo seguinte', () => {
     // O botão que só avançava momento deixava a pessoa presa no fim do
@@ -363,7 +363,7 @@ describe('Continuar', () => {
       carregar('Continuar');
     }
     expect(textoDoEcran()).toContain(`Passo ${ficha + 2} de ${LICAO.passos.length}`);
-  });
+  }, PASSO_A_PASSO);
 
   it('num passo de um momento só, «Continuar» leva ao passo seguinte', () => {
     // Dez dos onze passos são de um momento só. Se «Continuar» não atravessa
@@ -372,7 +372,7 @@ describe('Continuar', () => {
     correr();
     carregar('Continuar');
     expect(textoDoEcran()).toContain(`Passo 2 de ${LICAO.passos.length}`);
-  });
+  }, PASSO_A_PASSO);
 
   it('não atravessa um momento que ainda não foi visto, e diz o que falta', () => {
     // O probe decide se o momento está visto — mas o ecrã tem de dizer isso,
@@ -382,7 +382,7 @@ describe('Continuar', () => {
     carregar('Continuar');
     expect(textoDoEcran()).toContain(`Passo 1 de ${LICAO.passos.length}`);
     expect(textoDoEcran()).toMatch(/falta|não.*visto|correr/i);
-  });
+  }, PASSO_A_PASSO);
 
   it('uma corrida que não bate com a sondagem não abre a porta', () => {
     // O teste acima mede o que o ecrã **diz**; este mede o que o ecrã
@@ -397,7 +397,7 @@ describe('Continuar', () => {
     expect(ecra().querySelector('.passo-falta'), 'a linha do que falta desapareceu').not.toBeNull();
     carregar('Continuar');
     expect(textoDoEcran()).toContain(`Passo ${indice + 1} de ${LICAO.passos.length}`);
-  });
+  }, PASSO_A_PASSO);
 
   it('uma corrida que bate com a sondagem abre a porta sem o reveal', () => {
     // E o inverso, pelo mesmo caminho: sem isto, «a corrida não abre» podia
@@ -408,7 +408,7 @@ describe('Continuar', () => {
     expect(ecra().querySelector('.passo-falta'), 'o momento ficou por ver').toBeNull();
     carregar('Continuar');
     expect(textoDoEcran()).toContain(`Passo ${indice + 2} de ${LICAO.passos.length}`);
-  });
+  }, PASSO_A_PASSO);
 
   it('«Ver a resposta» marca o momento como visto e diz que foi revelada', () => {
     // A fuga honesta. A sondagem é o que julga, mas uma pessoa que não
@@ -422,7 +422,7 @@ describe('Continuar', () => {
     );
     carregar('Continuar');
     expect(textoDoEcran()).toContain(`Passo 2 de ${LICAO.passos.length}`);
-  });
+  }, PASSO_A_PASSO);
 
   it('a resposta revelada é a razão esperada pela sondagem, e não a do motor', () => {
     // São duas fontes diferentes e é uma distinção que vale a pena manter
@@ -434,7 +434,7 @@ describe('Continuar', () => {
     abrir(indice);
     carregar('Ver a resposta');
     expect(textoDoEcran()).toContain((sonda?.esperado.porque ?? '').trim());
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('A ficha de leitura', () => {
@@ -459,7 +459,7 @@ describe('A ficha de leitura', () => {
     const sexta = ecra().querySelector('[data-linha="6"]');
     expect(sexta?.textContent).toBe(linhas[5]);
     expect(sexta?.textContent?.startsWith('    ')).toBe(true);
-  });
+  }, PASSO_A_PASSO);
 
   it('pergunta linha a linha, e uma resposta com a palavra conta', () => {
     // A palavra não é a única resposta certa: `palavras` é uma lista, e
@@ -475,7 +475,7 @@ describe('A ficha de leitura', () => {
     fireEvent.change(campo, { target: { value: momento.palavras[0] ?? '' } });
     carregar('Continuar');
     expect(textoDoEcran()).toContain(passo?.momentos[1]?.texto ?? 'x');
-  });
+  }, PASSO_A_PASSO);
 
   it('uma resposta sem as palavras não é tratada como resposta, e o ecrã não diz «errado»', () => {
     // A §11 do produto: não há respostas erradas, há respostas que não dizem
@@ -489,7 +489,7 @@ describe('A ficha de leitura', () => {
     carregar('Continuar');
     expect(textoDoEcran()).not.toMatch(/errad|incorreto|wrong/i);
     expect(textoDoEcran()).toMatch(/falt|não.*cont/i);
-  });
+  }, PASSO_A_PASSO);
 
   it('a ficha só aparece no passo que a manda ler', () => {
     // Nove dos onze passos não têm ficha. Uma ficha em todos seria um
@@ -543,7 +543,7 @@ describe('O painel de texto diz onde o texto se afasta dos blocos', () => {
     for (const d of relatorio.divergencias) {
       expect(painel?.textContent ?? '').toContain(d.porque);
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('escrever o que os blocos escreveriam não mostra divergência nenhuma', () => {
     // E o inverso: um ecrã que mostra divergências quando não há nenhuma é
@@ -558,7 +558,7 @@ describe('O painel de texto diz onde o texto se afasta dos blocos', () => {
     fireEvent.change(screen.getByLabelText(/O teu código em/), { target: { value: gerado } });
     fireEvent.click(screen.getByRole('button', { name: 'Executar' }));
     expect(ecra().querySelector('.divergencias')).toBeNull();
-  });
+  }, PASSO_A_PASSO);
 
   it('o editor abre com o programa do passo já escrito, e não vazio', () => {
     // Um editor vazio num momento de texto é um editor que pede à pessoa para
@@ -568,7 +568,7 @@ describe('O painel de texto diz onde o texto se afasta dos blocos', () => {
     const esperado = emitir('python', blocoDe(derivada)).texto;
     render(<Tela linguagem="python" licao={derivada} />);
     expect((screen.getByLabelText(/O teu código em/) as HTMLTextAreaElement).value).toBe(esperado);
-  });
+  }, PASSO_A_PASSO);
 });
 
 /** O bloco do primeiro passo, ou uma falha com o nome do ficheiro. */

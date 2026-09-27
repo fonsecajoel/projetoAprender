@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dump } from 'js-yaml';
 import { CARREGAR, ErroDeAutoria, LICSOES, TEXTOS, temLicao } from './carregar';
-import { emitir } from '../projecoes/avaliar';
 import { FORMAS_POR_FAMILIA } from './esquema';
 import variavelPython from './python/variavel.yml?raw';
 
@@ -460,13 +459,15 @@ describe('a lição de Python que está no repositório', () => {
     expect(razao).toMatch(/referencia\.linhas|linhas/);
   });
 
-  it('cada programa de prova é escrito de verdade pela projeção da linguagem', () => {
-    const l = CARREGAR(variavelPython, 'python');
-    for (const s of l.sondas) {
-      if (s.prova.programa === undefined) continue;
-      expect(emitir('python', s.prova.programa).texto.length).toBeGreaterThan(0);
-    }
-  });
+  // A versão desta secção que dizia «cada programa de prova escreve alguma
+  // coisa» foi apagada na T13, e o motivo está escrito onde a substituiu.
+  // `texto.length > 0` passa com `undefined = 5`, que é o defeito
+  // que a conferência fraca deixou passar: a mutação que trocava `nome` por
+  // `NOME` no YAML pôs este ficheiro a vermelho, o `length > 0` ficou verde, e
+  // a única coisa que o apanhou foi a conferência de `portao.test.ts`, que
+  // existe porque este teste existia e era mais fraco. A regra nova é mais
+  // forte e está no sítio certo: em `portao.test.ts`, a correr sobre todas as
+  // lições em vez de uma.
 });
 
 function razaoDe(yaml: string): string {

@@ -11,6 +11,25 @@ import { obter } from '../projecoes/registo';
 import { CARREGAR } from '../conteudo/carregar';
 import variavelPython from '../conteudo/python/variavel.yml?raw';
 
+/** O tecto de tempo deste ficheiro, escrito à mão e posto em todos os testes.
+ *
+ *  Montar o ecrã é montar o Blockly, e o Blockly não é rápido: regista
+ *  blocos, mede um SVG que o jsdom não sabe medir, e monta a ferramenta.
+ *  Sozinho este ficheiro corre em menos de dois segundos por teste; a correr
+ *  ao lado dos outros, que é como o `npm test` o corre, passa dos cinco e o
+ *  teste morre de tempo esgotado sem que nada esteja errado. Já aconteceu
+ *  três vezes em três voltas, em três testes diferentes, e num commit que
+ * eria verde.
+ *
+ *  O tecto escreve-se à mão em vez de se subir o global, porque subir o
+ *  global é dizer que todos os testes são lentos quando estes são lentos por
+ *  uma razão que só estes têm. E vai em **todos** os testes do ficheiro, e
+ *  não numa lista dos lentos: essa lista seria uma segunda fonte de verdade
+ *  que divergiria no primeiro teste novo, e o teste novo morreria de tempo
+ *  esgotado sem ninguém saber porquê. */
+const PASSO_A_PASSO = 20_000;
+
+
 // ---------------------------------------------------------------------------
 // O cenário
 // ---------------------------------------------------------------------------
@@ -109,7 +128,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('lê o nome de um guardar do campo, e não do sítio errado', () => {
     // O `fields` do Blockly guarda o **valor cru** — `{"nome": "total"}` — e
@@ -127,7 +146,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('lê o texto que a pessoa escreveu, e não uma string vazia', () => {
     // O bloco `texto` do plano era uma caixa com outra caixa dentro, e o
@@ -142,7 +161,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('lê uma referência a uma variável, e só do bloco que a é', () => {
     // A regra antiga era «se tem um campo `NOME`, é uma referência». O bloco
@@ -163,7 +182,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('uma referência sem nome não é uma referência', () => {
     // Arrastar o bloco `variavel` sem escrever o nome dá um campo vazio, e um
@@ -182,7 +201,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('agrupa vários blocos de topo numa pilha', () => {
     const c = cenario((ws) => {
@@ -194,7 +213,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('lê a cadeia de instruções, que o Blockly guarda em `next`', () => {
     // Duas instruções ligadas. A primeira versão do tradutor lia
@@ -217,7 +236,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('o que sai do ecrã corre no motor sem um erro sequer', () => {
     const c = cenario((ws) => {
@@ -235,7 +254,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('um bloco que o Blockly não conhece passa em vez de rebentar', () => {
     // Um bloco do futuro é um bloco que esta tarefa ainda não conhece, e a
@@ -254,7 +273,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
       delete Blockly.Blocks['bloco_do_futuro'];
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('aceita as duas formas de estado, porque um `null` calado é um produto morto', () => {
     // `workspaces.save` embrulha o estado; um estado escrito à mão não. A
@@ -265,7 +284,7 @@ describe('paraBlocoLeigo lê o que o Blockly dá', () => {
     const lista = [{ type: 'log', fields: {}, inputs: {} }];
     expect(paraBlocoLeigo({ blocks: lista })).not.toBeNull();
     expect(paraBlocoLeigo({ blocks: { languageVersion: 0, blocks: lista } })).not.toBeNull();
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('deBlocoLeigo é o caminho inverso, e os dois caminhos fecham', () => {
@@ -294,7 +313,7 @@ describe('deBlocoLeigo é o caminho inverso, e os dois caminhos fecham', () => {
     };
     const estado = { blocks: { languageVersion: 0, blocks: deBlocoLeigo(programa) } };
     expect(paraBlocoLeigo(estado)).toEqual(programa);
-  });
+  }, PASSO_A_PASSO);
 
   it('e o programa que sai de ecrã e volta a dar o mesmo texto', () => {
     // Esta é a prova que vale: a ida e a volta não podem mudar o programa. Um
@@ -322,7 +341,7 @@ describe('deBlocoLeigo é o caminho inverso, e os dois caminhos fecham', () => {
     } finally {
       c.libertar();
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('uma pilha volta a ser vários blocos de topo, e não um bloco `pilha`', () => {
     // Uma `pilha` não é um bloco do Blockly: são vários blocos de topo. Se o
@@ -335,7 +354,7 @@ describe('deBlocoLeigo é o caminho inverso, e os dois caminhos fecham', () => {
     expect(saida).toHaveLength(1);
     expect(saida[0]!.type).toBe('log');
     expect(deBlocoLeigo(null)).toEqual([]);
-  });
+  }, PASSO_A_PASSO);
 
   it('o que o Bloco não consegue levar, fica fora, e não vira um bloco inventado', () => {
     // Um valor sem forma conhecida — um booleano, antes de a Task 11 registar
@@ -344,7 +363,7 @@ describe('deBlocoLeigo é o caminho inverso, e os dois caminhos fecham', () => {
     // como uma coisa que ele não colocou. E «vazio» é **visível**.
     const saida = deBlocoLeigo({ type: 'log', fields: {}, inputs: { VALOR: { valor: true } } });
     expect(saida[0]!.inputs?.VALOR).toBeUndefined();
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('o vocabulário vem da projeção, e não de uma lista neste ficheiro', () => {
@@ -354,7 +373,7 @@ describe('o vocabulário vem da projeção, e não de uma lista neste ficheiro',
     // segue a lista.
     expect(registarBlocos('python')).toEqual(obter('python').blocos);
     expect(registarBlocos('java')).toEqual(obter('java').blocos);
-  });
+  }, PASSO_A_PASSO);
 
   it('a caixa de ferramentas oferece a linguagem escolhida, e nada mais', () => {
     const caixa = criarToolbox('python');
@@ -365,7 +384,7 @@ describe('o vocabulário vem da projeção, e não de uma lista neste ficheiro',
     // bloco duas vezes no ecrã.
     const valores = caixa.contents.find((c) => c.name === 'Números e texto')!;
     expect(valores.contents.map((b) => b.type)).toEqual(['dador_num', 'texto', 'variavel']);
-  });
+  }, PASSO_A_PASSO);
 
   it('as duas linguagens que existem dão a mesma lista, e isso é de propósito', () => {
     // O mesmo conjunto de instruções em duas linguagens é o que faz a
@@ -374,7 +393,7 @@ describe('o vocabulário vem da projeção, e não de uma lista neste ficheiro',
     // redundante; com a frase em cima, é a afirmação de que a diferença
     // entre Python e Java ainda não chegou ao ecrã.
     expect(obter('java').blocos).toEqual(obter('python').blocos);
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('a área de blocos', () => {
@@ -387,7 +406,7 @@ describe('a área de blocos', () => {
     render(<Blocos chave="p1" linguagem="python" aoMudar={aoMudar} carregar={carregar} />);
     expect(screen.getByTestId('area-blocos')).toBeInTheDocument();
     expect(aoMudar).toHaveBeenCalledWith(carregar);
-  });
+  }, PASSO_A_PASSO);
 
   it('quando o ecrã muda, o programa novo é dito — e não só na montagem', async () => {
     const aoMudar = vi.fn();
@@ -412,7 +431,7 @@ describe('a área de blocos', () => {
     await waitFor(() => expect(aoMudar.mock.calls.length).toBeGreaterThan(naMontagem));
     const ultimo = aoMudar.mock.calls.at(-1)![0];
     expect(emitir('python', ultimo).texto).toBe("print('olá')\n");
-  });
+  }, PASSO_A_PASSO);
 
   it('o ecrã sobrevive a um novo `aoMudar`, que é o que acontece a cada passo', () => {
     // Se `aoMudar` estivesse no array de dependências, cada estado novo
@@ -425,7 +444,7 @@ describe('a área de blocos', () => {
     const depois = vi.fn();
     rerender(<Blocos chave="p1" linguagem="python" aoMudar={depois} />);
     expect(ecraPrincipal().getAllBlocks(false)).toHaveLength(1);
-  });
+  }, PASSO_A_PASSO);
 
   it('mudar a chave recria o ecrã, e é para isso que a chave existe', () => {
     // O contrário do teste anterior: com uma chave nova, o programa antigo tem
@@ -436,7 +455,7 @@ describe('a área de blocos', () => {
     d.render();
     rerender(<Blocos chave="p2" linguagem="python" aoMudar={vi.fn()} />);
     expect(ecraPrincipal().getAllBlocks(false)).toHaveLength(0);
-  });
+  }, PASSO_A_PASSO);
 });
 
 describe('a lição inteira passa pelo ecrã sem perder uma letra', () => {
@@ -488,7 +507,7 @@ describe('a lição inteira passa pelo ecrã sem perder uma letra', () => {
       expect(volta, `o bloco ${b.type} não voltou`).toEqual(b);
       expect(emitir('python', volta).texto).toBe(emitir('python', b).texto);
     }
-  });
+  }, PASSO_A_PASSO);
 
   it('e nenhum deles escreve `undefined` depois da volta', () => {
     // A prova negativa. Um tradutor que perde um campo dá `undefined` e o
@@ -499,5 +518,5 @@ describe('a lição inteira passa pelo ecrã sem perder uma letra', () => {
       expect(escrito).not.toMatch(/undefined/);
       expect(escrito).not.toMatch(/\[object Object\]/);
     }
-  });
+  }, PASSO_A_PASSO);
 });

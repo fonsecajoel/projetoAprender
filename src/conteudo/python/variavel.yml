@@ -232,10 +232,12 @@ sondas:
     esperado:
       classe: FalhaRuntime
       porque: >
-        Lê-se até `log`, que rebenta: é a primeira das duas falhas, e é uma
-        falha de função, não de tipo. A segunda vem cinco linhas depois, quando
-        o `total` — que deixou de ser número na linha 10 — chega a um sítio
-        que precisa de número. Nenhuma das duas diz onde está a causa.
+        Lê-se até à linha 12, onde `log` rebenta: essa função não existe, e é a
+        única falha deste ficheiro. Depois da linha 12 já não corre nada, e é
+        por isso que as linhas 13, 14 e 15 não têm nada a mostrar. O
+        `total = 'olá'` da linha 10 foi aceite sem uma pergunta, e a linha 15 é
+        onde isso se pagaria — mas nunca lá chega. Nenhuma das duas coisas diz
+        onde está a causa.
 
 passos:
   - fase: explicar
@@ -427,8 +429,8 @@ passos:
   - fase: fazer
     porque: >
       Lê o ficheiro de quinze linhas inteiro. Para cada linha, diz o que ela
-      faz. Depois diz quais são as duas que rebentam, e qual é a que as
-      estragou. O ficheiro está no painel; não o executes, lê-lo.
+      faz. Depois diz onde é que o programa morre, e o que ia acontecer se
+      não morresse aí. O ficheiro está no painel; não o executes, lê-lo.
     bloco:
       type: pilha
     sonda: o-que-o-ficheiro-diz
@@ -447,7 +449,7 @@ passos:
         fonte: leitura
       - id: l3
         texto: 'O que é o nome, e o que é a palavra entre aspas?'
-        palavras: ['texto', 'palavra', 'string', 'guarda', 'atribui', 'nome']
+        palavras: ['texto', 'string', 'guarda', 'atribui', 'atribuição']
         fonte: leitura
       - id: l4
         texto: 'O que é True aqui?'
@@ -475,7 +477,7 @@ passos:
         fonte: leitura
       - id: l10
         texto: 'O que muda na linha 10?'
-        palavras: ['texto', 'palavra', 'string', 'total', 'deixa', 'muda', 'troca', 'sobrescreve']
+        palavras: ['texto', 'palavra', 'string', 'total', 'deixa', 'troca', 'sobrescreve']
         fonte: leitura
       - id: l11
         texto: 'O que faz a linha 11?'

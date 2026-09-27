@@ -7,6 +7,7 @@ import { val } from '../nucleo/tipos';
 import type { FalhaRuntime, Tipo, Valor } from '../nucleo/tipos';
 import { BLOCOS_IMPERATIVOS } from './python';
 import { Emissor, textoDe } from './emissor';
+import { eNome, eventosDeConta, ladoCulpado } from './termos';
 import type { Gerado, LerResultado, Projection } from './tipos';
 
 // ---------------------------------------------------------------------------
@@ -160,10 +161,8 @@ const CICLO = /^for\s*\(\s*int\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*0;\s*[A-Za-z_][A-Z
 const SEM_TIPO = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/;
 // Um literal numérico de Java. Sem sinal: o `-` é uma operação, não parte do
 // número, e `1.5` é o único formato com ponto que a Java aceita.
-const NUMERO = /^\d+(\.\d+)?$/;
+const NÚMERO = /^\d+(\.\d+)?$/;
 const TEXTO = /^"((?:[^"\\]|\\.)*)"$/;
-const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 
 function erro(passo: number, porque: string, remedio: string): FalhaRuntime {
   return {
@@ -183,7 +182,7 @@ function desescapar(s: string): string {
 
 function valorDe(termo: string, passo: number): Valor | null {
   const origem = { bloco: 'texto', ranhura: 0, passo };
-  if (NUMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
+  if (NÚMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
   const txt = TEXTO.exec(termo);
   if (txt) return val('texto', desescapar(txt[1]!), AMOSTRA, origem);
   if (termo === 'true') return val('lógico', true, AMOSTRA, origem);
@@ -300,13 +299,28 @@ function lerImprimir(dentro: string, passo: number): LerResultado {
   if (valor !== null) {
     return { eventos: [{ passo, tipo: 'imprimir', valor }], erros: [] };
   }
-  if (NOME.test(dentro)) {
+  if (eNome(dentro)) {
     // O `println` é sobrecarregado e aceita qualquer tipo. Um `usar` com
     // `tipoValor` viria dizer "total guarda número, e este sítio precisa de
     // texto" — um erro que a Java não tem, na linha que a Java aceita, e o
     // aluno concluiria que o produto também se engana.
     return { eventos: [{ passo, tipo: 'usar', nome: dentro }], erros: [] };
   }
+
+  // Uma conta dentro do `println`. **Faltava aqui**, e a segunda projeção
+  // foi o que mostrou: as duas percebiam uma conta depois de um `=` e nenhuma
+  // dentro de um `println`, e `println(total + 1)` é a linha com que a lição
+  // de Java mostra que usar um valor recusado também é erro.
+  //
+  // O `tipoDosNomes` é `undefined`, e é a diferença real entre as duas
+  // linguagens: **`"olá" + 1` dá `"olá1"` em Java e compila**, e `1 + "olá"`
+  // dá `"1olá"`. Qual dos lados é número decide, e o tipo guardado só existe
+  // quando o programa corre, portanto este sítio não pode exigir nada. No
+  // Python é o contrário — `'olá' + 1` é erro logo a correr — e por isso o
+  // Python passa `'número'` no mesmo sítio. A mesma conta, a mesma forma, e o
+  // que muda é uma palavra.
+  const conta = eventosDeConta(dentro, passo, (t) => valorDe(t, passo), undefined);
+  if (conta !== null) return { eventos: conta, erros: [] };
   return {
     eventos: [],
     erros: [
@@ -358,40 +372,24 @@ function lerAtribuir(
     };
   }
 
-  if (NOME.test(resto)) {
+  if (eNome(resto)) {
     return { eventos: [{ passo, tipo: 'usar', nome: resto }], erros: [] };
   }
 
-  const expressao = EXPRESSAO.exec(resto);
-  if (expressao) {
-    const esquerda = expressao[1]!;
-    const direita = expressao[3]!;
-    const legivel = (t: string): boolean => valorDe(t, passo) !== null || NOME.test(t);
-    if (legivel(esquerda) && legivel(direita)) {
-      const eventos: EventoLido[] = [];
-      // O uso vem **antes** da operação, e é ele que carrega o tipo exigido.
-      // Em Java a incompatibilidade sai disto: `String total = ...;` seguido de
-      // `int total = total + 1;` é recusado pelo compilador, e é o `restricao`
-      // desta linha que traz o `número` que o `total` não tem.
-      for (const t of [esquerda, direita]) {
-        if (NOME.test(t)) eventos.push({ passo, tipo: 'usar', nome: t, tipoValor: 'número' });
-      }
-      eventos.push({
-        passo,
-        tipo: 'operar',
-        operacao: expressao[2] as '+' | '-' | '*' | '/',
-        a: valorDe(esquerda, passo),
-        b: valorDe(direita, passo),
-      });
-      return { eventos, erros: [] };
-    }
+  // A leitura da conta é a do leitor partilhado, e a diferença entre exigir
+  // número e não exigir está escrita num sítio só — não em dois, que é como
+  // os dois ficheiros divergiam.
+  const conta = eventosDeConta(resto, passo, (t) => valorDe(t, passo), undefined);
+  if (conta !== null) return { eventos: conta, erros: [] };
+  const culpado = ladoCulpado(resto, (t) => valorDe(t, passo));
+  if (culpado !== null) {
     return {
       eventos: [],
       erros: [
         erro(
           passo,
           `Esta conta ainda não sei ler: "${resto}". Numa conta, cada lado tem de ser um número, um texto, true/false, ou o nome de outra variável.`,
-          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, true/false, ou o nome de outra variável. O termo "${legivel(esquerda) ? direita : esquerda}" não é nenhum dos quatro.`,
+          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, true/false, ou o nome de outra variável. O termo "${culpado}" não é nenhum dos quatro.`,
         ),
       ],
     };

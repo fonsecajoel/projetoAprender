@@ -5,7 +5,7 @@ import type { Recusa, RestricaoDeTipo, Valor } from './tipos';
 
 const O = { bloco: 'guardar', ranhura: 0, passo: 1 };
 
-function numero(n: number): Valor {
+function num(n: number): Valor {
   return val('número', n, EXPLICACAO_VAZIA, O);
 }
 function palavra(s: string): Valor {
@@ -29,10 +29,10 @@ describe('regra dura: nenhuma recusa existe sem porque', () => {
   it('toda recusa no trace tem porque não vazio', () => {
     const t = construir();
     t.recusa(recusaNumeroTexto);
-    const unico = t.eventos.find((e) => e.tipo === 'erro');
-    expect(unico).toBeDefined();
-    if (!unico || unico.tipo !== 'erro') throw new Error('esperava um evento de erro');
-    expect(unico.erro.porque.length).toBeGreaterThan(0);
+    const único = t.eventos.find((e) => e.tipo === 'erro');
+    expect(único).toBeDefined();
+    if (!único || único.tipo !== 'erro') throw new Error('esperava um evento de erro');
+    expect(único.erro.porque.length).toBeGreaterThan(0);
   });
 });
 
@@ -51,8 +51,8 @@ describe('nenhuma referência a outras linguagens', () => {
 
 describe('registar', () => {
   it('produz um evento de valor com o passo certo', () => {
-    const e = registar(3, numero(1));
-    expect(e).toEqual({ tipo: 'valor', passo: 3, valor: numero(1) });
+    const e = registar(3, num(1));
+    expect(e).toEqual({ tipo: 'valor', passo: 3, valor: num(1) });
   });
 });
 
@@ -63,9 +63,9 @@ describe('cabeEm', () => {
   // da linha passava a ser mentira. `número em texto` só é falso se o
   // sítio for de texto, e é por isso que o sítio viaja na linha.
   const casos: Array<[string, RestricaoDeTipo, Valor, boolean]> = [
-    ['número em número', restricao('número'), numero(3), true],
+    ['número em número', restricao('número'), num(3), true],
     ['texto em número', restricao('número'), palavra('olá'), false],
-    ['número em texto', restricao('texto'), numero(3), false],
+    ['número em texto', restricao('texto'), num(3), false],
     ['lógico em número', restricao('número'), logico(true), false],
     ['lógico em texto', restricao('texto'), logico(false), false],
     ['actor em número', restricao('número'), val('actor', 'coelho', EXPLICACAO_VAZIA, O), false],
@@ -75,9 +75,9 @@ describe('cabeEm', () => {
     ['null em número', restricao('número'), val('número', null, EXPLICACAO_VAZIA, O), false],
     ['NaN em número', restricao('número'), val('número', NaN, EXPLICACAO_VAZIA, O), false],
     ['Infinity em número', restricao('número'), val('número', Infinity, EXPLICACAO_VAZIA, O), false],
-    ['acima de RANGE_INTEIROS em número', restricao('número'), numero(1e9), false],
-    ['número recusado em número', restricao('número'), { ...numero(1), recusado: true }, false],
-    ['número recusado em texto', restricao('texto'), { ...numero(1), recusado: true }, false],
+    ['acima de RANGE_INTEIROS em número', restricao('número'), num(1e9), false],
+    ['número recusado em número', restricao('número'), { ...num(1), recusado: true }, false],
+    ['número recusado em texto', restricao('texto'), { ...num(1), recusado: true }, false],
   ];
   for (const [nome, raio, v, esperado] of casos) {
     it(`${nome} é ${esperado}`, () => {

@@ -17,7 +17,7 @@ describe('LINGUAGENS e NOMES', () => {
     expect(Object.keys(NOMES).sort()).toEqual([...LINGUAGENS].sort());
   });
 
-  it('nenhum nome é o identificador a gritar, excepto onde tem de ser', () => {
+  it('nenhum nome é o identificador a gritar, exceto onde tem de ser', () => {
     // A regra é "o nome é o que uma pessoa escreveria, não a chave em
     // maiúsculas". `SQL` é a exceção que confirma a regra: é um acrónimo,
     // escreve-se em maiúsculas em todo o lado, e `SQL` seria uma
@@ -53,7 +53,7 @@ describe('Explicacao', () => {
     expect(r1.porque).not.toMatch(nomes);
     expect(r1.remedio).not.toMatch(nomes);
 
-    const r2 = E(restricao('lista', 'numeros'), num(3));
+    const r2 = E(restricao('lista', 'números'), num(3));
     expect(r2.porque).not.toMatch(nomes);
     expect(r2.remedio).not.toMatch(nomes);
   });

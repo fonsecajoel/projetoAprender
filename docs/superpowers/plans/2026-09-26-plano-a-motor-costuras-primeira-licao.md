@@ -68,7 +68,7 @@ Cinco classes de erro ou modo de falha que a spec v2 implica, que nenhum teste d
 
 ## File Structure
 
-Os 43 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
+Os 44 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
 `- Create:` de cada tarefa — o que significa que se um ficheiro entrar na
 lista sem nenhuma tarefa o criar, ou sair da lista sem ser apagado de uma
 tarefa, esta secção está errada e o plano também. `java/variavel.yml` **não**
@@ -113,8 +113,13 @@ src/
     python.ts                          `emit` + `ler`. A primeira, completa.    T4
     java.ts                            `emit` + `ler`, e `declaracaoDe`.         T5
                                        A que prova a costura.
-    avaliar.ts                         emitir, avaliarTexto, comparar-texto,     T6
-                                       classificar.
+    avaliar.ts                         emitir, avaliarTexto, classificar,      T6
+                                       bate, divergir.
+    termos.ts                          NOME, EXPRESSAO, eNome, eventosDeConta,   T6
+                                       ladoCulpado. A leitura de um termo é
+                                       igual nas seis; o que muda é o que cada
+                                       linguagem exige dele, e isso vem por
+                                       argumento.
     dourados.test.ts                   Um ficheiro dourado por projeção.        T13
 
   conteudo/
@@ -191,7 +196,7 @@ describe('LINGUAGENS e NOMES', () => {
     expect(Object.keys(NOMES).sort()).toEqual([...LINGUAGENS].sort());
   });
 
-  it('nenhum nome é o identificador a gritar, excepto onde tem de ser', () => {
+  it('nenhum nome é o identificador a gritar, exceto onde tem de ser', () => {
     // A regra é "o nome é o que uma pessoa escreveria, não a chave em
     // maiúsculas". `SQL` é a exceção que confirma a regra: é um acrónimo,
     // escreve-se em maiúsculas em todo o lado, e `SQL` seria uma
@@ -227,7 +232,7 @@ describe('Explicacao', () => {
     expect(r1.porque).not.toMatch(nomes);
     expect(r1.remedio).not.toMatch(nomes);
 
-    const r2 = E(restricao('lista', 'numeros'), num(3));
+    const r2 = E(restricao('lista', 'números'), num(3));
     expect(r2.porque).not.toMatch(nomes);
     expect(r2.remedio).not.toMatch(nomes);
   });
@@ -534,7 +539,7 @@ import type { Recusa, RestricaoDeTipo, Valor } from './tipos';
 
 const O = { bloco: 'guardar', ranhura: 0, passo: 1 };
 
-function numero(n: number): Valor {
+function num(n: number): Valor {
   return val('número', n, EXPLICACAO_VAZIA, O);
 }
 function palavra(s: string): Valor {
@@ -558,10 +563,10 @@ describe('regra dura: nenhuma recusa existe sem porque', () => {
   it('toda recusa no trace tem porque não vazio', () => {
     const t = construir();
     t.recusa(recusaNumeroTexto);
-    const unico = t.eventos.find((e) => e.tipo === 'erro');
-    expect(unico).toBeDefined();
-    if (!unico || unico.tipo !== 'erro') throw new Error('esperava um evento de erro');
-    expect(unico.erro.porque.length).toBeGreaterThan(0);
+    const único = t.eventos.find((e) => e.tipo === 'erro');
+    expect(único).toBeDefined();
+    if (!único || único.tipo !== 'erro') throw new Error('esperava um evento de erro');
+    expect(único.erro.porque.length).toBeGreaterThan(0);
   });
 });
 
@@ -580,8 +585,8 @@ describe('nenhuma referência a outras linguagens', () => {
 
 describe('registar', () => {
   it('produz um evento de valor com o passo certo', () => {
-    const e = registar(3, numero(1));
-    expect(e).toEqual({ tipo: 'valor', passo: 3, valor: numero(1) });
+    const e = registar(3, num(1));
+    expect(e).toEqual({ tipo: 'valor', passo: 3, valor: num(1) });
   });
 });
 
@@ -592,9 +597,9 @@ describe('cabeEm', () => {
   // da linha passava a ser mentira. `número em texto` só é falso se o
   // sítio for de texto, e é por isso que o sítio viaja na linha.
   const casos: Array<[string, RestricaoDeTipo, Valor, boolean]> = [
-    ['número em número', restricao('número'), numero(3), true],
+    ['número em número', restricao('número'), num(3), true],
     ['texto em número', restricao('número'), palavra('olá'), false],
-    ['número em texto', restricao('texto'), numero(3), false],
+    ['número em texto', restricao('texto'), num(3), false],
     ['lógico em número', restricao('número'), logico(true), false],
     ['lógico em texto', restricao('texto'), logico(false), false],
     ['actor em número', restricao('número'), val('actor', 'coelho', EXPLICACAO_VAZIA, O), false],
@@ -604,9 +609,9 @@ describe('cabeEm', () => {
     ['null em número', restricao('número'), val('número', null, EXPLICACAO_VAZIA, O), false],
     ['NaN em número', restricao('número'), val('número', NaN, EXPLICACAO_VAZIA, O), false],
     ['Infinity em número', restricao('número'), val('número', Infinity, EXPLICACAO_VAZIA, O), false],
-    ['acima de RANGE_INTEIROS em número', restricao('número'), numero(1e9), false],
-    ['número recusado em número', restricao('número'), { ...numero(1), recusado: true }, false],
-    ['número recusado em texto', restricao('texto'), { ...numero(1), recusado: true }, false],
+    ['acima de RANGE_INTEIROS em número', restricao('número'), num(1e9), false],
+    ['número recusado em número', restricao('número'), { ...num(1), recusado: true }, false],
+    ['número recusado em texto', restricao('texto'), { ...num(1), recusado: true }, false],
   ];
   for (const [nome, raio, v, esperado] of casos) {
     it(`${nome} é ${esperado}`, () => {
@@ -3528,7 +3533,7 @@ describe('a projeção e a sua política', () => {
 
   it('emit e ler são o mesmo objeto, e é para isso que serve', () => {
     // Escrever `total = 5` e ler `total = 5` é a mesma pessoa. Se `emit` e
-    // `ler` fossem dois objectos separados, cada um com as suas ideias
+    // `ler` fossem dois objetos separados, cada um com as suas ideias
     // sobre o que é Python, a lição ensinaria duas linguagens diferentes
     // com o mesmo nome.
     const escrito = python.emit(pilha(guardar('total', 5))).texto;
@@ -3883,6 +3888,7 @@ import type { EventoLido } from '../nucleo/semantica';
 import { val } from '../nucleo/tipos';
 import type { FalhaRuntime, Valor } from '../nucleo/tipos';
 import { Emissor, textoDe } from './emissor';
+import { eNome, eventosDeConta, ladoCulpado } from './termos';
 import type { Gerado, LerResultado, Projection } from './tipos';
 
 export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
@@ -3979,7 +3985,7 @@ const CICLO = /^for\s+_\s+in\s+range\(\s*(\d+)\s*\)\s*:$/;
 // Um inteiro, ou um inteiro com casas decimais. `x = 1.5` é Python e
 // compila; recusá-lo é dizer ao aluno que está a escrever uma coisa que não
 // é Python, e ele acredita.
-const NUMERO = /^[-+]?\d+(\.\d+)?$/;
+const NÚMERO = /^[-+]?\d+(\.\d+)?$/;
 // Texto entre aspas simples **ou duplas** — e nada mais. A casa é a das
 // simples; o que se aceita são as duas. Recusar `x = "olá"` seria ensinar o
 // aluno a desconfiar do produto, que é o pior que um professor de sintaxe
@@ -3987,8 +3993,6 @@ const NUMERO = /^[-+]?\d+(\.\d+)?$/;
 // Python que `x = \`olá\`` é erro de sintaxe, e aceitar aqui seria trocar um
 // erro que o aluno cometia por um que o produto inventava.
 const TEXTO = /^(['"])([\s\S]*?)\1$/;
-const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 
 function erro(passo: number, porque: string, remedio: string): FalhaRuntime {
   return {
@@ -4008,7 +4012,7 @@ function desescapar(s: string): string {
 
 function valorDe(termo: string, passo: number): Valor | null {
   const origem = { bloco: 'texto', ranhura: 0, passo };
-  if (NUMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
+  if (NÚMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
   const txt = TEXTO.exec(termo);
   if (txt) return val('texto', desescapar(txt[2]!), AMOSTRA, origem);
   if (termo === 'True') return val('lógico', true, AMOSTRA, origem);
@@ -4072,7 +4076,7 @@ function tentarLer(t: string, passo: number): LerResultado {
 }
 
 function lerImprimir(dentro: string, passo: number): LerResultado {
-  if (NUMERO.test(dentro)) {
+  if (NÚMERO.test(dentro)) {
     return {
       eventos: [{ passo, tipo: 'imprimir', valor: valorDe(dentro, passo)! }],
       erros: [],
@@ -4082,7 +4086,7 @@ function lerImprimir(dentro: string, passo: number): LerResultado {
   if (txt) {
     return { eventos: [{ passo, tipo: 'imprimir', valor: valorDe(dentro, passo)! }], erros: [] };
   }
-  if (NOME.test(dentro)) {
+  if (eNome(dentro)) {
     // `print(total)` não declara tipo. Emitir aqui um `usar` com
     // `tipoValor: 'texto'` fazia o núcleo responder "total guarda número, e
     // este sítio precisa de texto" — um erro que o Python não tem, numa
@@ -4090,6 +4094,18 @@ function lerImprimir(dentro: string, passo: number): LerResultado {
     // impõe tipo a nada.
     return { eventos: [{ passo, tipo: 'usar', nome: dentro }], erros: [] };
   }
+
+  // Uma conta dentro do `print`. **Faltava aqui, e é a linha de que a lição
+  // de Python precisa:** `total = 'olá'` passa, e é `print(total + 1)` que
+  // diz que este sítio precisa de número. Sem esta rama o produto recusava a
+  // linha — e com a recusa certa, por motivo errado, que é pior do que não
+  // dizer nada.
+  //
+  // O `tipoDosNomes` é `'número'` **por causa do Python**: `'olá' + 1` é erro
+  // logo a correr, porque o Python não converte nada sozinho. O mesmo código
+  // na Java passa `undefined`, e a diferença está escrita num lugar só.
+  const conta = eventosDeConta(dentro, passo, (t) => valorDe(t, passo), 'número');
+  if (conta !== null) return { eventos: conta, erros: [] };
   return {
     eventos: [],
     erros: [
@@ -4130,56 +4146,34 @@ function lerAtribuir(nome: string, resto: string, passo: number): LerResultado {
     };
   }
 
-  if (NOME.test(resto)) {
+  if (eNome(resto)) {
     // Uma cópia não impõe tipo ao destino. `x = total` é válido com
     // qualquer coisa em `total`.
     return { eventos: [{ passo, tipo: 'usar', nome: resto }], erros: [] };
   }
 
-  const expressao = EXPRESSAO.exec(resto);
-  if (expressao) {
-    const esquerda = expressao[1]!;
-    const direita = expressao[3]!;
-    // Um termo de uma conta é um número, um texto, True/False — ou o nome
-    // de outra variável. Um nome não é um termo inválido: é o termo mais
-    // comum, e é o que faz `total = total + 1` ser a linha da lição. O que
-    // não é um termo é `2 - 3` escrito do lado direito de um `1 -`.
-    const legivel = (t: string): boolean => valorDe(t, passo) !== null || NOME.test(t);
-    if (legivel(esquerda) && legivel(direita)) {
-      const eventos: EventoLido[] = [];
-      // Um nome do lado esquerdo é um uso, e o uso vem **antes** da
-      // operação: `total = total + 1` com `total` por guardar tem de falhar
-      // em `total`, não na soma. A ordem dos eventos é o que decide isso.
-      //
-      // O uso declara `número` porque é isso que o sítio exige: em Python
-      // `+ - * /` são operações numéricas. E é este `tipoValor` que dá a
-      // linha mais importante da lição — `total = 'olá'` passa, e a linha
-      // seguinte é que rebenta com "total guarda texto, e este sítio
-      // precisa de número". Se a conta não declarasse nada, o produto não
-      // teria como dizer ao aluno a coisa mais importante que sabe sobre
-      // Python: que o texto entra em silêncio e rebenta em baixo.
-      for (const t of [esquerda, direita]) {
-        if (NOME.test(t)) eventos.push({ passo, tipo: 'usar', nome: t, tipoValor: 'número' });
-      }
-      eventos.push({
-        passo,
-        tipo: 'operar',
-        operacao: expressao[2] as '+' | '-' | '*' | '/',
-        a: valorDe(esquerda, passo),
-        b: valorDe(direita, passo),
-      });
-      return { eventos, erros: [] };
-    }
+  // Um termo de uma conta é um número, um texto, True/False — ou o nome de
+  // outra variável. Um nome não é um termo inválido: é o termo mais comum, e é
+  // o que faz `total = total + 1` ser a linha da lição. O que não é um termo
+  // é `2 - 3` escrito do lado direito de um `1 -`.
+  //
+  // A leitura da conta é a do leitor partilhado, e a diferença entre_requireer
+  // número e não requerer está escrita num sítio só, e não em dois — que é
+  // como os dois ficheiros divergiam.
+  const conta = eventosDeConta(resto, passo, (t) => valorDe(t, passo), 'número');
+  if (conta !== null) return { eventos: conta, erros: [] };
+  const culpado = ladoCulpado(resto, (t) => valorDe(t, passo));
+  if (culpado !== null) {
     // A expressão é válida para o Python e não se sabe ler. Dizer isso é
-    // ensino; transformar o termo em `0` sem dizer nada é fazer o aluno
-    // ler `a = 1 - 0` e pensar que foi o que escreveu.
+    // ensino; transformar o termo em `0` sem dizer nada é fazer o aluno ler
+    // `a = 1 - 0` e pensar que foi o que escreveu.
     return {
       eventos: [],
       erros: [
         erro(
           passo,
           `Esta conta ainda não sei ler: "${resto}". Numa conta, cada lado tem de ser um número, um texto, True/False, ou o nome de outra variável.`,
-          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, True/False, ou o nome de outra variável. O termo "${legivel(esquerda) ? direita : esquerda}" não é nenhum dos quatro.`,
+          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, True/False, ou o nome de outra variável. O termo "${culpado}" não é nenhum dos quatro.`,
         ),
       ],
     };
@@ -5040,6 +5034,7 @@ import { val } from '../nucleo/tipos';
 import type { FalhaRuntime, Tipo, Valor } from '../nucleo/tipos';
 import { BLOCOS_IMPERATIVOS } from './python';
 import { Emissor, textoDe } from './emissor';
+import { eNome, eventosDeConta, ladoCulpado } from './termos';
 import type { Gerado, LerResultado, Projection } from './tipos';
 
 // ---------------------------------------------------------------------------
@@ -5193,10 +5188,8 @@ const CICLO = /^for\s*\(\s*int\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*0;\s*[A-Za-z_][A-Z
 const SEM_TIPO = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/;
 // Um literal numérico de Java. Sem sinal: o `-` é uma operação, não parte do
 // número, e `1.5` é o único formato com ponto que a Java aceita.
-const NUMERO = /^\d+(\.\d+)?$/;
+const NÚMERO = /^\d+(\.\d+)?$/;
 const TEXTO = /^"((?:[^"\\]|\\.)*)"$/;
-const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 
 function erro(passo: number, porque: string, remedio: string): FalhaRuntime {
   return {
@@ -5216,7 +5209,7 @@ function desescapar(s: string): string {
 
 function valorDe(termo: string, passo: number): Valor | null {
   const origem = { bloco: 'texto', ranhura: 0, passo };
-  if (NUMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
+  if (NÚMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
   const txt = TEXTO.exec(termo);
   if (txt) return val('texto', desescapar(txt[1]!), AMOSTRA, origem);
   if (termo === 'true') return val('lógico', true, AMOSTRA, origem);
@@ -5333,13 +5326,28 @@ function lerImprimir(dentro: string, passo: number): LerResultado {
   if (valor !== null) {
     return { eventos: [{ passo, tipo: 'imprimir', valor }], erros: [] };
   }
-  if (NOME.test(dentro)) {
+  if (eNome(dentro)) {
     // O `println` é sobrecarregado e aceita qualquer tipo. Um `usar` com
     // `tipoValor` viria dizer "total guarda número, e este sítio precisa de
     // texto" — um erro que a Java não tem, na linha que a Java aceita, e o
     // aluno concluiria que o produto também se engana.
     return { eventos: [{ passo, tipo: 'usar', nome: dentro }], erros: [] };
   }
+
+  // Uma conta dentro do `println`. **Faltava aqui**, e a segunda projeção
+  // foi o que mostrou: as duas percebiam uma conta depois de um `=` e nenhuma
+  // dentro de um `println`, e `println(total + 1)` é a linha com que a lição
+  // de Java mostra que usar um valor recusado também é erro.
+  //
+  // O `tipoDosNomes` é `undefined`, e é a diferença real entre as duas
+  // linguagens: **`"olá" + 1` dá `"olá1"` em Java e compila**, e `1 + "olá"`
+  // dá `"1olá"`. Qual dos lados é número decide, e o tipo guardado só existe
+  // quando o programa corre, portanto este sítio não pode exigir nada. No
+  // Python é o contrário — `'olá' + 1` é erro logo a correr — e por isso o
+  // Python passa `'número'` no mesmo sítio. A mesma conta, a mesma forma, e o
+  // que muda é uma palavra.
+  const conta = eventosDeConta(dentro, passo, (t) => valorDe(t, passo), undefined);
+  if (conta !== null) return { eventos: conta, erros: [] };
   return {
     eventos: [],
     erros: [
@@ -5391,40 +5399,24 @@ function lerAtribuir(
     };
   }
 
-  if (NOME.test(resto)) {
+  if (eNome(resto)) {
     return { eventos: [{ passo, tipo: 'usar', nome: resto }], erros: [] };
   }
 
-  const expressao = EXPRESSAO.exec(resto);
-  if (expressao) {
-    const esquerda = expressao[1]!;
-    const direita = expressao[3]!;
-    const legivel = (t: string): boolean => valorDe(t, passo) !== null || NOME.test(t);
-    if (legivel(esquerda) && legivel(direita)) {
-      const eventos: EventoLido[] = [];
-      // O uso vem **antes** da operação, e é ele que carrega o tipo exigido.
-      // Em Java a incompatibilidade sai disto: `String total = ...;` seguido de
-      // `int total = total + 1;` é recusado pelo compilador, e é o `restricao`
-      // desta linha que traz o `número` que o `total` não tem.
-      for (const t of [esquerda, direita]) {
-        if (NOME.test(t)) eventos.push({ passo, tipo: 'usar', nome: t, tipoValor: 'número' });
-      }
-      eventos.push({
-        passo,
-        tipo: 'operar',
-        operacao: expressao[2] as '+' | '-' | '*' | '/',
-        a: valorDe(esquerda, passo),
-        b: valorDe(direita, passo),
-      });
-      return { eventos, erros: [] };
-    }
+  // A leitura da conta é a do leitor partilhado, e a diferença entre exigir
+  // número e não exigir está escrita num sítio só — não em dois, que é como
+  // os dois ficheiros divergiam.
+  const conta = eventosDeConta(resto, passo, (t) => valorDe(t, passo), undefined);
+  if (conta !== null) return { eventos: conta, erros: [] };
+  const culpado = ladoCulpado(resto, (t) => valorDe(t, passo));
+  if (culpado !== null) {
     return {
       eventos: [],
       erros: [
         erro(
           passo,
           `Esta conta ainda não sei ler: "${resto}". Numa conta, cada lado tem de ser um número, um texto, true/false, ou o nome de outra variável.`,
-          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, true/false, ou o nome de outra variável. O termo "${legivel(esquerda) ? direita : esquerda}" não é nenhum dos quatro.`,
+          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, true/false, ou o nome de outra variável. O termo "${culpado}" não é nenhum dos quatro.`,
         ),
       ],
     };
@@ -5691,22 +5683,22 @@ Duas coisas que só existem porque há seis linguagens: o texto do utilizador é
 É aqui que se resolvem os pontos 1, 3 e 4 do `Review Focus`.
 
 **Files:**
-- Create: `src/nucleo/divergencia.ts`, `src/projecoes/avaliar.ts`
+- Create: `src/nucleo/divergencia.ts`, `src/projecoes/avaliar.ts`, `src/projecoes/termos.ts`
 - Test: `src/nucleo/divergencia.test.ts`, `src/projecoes/avaliar.test.ts`
+- Change: `src/projecoes/python.ts`, `src/projecoes/java.ts` — a conta dentro de
+  um `print`/`println` passa a ser lida, e a leitura vai buscar o leitor
+  partilhado em vez de estar escrita duas vezes.
 
 **Interfaces:**
 - Consumes: Task 1 — `Erro`, `Language`, `Origem`; Task 3 — `interpretar`, `EventoLido`; Task 4 — `Projection`, `Gerado`, `obter`, `LINGUAGENS_COM_PROJECAO`; Task 5 — `java`.
-- Produces: `TOLERANCIA_EDICAO`, `dividirEmLinhas`, `distancia`, `comparar(gerado, texto)`, `Relatorio`, `Divergencia`, `avaliarTexto(linguagem, texto)`, `emitir(linguagem, programa)`, `classificar(erros)`, `ClassesObservadas`, `bate(esperado, erros)`, `LerLeitura`.
+- Produces: `TOLERANCIA_EDICAO`, `dividirEmLinhas`, `distância`, `comparar(esperado: string, obtido: string)`, `Relatorio`, `Divergencia`, `avaliarTexto(linguagem, texto)`, `emitir(linguagem, programa)`, `divergir(linguagem, programa, texto)`, `classificar(erros)`, `ClassesObservadas`, `bate(esperado, erros)`; e em `termos.ts` — `NOME`, `EXPRESSAO`, `eNome`, `eventosDeConta`, `ladoCulpado`.
 
 - [ ] **Step 1: Escrever o teste falhado — divergência**
 
 `src/nucleo/divergencia.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { TOLERANCIA_EDICAO, comparar, distancia, dividirEmLinhas } from './divergencia';
-import { java } from '../projecoes/java';
-import { python } from '../projecoes/python';
-import { guardar, log, pilha, repetir } from './testes/dados';
+import { TOLERANCIA_EDICAO, comparar, distância, dividirEmLinhas } from './divergencia';
 
 describe('dividirEmLinhas', () => {
   it('ignora linhas em branco e espaços nas pontas', () => {
@@ -5717,26 +5709,69 @@ describe('dividirEmLinhas', () => {
     expect(dividirEmLinhas('')).toEqual([]);
   });
 
-  it('não remove espaços do meio, que em Java mudam nada mas são o texto', () => {
+  it('não remove espaços do meio, que mudam nada mas são o texto', () => {
     expect(dividirEmLinhas('int  total = 5;')).toEqual(['int  total = 5;']);
+  });
+
+  it('o texto lido é o mesmo que a pessoa escreveu, sem a linha a mais do fim', () => {
+    // Cortar o fim não pode ser "cortar o último caractere": um programa
+    // escrito sem o `\n` final é o mesmo programa, e uma comparação que
+    // tratasse os dois como textos diferentes culpava a pessoa por uma coisa
+    // que não fez.
+    expect(dividirEmLinhas('a = 1\nb = 2')).toEqual(['a = 1', 'b = 2']);
+    expect(dividirEmLinhas('a = 1\nb = 2\n')).toEqual(['a = 1', 'b = 2']);
   });
 });
 
-describe('distancia', () => {
+describe('distância', () => {
   it('zero para texto igual', () => {
-    expect(distancia('total = 5', 'total = 5')).toBe(0);
+    expect(distância('total = 5', 'total = 5')).toBe(0);
   });
 
   it('conta uma omissão como 1', () => {
-    expect(distancia('tota = 5', 'total = 5')).toBe(1);
+    expect(distância('tota = 5', 'total = 5')).toBe(1);
   });
 
   it('conta uma duplicação como 1', () => {
-    expect(distancia('totall = 5', 'total = 5')).toBe(1);
+    expect(distância('totall = 5', 'total = 5')).toBe(1);
   });
 
-  it('uma transposição de adjacentes custa 1', () => {
-    expect(distancia('tla = 5', 'total = 5')).toBe(3);
+  it('uma transposição de adjacentes custa 1, e não 2', () => {
+    // A promessa do comentário acima da função, e a que dá sentido à
+    // tolerância: quem escreve à pressa troca duas letras, não apaga quatro.
+    // A primeira implementação lia a linha **um** acima do sítio certo — a
+    // linha anterior, e não a de há duas — e por isso nunca encontrava a
+    // troca: `cosntante` custava 2. O teste passava na mesma, porque a
+    // tolerância é 2. **Um teste que passa por uma margem dobrada não está a
+    // fixar o que diz que fixa.**
+    expect(distância('cosntante', 'constante')).toBe(1);
+    expect(distância('tset', 'test')).toBe(1);
+  });
+
+  it('a troca tem de ser mesmo de adjacentes', () => {
+    // `total` com o `t` e o `a` trocados não é uma troca de adjacentes, e
+    // custa mais. Se custasse 1, a tolerância aceitaria uma linha reescrita.
+    expect(distância('aotlt', 'total')).toBeGreaterThan(1);
+  });
+
+  it('uma troca e uma omissão na mesma palavra custam 3, e não 2', () => {
+    // `tla` → `total` resolve-se com uma troca **e** uma omissão, que à
+    // primeira vista são 2. Dão 3, e é por isso que a conta é a de
+    // Damerau-Levenshtein **restrito**: a variante que não deixa editar a mesma
+    // palavra duas vezes. A irrestrita dava 2 e tinha de manter duas colunas
+    // de histórico para o saber.
+    //
+    // A escolha é do lado certo para o que a tolerância quer: quem troca duas
+    // letras está a fazer um erro, e quem troca *e* omite está a fazer dois.
+    // A tolerância de 2 apanha o primeiro e deixa passar o segundo para a
+    // pessoa ler a divergência, que é mais útil do que aceitar a linha.
+    expect(distância('tla = 5', 'total = 5')).toBe(3);
+  });
+
+  it('uma linha contra a vazia custa o comprimento dela', () => {
+    expect(distância('', 'abc')).toBe(3);
+    expect(distância('abc', '')).toBe(3);
+    expect(distância('', '')).toBe(0);
   });
 });
 
@@ -5745,59 +5780,134 @@ describe('tolerância de edição', () => {
     expect(TOLERANCIA_EDICAO).toBe(2);
   });
 
-  it('aceita texto idêntico em Python', () => {
-    const g = python.emit(pilha(repetir(2, [guardar('x', 1)])));
-    expect(comparar(g, 'for _ in range(2):\n    x = 1\n').ok).toBe(true);
+  it('aceita texto idêntico', () => {
+    expect(comparar('total = 5\n', 'total = 5\n').ok).toBe(true);
   });
 
   it('aceita falta da linha em branco final', () => {
-    expect(comparar(python.emit(pilha(guardar('total', 5))), 'total = 5').ok).toBe(true);
+    expect(comparar('total = 5\n', 'total = 5').ok).toBe(true);
   });
 
   it('aceita uma transposição de caracteres adjacentes', () => {
-    const g = python.emit(pilha(log({ ref: 'constante' })));
-    expect(comparar(g, 'log(cosntante)\n').ok).toBe(true);
+    expect(comparar('log(constante)\n', 'log(cosntante)\n').ok).toBe(true);
+  });
+
+  it('aceita dois caracteres trocados em sítios diferentes', () => {
+    expect(comparar('log(constante)\n', 'log(contsante)\n').ok).toBe(true);
   });
 
   it('rejeita três caracteres errados', () => {
-    const g = python.emit(pilha(guardar('total', 5)));
-    expect(comparar(g, 'txxttxl = 5\n').ok).toBe(false);
+    expect(comparar('total = 5\n', 'txxttxl = 5\n').ok).toBe(false);
   });
 });
 
 describe('divergência em Java: o ponto-e-vírgula em falta', () => {
-  // Review Focus 4. A tolerância de 2 foi calibrada para `total = 5`; em Java
-  // o `;` em falta tem de ser apanhado pelo motivo certo.
-  it('o ; em falta é uma divergência, não texto desconhecido', () => {
-    const g = java.emit(pilha(guardar('total', 5)));
-    const r = comparar(g, 'int total = 5\n');
+  // Review Focus 4. E a armadilha: a tolerância é de 2 caracteres, e um `;` em
+  // falta é **um** caractere. A primeira versão comparava primeiro e só depois
+  // dizia o que faltava, e a distância de 1 comia o erro — a linha passava, e
+  // a lição de Java perdia o exemplo mais curto que tem.
+  it('o ; em falta é uma divergência, não texto aceite', () => {
+    const r = comparar('int total = 5;\n', 'int total = 5\n');
     expect(r.ok).toBe(false);
     expect(r.divergencias).toHaveLength(1);
     expect(r.divergencias[0]!.linha).toBe(1);
-    expect(r.divergencias[0]!.porque).toContain(';');
+    expect(r.divergencias[0]!.porque).toContain('ponto-e-vírgula');
+  });
+
+  it('e diz o que fazer, e o que a linha devia ser', () => {
+    const d = comparar('int total = 5;\n', 'int total = 5\n').divergencias[0]!;
+    expect(d.remedio).toContain(';');
+    expect(d.esperado).toBe('int total = 5;');
+    expect(d.obtido).toBe('int total = 5');
   });
 
   it('o porque não diz "função desconhecida" nem "linha inválida"', () => {
-    const g = java.emit(pilha(guardar('total', 5)));
-    const d = comparar(g, 'int total = 5\n').divergencias[0]!;
+    const d = comparar('int total = 5;\n', 'int total = 5\n').divergencias[0]!;
     expect(d.porque).not.toMatch(/desconhecid|inválid/);
   });
 
-  it('com o ; a escrever, a mesma comparação passa', () => {
-    const g = java.emit(pilha(guardar('total', 5)));
-    expect(comparar(g, 'int total = 5;\n').ok).toBe(true);
+  it('a verificação é de forma, e não de contagem de caracteres', () => {
+    // Em Python a linha não acaba em `;`, logo não há o que faltar — e é a
+    // mesma comparação com o sinal trocado. A regra olha para a **forma** que a
+    // linha tem de ter, e não para quantos caracteres faltam: por isso o `;`
+    // em falta é apanhado mesmo estando a distância dentro da tolerância, e
+    // por isso um `;` a mais numa linha de Python também é apanhado.
+    expect(comparar('total = 5\n', 'total = 5\n').ok).toBe(true);
+    expect(comparar('total = 5\n', 'total = 5;\n').ok).toBe(false);
   });
 
-  it('o mesmo texto Python não é aceito em Java', () => {
-    const g = java.emit(pilha(guardar('total', 5)));
-    expect(comparar(g, 'total = 5\n').ok).toBe(false);
+  it('e o ; a mais é dito como o que é', () => {
+    const d = comparar('total = 5\n', 'total = 5;\n').divergencias[0]!;
+    expect(d.porque).toMatch(/sobrou|a mais|não pede/);
   });
 });
 
-describe('exportação não tem tolerância', () => {
-  it('cada linha gerada é exacta, sem tolerância', () => {
-    expect(java.emit(pilha(guardar('total', 5))).texto).toBe('int total = 5;\n');
-    expect(python.emit(pilha(guardar('total', 5))).texto).toBe('total = 5\n');
+describe('a comparação diz o que falta, e não "a linha está errada"', () => {
+  it('uma linha a mais é dita como linha a mais', () => {
+    const r = comparar('total = 5\n', 'total = 5\ntotal = 6\n');
+    expect(r.ok).toBe(false);
+    expect(r.divergencias[0]!.porque).toMatch(/a mais|sobra/);
+  });
+
+  it('uma linha a menos é dita como linha em falta', () => {
+    const r = comparar('total = 5\nlog(total)\n', 'total = 5\n');
+    expect(r.ok).toBe(false);
+    expect(r.divergencias[0]!.porque).toMatch(/falta/);
+  });
+
+  it('um espaço a mais é aceite, porque é um erro que não se vê', () => {
+    // A tolerância existe para isto: um espaço que a pessoa não vê não é uma
+    // linha errada, é o mesmo programa. E dizê-lo por escrito evita que a
+    // tolerância seja lida como "aceita o que der".
+    expect(comparar('int total = 5;\n', 'int  total = 5;\n').ok).toBe(true);
+  });
+
+  it('mas três já não, e então é dito que é o espaçamento', () => {
+    const r = comparar('int total = 5;\n', 'int   total   =   5;\n');
+    expect(r.ok).toBe(false);
+    expect(r.divergencias[0]!.porque).toMatch(/espaçamento/);
+  });
+
+  it('e o resto remede para a linha verdadeira, à vista', () => {
+    // A diferença tem de passar da tolerância. A primeira versão escreveu
+    // `totl = 5`, que está a uma letra de distância — e portanto é aceite, e
+    // o teste lia `undefined` numa lista vazia. Um teste que não falha não
+    // está a testar.
+    const d = comparar('total = 5\n', 'xxxx = 5\n').divergencias[0]!;
+    expect(d.remedio).toContain('total = 5');
+  });
+
+  it('uma letra a menos passa, e é o que a tolerância é para isso', () => {
+    // O par do teste anterior: o mesmo nome com uma letra a menos **não** é
+    // divergência. Juntos, os dois, a tolerância de 2 fica escrita nos dois
+    // sentidos em vez de ser um número solto.
+    expect(comparar('total = 5\n', 'totl = 5\n').ok).toBe(true);
+  });
+
+  it('cada divergência diz a que linha do programa se refere', () => {
+    // A linha é a do **texto da pessoa**, e é o número que o painel mostra ao
+    // lado. Contar as linhas esperadas daria o número errado a partir da
+    // primeira divergência, que é a mais importante de ver.
+    const r = comparar('a = 1\nb = 2\nc = 3\n', 'a = 1\nb = 22222\nc = 3\n');
+    expect(r.divergencias).toHaveLength(1);
+    expect(r.divergencias[0]!.linha).toBe(2);
+  });
+});
+
+describe('a comparação não sabe sintaxe, e não a inventa', () => {
+  it('recebe texto, e não um objeto de projeção', () => {
+    // A primeira versão de `comparar` recebia um `Gerado`, que é um tipo de
+    // `projecoes/`, e o verificador de árvore ter-lhe-ia barrado a tarefa — a
+    // dependência ia do núcleo para a camada que o núcleo não pode conhecer.
+    // A assinatura a receber texto resolve: o que se compara é o texto, e as
+    // anotações nunca entraram na comparação.
+    expect(typeof comparar).toBe('function');
+    expect(comparar('a', 'a').divergencias).toEqual([]);
+  });
+
+  it('a distância nunca é negativa, mesmo com a linha vazia dos dois lados', () => {
+    expect(distância('', '')).toBeGreaterThanOrEqual(0);
+    expect(comparar('', '').ok).toBe(true);
   });
 });
 ```
@@ -5807,15 +5917,21 @@ describe('exportação não tem tolerância', () => {
 `src/projecoes/avaliar.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { avaliarTexto, bate, classificar, emitir } from './avaliar';
-import { java } from './java';
-import { python } from './python';
-import { guardar, pilha } from '../nucleo/testes/dados';
+import { avaliarTexto, bate, classificar, divergir, emitir } from './avaliar';
+import { guardar, log, pilha, repetir } from '../nucleo/testes/dados';
 
 describe('emitir', () => {
   it('delega na projeção da linguagem', () => {
     expect(emitir('python', pilha(guardar('total', 5))).texto).toBe('total = 5\n');
     expect(emitir('java', pilha(guardar('total', 5))).texto).toBe('int total = 5;\n');
+  });
+
+  it('e uma linguagem sem projeção diz que não tem, em vez de devolver nada', () => {
+    expect(() => emitir('sql', pilha(guardar('total', 5)))).toThrow(/sql/);
+  });
+
+  it('aceita um programa vazio, como o `emit` da projeção', () => {
+    expect(emitir('java', null).texto).toBe('');
   });
 });
 
@@ -5838,8 +5954,16 @@ describe('avaliarTexto: Review Focus 1 — texto de outra linguagem', () => {
   });
 
   it('nenhum erro de texto-outra-linguagem menciona a outra linguagem por nome no remedio', () => {
+    // A regra de §0: nenhuma mensagem aponta para outra linguagem. A pessoa
+    // escolheu uma, e ser-lhe mostrada outra pelo nome é exatamente a
+    // referência cruzada que a spec removeu.
     const erros = avaliarTexto('java', 'total = 5\n');
     expect(erros[0]!.remedio).not.toMatch(/Python/);
+  });
+
+  it('e nenhum dos dois lados usa o nome da linguagem errada no porque', () => {
+    expect(avaliarTexto('java', 'total = 5\n')[0]!.porque).not.toMatch(/Python/);
+    expect(avaliarTexto('python', 'int total = 5;\n')[0]!.porque).not.toMatch(/Java/);
   });
 });
 
@@ -5854,11 +5978,12 @@ describe('avaliarTexto: Review Focus 3 — variável antes de existir', () => {
   it('vale igual em Java', () => {
     const erros = avaliarTexto('java', 'int total = total + 1;\n');
     expect(erros.length).toBeGreaterThan(0);
+    expect(erros[0]!.porque).toContain('total');
   });
 });
 
 describe('avaliarTexto: a mesma linha, linguagens diferentes', () => {
-  it("guardar texto onde se quer número: Java recusa, Python adia", () => {
+  it('guardar texto onde se quer número: Java recusa, Python adia', () => {
     const emJava = avaliarTexto('java', 'int total = "olá";\n');
     const emPython = avaliarTexto('python', "total = 'olá'\n");
     expect(emJava.some((e) => e.classe === 'Recusa')).toBe(true);
@@ -5866,10 +5991,90 @@ describe('avaliarTexto: a mesma linha, linguagens diferentes', () => {
   });
 
   it('em Python a dívida paga-se no uso, e aí sim é FalhaRuntime', () => {
-    const erros = avaliarTexto('python', "total = 'olá'\nprint(total)\n");
+    // A dívida paga-se **numa conta**, e não num `print`. O `print` aceita
+    // qualquer tipo — o `tipoValor` fica de fora de propósito, senão o produto
+    // inventava um erro de tipo onde a linguagem não tem nenhum — e por isso
+    // `print(total)` não acusa nada. A primeira versão deste teste escrevia
+    // `print(total)` e esperava um erro: um teste que só passa se a projeção
+    // mentir sobre o `print`.
+    //
+    // E o `porque` é exigido **pelo conteúdo**: a primeira versão deste teste
+    // passava com o erro de leitura errado, porque também era
+    // `FalhaRuntime` e também estava no passo 2. Passava a testar outra coisa.
+    const erros = avaliarTexto('python', "total = 'olá'\nprint(total + 1)\n");
     expect(erros).toHaveLength(1);
     expect(erros[0]!.classe).toBe('FalhaRuntime');
+    if (erros[0]!.classe !== 'FalhaRuntime') throw new Error('esperava FalhaRuntime');
     expect(erros[0]!.passo).toBe(2);
+    expect(erros[0]!.porque).toContain('precisa de número');
+  });
+
+  it('e a mesma dívida, em Java, não chega a ser dívida', () => {
+    const emJava = avaliarTexto('java', 'int total = "olá";\nSystem.out.println(total + 1);\n');
+    expect(emJava[0]!.classe).toBe('Recusa');
+    expect(emJava[0]!.classe).not.toBe('FalhaRuntime');
+  });
+});
+
+describe('a leitura de texto é em duas fases, e a ordem importa', () => {
+  it('uma linha que nem se lê não chega a ser julgada', () => {
+    // Primeiro a projeção diz o que a linha diz. Se o núcleo a julgasse
+    // primeiro, o produto ensinaria Python a recusar coisas que não recusa —
+    // que é a falha mais cara que esta divisão de trabalho evita.
+    //
+    // A segunda linha **recusa um tipo**, e é para isso que o teste existe: a
+    // `Recusa` dela não aparece. Se aparecesse, o núcleo estaria a julgar
+    // eventos lidos de uma linha que não se leu, e não há nada a julgar.
+    const erros = avaliarTexto('java', 'total = 5;\nint total = "olá";\n');
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.origem.passo).toBe(1);
+    expect(erros[0]!.classe).not.toBe('Recusa');
+  });
+
+  it('e a segunda linha é julgada quando a primeira lê-se', () => {
+    // O mesmo texto sem o ponto-e-vírgula: a linha 1 passa, e é a linha 2 que
+    // dá a `Recusa`. Um teste só com o caso de cima passa mesmo com o
+    // curto-circuito a acontecer ao contrário.
+    const erros = avaliarTexto('java', 'int total = 5;\nint total = "olá";\n');
+    expect(erros.length).toBeGreaterThan(0);
+    expect(erros.some((e) => e.classe === 'Recusa')).toBe(true);
+  });
+});
+
+describe('a classe é que género de erro foi, e a mensagem é quando', () => {
+  it('uma falta de ; numa linguagem compilada é FalhaRuntime, e a mensagem diz antes', () => {
+    // Aqui está a decisão, e é uma decisão e não um acidente. **A classe
+    // responde a "que genre de coisa está errada", e não a "quando".** Um `;`
+    // em falta não é um tipo trocado, e pôr-lo em `Recusa` obrigaria a inventar
+    // um `esperado` e um `obtido` que não são tipos — e um `Recusa` com tipos
+    // inventados é pior do que um `FalhaRuntime` honesto. **Quando** é a
+    // mensagem que diz, e a projeção de Java diz que o compilador recusa antes
+    // de o código correr.
+    const erros = avaliarTexto('java', 'int total = 5\n');
+    expect(erros[0]!.classe).toBe('FalhaRuntime');
+    expect(erros[0]!.porque).toMatch(/ponto-e-vírgula/);
+  });
+
+  it('e a mesma linha, na linguagem que não recusa, é FalhaRuntime sem mais', () => {
+    const emPython = avaliarTexto('python', "total = 'olá'\nprint(total + 1)\n");
+    expect(emPython[0]!.classe).toBe('FalhaRuntime');
+    expect(emPython[0]!.porque).toMatch(/quando este valor é usado/);
+  });
+
+  it('a classe observada nunca é QuebraEquivalencia', () => {
+    // Que há três classes observadas, e QuebraEquivalencia não é uma delas: a
+    // divergência entre blocos e texto é um erro de comparação, não do
+    // programa. Uma sonda que espera `Recusa` nunca pode ser satisfeita por
+    // alguém que escreveu a linha de outra maneira.
+    const casos = [
+      avaliarTexto('java', 'int total = 5\n'),
+      avaliarTexto('java', 'int total = "olá";\n'),
+      avaliarTexto('python', "total = 'olá'\nprint(total + 1)\n"),
+      avaliarTexto('python', 'total = 5\n'),
+    ];
+    for (const erros of casos) {
+      expect(['Observacao', 'Recusa', 'FalhaRuntime']).toContain(classificar(erros));
+    }
   });
 });
 
@@ -5883,17 +6088,58 @@ describe('classificar e bate', () => {
   });
 
   it('com FalhaRuntime é FalhaRuntime', () => {
-    expect(classificar(avaliarTexto('python', "total = 'olá'\nprint(total)\n"))).toBe('FalhaRuntime');
+    expect(classificar(avaliarTexto('python', "total = 'olá'\nprint(total + 1)\n"))).toBe(
+      'FalhaRuntime',
+    );
   });
 
   it('a Recusa ganha à FalhaRuntime, porque é a primeira a acontecer', () => {
-    const erros = avaliarTexto('java', 'int total = "olá";\n');
+    // E é a primeira mesmo: numa linguagem que recusa, a atribuição errada
+    // aparece antes de o uso errado. Ordenar por classe em vez de por ordem
+    // de acontecimento daria o mesmo resultado por sorte, e o próximo caso em
+    // que não desse seria o primeiro a enganar.
+    const erros = avaliarTexto('java', 'int total = "olá";\nSystem.out.println(total + 1);\n');
+    expect(erros.length).toBeGreaterThan(1);
     expect(classificar(erros)).toBe('Recusa');
   });
 
   it('bate aceita quando a classe observada é a esperada', () => {
     expect(bate('Observacao', avaliarTexto('python', 'total = 5\n'))).toBe(true);
     expect(bate('Recusa', avaliarTexto('python', 'total = 5\n'))).toBe(false);
+  });
+
+  it('bate não diz o que viu, e isso é trabalho de quem pergunta', () => {
+    // `bate` devolve sim ou não, e é o que uma sondagem precisa para passar ou
+    // falhar. Dizer "esperavas Recusa, viste FalhaRuntime" é trabalho da
+    // sondagem, que tem o esperado à mão — e que, em Portugal, se escreve
+    // `sondas.ts` na T7. Uma função que devolvesse a frase faria o núcleo
+    // saber o formato da lição, e é o que ele não pode saber.
+    expect(bate('Recusa', avaliarTexto('python', "total = 'olá'\nprint(total + 1)\n"))).toBe(
+      false,
+    );
+  });
+});
+
+describe('divergir: os blocos contra o texto, na linguagem escolhida', () => {
+  it('o texto que o programa gera bate com ele', () => {
+    expect(divergir('python', pilha(repetir(2, [guardar('x', 1)])), 'for _ in range(2):\n    x = 1\n').ok).toBe(
+      true,
+    );
+  });
+
+  it('e o mesmo programa escrito à maneira de outra linguagem não bate', () => {
+    const programa = pilha(guardar('total', 5), log({ ref: 'total' }));
+    expect(divergir('java', programa, 'int total = 5;\nlog(total);\n').ok).toBe(true);
+    expect(divergir('java', programa, 'total = 5\nlog(total)\n').ok).toBe(false);
+  });
+
+  it('a divergência diz a linha e as duas versões', () => {
+    const programa = pilha(guardar('total', 5), log({ ref: 'total' }));
+    const r = divergir('java', programa, 'int total = 5;\nlog(total)\n');
+    expect(r.ok).toBe(false);
+    expect(r.divergencias[0]!.linha).toBe(2);
+    expect(r.divergencias[0]!.esperado).toBe('log(total);');
+    expect(r.divergencias[0]!.obtido).toBe('log(total)');
   });
 });
 ```
@@ -5906,11 +6152,17 @@ Expected: FAIL com erros de resolução de `./divergencia` e `./avaliar`.
 - [ ] **Step 4: Escrever `src/nucleo/divergencia.ts`**
 
 ```typescript
-import type { Gerado } from '../projecoes/tipos';
-
+/** Quantos caracteres podem estar errados numa linha sem que a linha conte
+ *  como errada.
+ *
+ *  Calibrada para quem escreve à pressa e troca duas letras, não para quem
+ *  reescreve a linha. Três parece o número óbvio e é o número errado: aceita
+ *  uma linha que a pessoa meio que sabe reescrever, e recusa o erro que ela
+ *  mais comete — uma letra trocada com a vizinha. */
 export const TOLERANCIA_EDICAO = 2;
 
 export interface Divergencia {
+  /** A linha do **texto da pessoa**, que é a que o painel mostra ao lado. */
   linha: number;
   esperado: string;
   obtido: string;
@@ -5923,105 +6175,284 @@ export interface Relatorio {
   divergencias: Divergencia[];
 }
 
+/** O texto lido, linha a linha, sem o que a pessoa não quis dizer.
+ *
+ *  Espaços nas **duas** pontas: quem copia de um painel vê `  a = 1  ` e
+ *  escreve-a assim, e a linha é a mesma. Espaços no meio ficam, porque no meio
+ *  são o texto — e é a diferença entre o que a pessoa quis dizer e o que a
+ *  pessoa escreveu que esta comparação anda a medir. */
 export function dividirEmLinhas(texto: string): string[] {
   return texto
     .split('\n')
-    .map((l) => l.replace(/\s+$/, ''))
-    .filter((l) => l.trim().length > 0);
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 }
 
-/** Distância de edição com contagem de Levenshtein, mas uma transposição de
- *  caracteres adjacentes custa 1 e não 2 — é isso que a tolerância tem de
- *  apanhar quando alguém escreve à pressa. */
-export function distancia(a: string, b: string): number {
+/** Nomes dos fechos que a linha tem de ter, porque a linguagem lida-os.
+ *
+ *  Vem da leitura de cada linguagem e não deste ficheiro: em Java a linha
+ *  acaba em `;`, em Python não acaba em nada, e em SQL acaba em `;`. Este
+ *  ficheiro **não conhece sintaxe** — só sabe que há fechos que não são uma
+ *  gralha de escrita, e lê a lista de cima. */
+const FECHOS: Record<string, string> = {
+  ';': 'ponto-e-vírgula',
+  ':': 'dois pontos',
+};
+
+/** Distância de edição de Damerau-Levenshtein: como Levenshtein, mas uma
+ *  transposição de caracteres adjacentes custa 1 e não 2 — que é o erro que
+ *  a tolerância tem de apanhar.
+ *
+ *  E a transposição é lida da linha de **há duas**, e não da anterior. Ler da
+ *  anterior é o erro que esta função teve na primeira versão: `cosntante`
+ *  custava 2 em vez de 1, o que não se via porque a tolerância é 2 — e um
+ *  teste que passa por uma margem dobrada não está a fixar o que diz que fixa.
+ *  Por isso a função guarda duas linhas, e não uma. */
+export function distância(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
-  let anterior = Array.from({ length: n + 1 }, (_, j) => j);
+  // `haDois` é a linha de há duas iterações e `haUm` a de há uma. No começo
+  // `haUm` é a linha zero, que é `0, 1, 2, …, n` — e se `a` for vazia é
+  // precisamente a resposta.
+  let haDois = Array.from({ length: n + 1 }, (_, j) => j);
+  let haUm = haDois;
   for (let i = 1; i <= m; i += 1) {
     const actual = [i];
     for (let j = 1; j <= n; j += 1) {
       const custo = a[i - 1] === b[j - 1] ? 0 : 1;
       let melhor = Math.min(
-        (anterior[j] ?? Infinity) + 1,
+        (haUm[j] ?? Infinity) + 1,
         (actual[j - 1] ?? Infinity) + 1,
-        (anterior[j - 1] ?? Infinity) + custo,
+        (haUm[j - 1] ?? Infinity) + custo,
       );
       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
-        melhor = Math.min(melhor, (anterior[j - 2] ?? Infinity) + 1);
+        melhor = Math.min(melhor, (haDois[j - 2] ?? Infinity) + 1);
       }
       actual.push(melhor);
     }
-    anterior = actual;
+    haDois = haUm;
+    haUm = actual;
   }
-  return anterior[n] ?? Math.max(m, n);
+  return haUm[n] ?? Math.max(m, n);
 }
 
-/** O que falta da linha, para o `porque` dizer a coisa certa em vez de
- *  "a linha está errada". */
-function descricao(esperado: string, obtido: string): { porque: string; remedio: string } {
-  const ultimos = esperado.length > 0 ? esperado.slice(-1) : '';
-  if (ultimos === ';' && obtido.replace(/\s+$/, '').endsWith(';') === false) {
-    return {
-      porque: 'Falta o ponto-e-vírgula no fim da linha.',
-      remedio: 'Acrescenta ; no fim.',
-    };
+interface Desvio {
+  porque: string;
+  remedio: string;
+}
+
+/** O que a **forma** da linha diz, antes de contar caracteres.
+ *
+ *  Um `;` em falta é uma divergência por si, mesmo estando a distância dentro
+ *  da tolerância: é um caractere de diferença, e a tolerância de 2 comia-o.
+ *  Perder isso é perder o exemplo mais curto que a lição de Java tem — a
+ *  linha que é quase a mesma e mesmo assim está errada.
+ *
+ *  E o simétrico também conta, porque o mesmo buraco noutro sentido dá a mesma
+ *  nota: em Python, um `;` a mais não é uma gralha de escrita, é um sinal que
+ *  a linguagem não usa. */
+function desvioDeForma(esperado: string, obtido: string): Desvio | null {
+  for (const [fecho, nome] of Object.entries(FECHOS)) {
+    if (esperado.endsWith(fecho) && !obtido.endsWith(fecho)) {
+      return {
+        porque: `Esta linha tinha de acabar em ${nome}, e a tua acaba sem.`,
+        remedio: `Acrescenta o "${fecho}" no fim da linha.`,
+      };
+    }
   }
-  if (ultimos === ':' && obtido.includes(':') === false) {
-    return {
-      porque: 'Falta o dois pontos no fim da linha.',
-      remedio: 'Acrescenta : no fim.',
-    };
+  for (const [fecho, nome] of Object.entries(FECHOS)) {
+    if (obtido.endsWith(fecho) && !esperado.endsWith(fecho)) {
+      return {
+        porque: `A tua linha acaba em ${nome}, e esta não pede esse fecho.`,
+        remedio: `Retira o "${fecho}" do fim da linha.`,
+      };
+    }
+  }
+  return null;
+}
+
+/** O que falta da linha, para o `porque` dizer a coisa certa em vez de "a
+ *  linha está errada". */
+function desvio(esperado: string, obtido: string): Desvio {
+  const forma = desvioDeForma(esperado, obtido);
+  if (forma !== null) return forma;
+  if (esperado === '') {
+    return { porque: 'Sobrou uma linha a mais.', remedio: 'Apaga essa linha.' };
   }
   if (obtido === '') {
-    return { porque: 'Esta linha falta.', remedio: 'Escreve a linha.' };
+    return { porque: 'Esta linha falta.', remedio: 'Escreve a linha que está em cima.' };
   }
   if (esperado.replace(/\s+/g, '') === obtido.replace(/\s+/g, '')) {
-    return { porque: 'O espaçamento está diferente.', remedio: 'Iguala o espaçamento.' };
+    return {
+      porque: 'O espaçamento está diferente, e o programa é o mesmo.',
+      remedio: 'Iguala o espaçamento.',
+    };
   }
   return {
     porque: `Esta linha está escrita de outra maneira. Aqui era: ${esperado}`,
-    remedio: 'Copia a linha tal como está acima.',
+    remedio: `Copia a linha tal como está: ${esperado}`,
   };
 }
 
-export function comparar(gerado: Gerado, texto: string): Relatorio {
-  const esperadas = dividirEmLinhas(gerado.texto);
-  const obtidas = dividirEmLinhas(texto);
+/** O texto gerado e o texto escrito, linha a linha.
+ *
+ *  Recebe **texto**, e não o `Gerado` da projeção. A primeira versão recebia o
+ *  `Gerado`, que é um tipo de `projecoes/`, e o verificador de árvore
+ *  ter-lhe-ia barrado a tarefa: a dependência ia do núcleo para a camada que o
+ *  núcleo não pode conhecer. Só que nunca houve problema — o que se compara é
+ *  o texto, e as anotações nunca entraram na comparação. A assinatura
+ *  estava a pedir mais do que a função usava. */
+export function comparar(esperado: string, obtido: string): Relatorio {
+  const esperadas = dividirEmLinhas(esperado);
+  const obtidas = dividirEmLinhas(obtido);
   const divergencias: Divergencia[] = [];
 
   const maximo = Math.max(esperadas.length, obtidas.length);
   for (let i = 0; i < maximo; i += 1) {
-    const esperado = esperadas[i] ?? '';
-    const obtido = obtidas[i] ?? '';
-    if (esperado === obtido) continue;
-    if (distancia(esperado, obtido) <= TOLERANCIA_EDICAO) continue;
-    const d = descricao(esperado, obtido);
-    divergencias.push({ linha: i + 1, esperado, obtido, ...d });
+    const linhaEsperada = esperadas[i] ?? '';
+    const linhaObtida = obtidas[i] ?? '';
+    if (linhaEsperada === linhaObtida) continue;
+    // A forma primeiro, e a distância depois. Ao contrário, um `;` em falta
+    // — uma diferença de um caractere — passava por dentro da tolerância e a
+    // lição de Java perdia o exemplo mais curto que tem.
+    if (desvioDeForma(linhaEsperada, linhaObtida) === null) {
+      if (distância(linhaEsperada, linhaObtida) <= TOLERANCIA_EDICAO) continue;
+    }
+    divergencias.push({
+      linha: i + 1,
+      esperado: linhaEsperada,
+      obtido: linhaObtida,
+      ...desvio(linhaEsperada, linhaObtida),
+    });
   }
 
   return { ok: divergencias.length === 0, divergencias };
 }
 ```
 
-- [ ] **Step 5: Escrever `src/projecoes/avaliar.ts`**
+- [ ] **Step 5: Escrever `src/projecoes/termos.ts` — a leitura de um termo, uma vez**
+
+A leitura de uma conta estava escrita nas duas projeções, e por isso a segunda
+projection não a tinha no sítio onde era preciso. Ver a nota da Task 6.
+
+`src/projecoes/termos.ts`:
+
+```typescript
+import type { EventoLido } from '../nucleo/semantica';
+import type { Tipo, Valor } from '../nucleo/tipos';
+
+/** As três coisas que uma linha tem por baixo, e que são as mesmas nas seis
+ *  linguagens: um nome, uma conta de dois termos, e um literal.
+ *
+ *  Vivem aqui, e não em cada projeção, pela mesma razão que o `Emissor` vive
+ *  uma vez só — e a prova é que estar escritas duas vezes **produziu um
+ *  buraco**: as duas projeções percebiam uma conta depois de um `=`, e nenhuma a
+ *  percebia dentro de um `print`. `print(total + 1)` — que é a linha de que a
+ *  lição de Python precisa para mostrar a dívida a pagar-se no uso — era
+ *  recusada pelas duas.
+ *
+ *  O que fica de fora é tudo o que é da linguagem: os delimitadores de texto,
+ *  os lógicos, e a frase do erro. Cada uma dessas coisas é uma resposta
+ *  diferente à pergunta "como se escreve isto aqui", e é a projeção que a tem. */
+export const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** Uma conta de dois termos, se a houver. */
+export const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
+
+export function eNome(termo: string): boolean {
+  return NOME.test(termo);
+}
+
+/** O que uma conta produz: um uso por cada nome que apareça, e a operação.
+ *
+ *  `tipoDosNomes` é o que o sítio exige de cada nome, e pode ser `undefined` —
+ *  e numa linguagem compilada é. **O `+` de Java não exige número**: `"olá" + 1`
+ *  dá `"olá1"` e compila, e `1 + "olá"` dá `"1olá"`. Qual dos dois lados é
+ *  número decide, e o tipo guardado só existe quando o programa corre, portanto
+ *  aqui não há nada para exigir. Dizer que este sítio precisa de número faria o
+ *  produto recusar uma linha que a Java aceita.
+ *
+ *  Em Python é o contrário, e é a diferença entre as duas: `'olá' + 1` é erro
+ *  logo a correr, porque o Python não converte nada sozinho. A mesma conta, a
+ *  mesma forma, e o que muda é uma palavra — que é exatamente o que a costura
+ *  tem de mostrar.
+ *
+ *  Devolve `null` quando algum dos lados não é um termo legível, e quem escreve
+ *  a frase do erro é a projeção: a frase é em termos da linguagem dela, e este
+ *  ficheiro não conhece nenhuma. */
+export function eventosDeConta(
+  termo: string,
+  passo: number,
+  valorDeTermo: (t: string) => Valor | null,
+  tipoDosNomes: Tipo | undefined,
+): EventoLido[] | null {
+  const conta = EXPRESSAO.exec(termo);
+  if (conta === null) return null;
+  const esquerda = conta[1]!;
+  const direita = conta[3]!;
+  if (!legivel(esquerda, valorDeTermo) || !legivel(direita, valorDeTermo)) return null;
+
+  const eventos: EventoLido[] = [];
+  for (const lado of [esquerda, direita]) {
+    // O `tipoValor` a omitir é a informação. É a mesma omissão que o
+    // `print(total)` faz, e por uma razão parecida: este sítio não declara
+    // tipo a ninguém.
+    if (eNome(lado)) eventos.push({ passo, tipo: 'usar', nome: lado, tipoValor: tipoDosNomes });
+  }
+  eventos.push({
+    passo,
+    tipo: 'operar',
+    operacao: conta[2] as '+' | '-' | '*' | '/',
+    a: valorDeTermo(esquerda),
+    b: valorDeTermo(direita),
+  });
+  return eventos;
+}
+
+function legivel(termo: string, valorDeTermo: (t: string) => Valor | null): boolean {
+  return valorDeTermo(termo) !== null || eNome(termo);
+}
+
+/** O lado da conta que não é um termo legível, para a frase dizer qual foi. */
+export function ladoCulpado(
+  termo: string,
+  valorDeTermo: (t: string) => Valor | null,
+): string | null {
+  const conta = EXPRESSAO.exec(termo);
+  if (conta === null) return null;
+  for (const lado of [conta[1]!, conta[3]!]) {
+    if (!legivel(lado, valorDeTermo)) return lado;
+  }
+  return null;
+}
+```
+
+- [ ] **Step 6: Escrever `src/projecoes/avaliar.ts`**
 
 ```typescript
 import { comparar } from '../nucleo/divergencia';
+import type { Relatorio } from '../nucleo/divergencia';
 import { interpretar } from '../nucleo/semantica';
 import type { BlocoLeigo } from '../nucleo/blocos';
 import type { Erro, Language } from '../nucleo/tipos';
 import { obter } from './registo';
 import type { Gerado } from './tipos';
 
-export function emitir(linguagem: Language, programa: BlocoLeigo): Gerado {
+export function emitir(linguagem: Language, programa: BlocoLeigo | null): Gerado {
   return obter(linguagem).emit(programa);
 }
 
-/** A leitura de texto é em duas fases, e a ordem importa. Primeiro a projeção
- *  diz o que a linha diz — e recusa o que não é da linguagem dela. Depois o
- *  núcleo julga o que foi dito, com a política da linguagem. Se invertermos a
- *  ordem, o núcleo de Python vai julgar uma linha de Java e vamos ensinar
- *  Python a recusar coisas que não recusa. */
+/** O texto da pessoa, lido e julgado — em duas fases, e a ordem é tudo.
+ *
+ *  Primeiro a projeção da linguagem escolhida diz o que cada linha diz, e
+ *  recusa o que não é da linguagem dela. Só depois o núcleo julga o que foi
+ *  dito, com a política dessa mesma linguagem.
+ *
+ *  Inverter a ordem é a falha mais cara que esta divisão de trabalho evita: o
+ *  núcleo de Python a julgar uma linha de Java ensinaria Python a recusar
+ *  coisas que não recusa, e o aluno levaria para a vida a ideia errada sobre
+ *  a linguagem que escolheu. E, por isso, quando a linha nem se lê, o erro é o
+ *  da leitura e o núcleo **não é chamado** — não há nada para julgar. */
 export function avaliarTexto(linguagem: Language, texto: string): Erro[] {
   const projecao = obter(linguagem);
   const lido = projecao.ler(texto);
@@ -6033,6 +6464,20 @@ export function avaliarTexto(linguagem: Language, texto: string): Erro[] {
   }));
 }
 
+/** As três coisas que uma sondagem pode ver acontecer.
+ *
+ *  A classe responde a **que género de erro é**, e não a *quando*. Um `;` em
+ *  falta é `FalhaRuntime` mesmo em Java, porque não é um tipo trocado: pô-lo
+ *  em `Recusa` obrigaria a inventar um `esperado` e um `obtido` que não são
+ *  tipos, e um `Recusa` com tipos inventados é pior do que um `FalhaRuntime`
+ *  honesto. *Quando* é a mensagem que diz, e a projeção de Java diz que o
+ *  compilador recusa a linha antes de o código correr.
+ *
+ *  `QuebraEquivalencia` **não** está aqui, e a ausência é uma decisão: a
+ *  divergência entre blocos e texto é um erro de comparação, não do programa.
+ *  O programa está certo e o texto é que diverge, e uma sondagem que espera
+ *  `Recusa` nunca pode ser satisfeita por alguém que escreveu a linha de outra
+ *  maneira — seria dar a nota a uma coisa que não se estava a perguntar. */
 export type ClassesObservadas = 'Observacao' | 'Recusa' | 'FalhaRuntime';
 
 export function classificar(erros: readonly Erro[]): ClassesObservadas {
@@ -6045,24 +6490,29 @@ export function bate(esperado: ClassesObservadas, erros: readonly Erro[]): boole
   return classificar(erros) === esperado;
 }
 
-export function divergir(linguagem: Language, programa: BlocoLeigo, texto: string) {
-  return comparar(emitir(linguagem, programa), texto);
+/** O programa e o que a pessoa escreveu, na linguagem escolhida. */
+export function divergir(
+  linguagem: Language,
+  programa: BlocoLeigo | null,
+  texto: string,
+): Relatorio {
+  return comparar(emitir(linguagem, programa).texto, texto);
 }
 ```
 
 **Nota sobre `ClassesObservadas`:** só há três, e `QuebraEquivalencia` **não** está entre elas. A divergência entre blocos e texto é um erro de *comparação*, não um erro do programa: o programa está certo e o texto é que diverge, e uma sonda que espera `Recusa` nunca deve ser satisfeita por um erro de escrita. Se a lição precisar de distinguir, é um campo novo em `esperado`, não uma quarta classe.
 
-- [ ] **Step 6: Correr os testes e ver passar**
+- [ ] **Step 7: Correr os testes e ver passar**
 
 Run: `npx vitest run src/nucleo/divergencia.test.ts src/projecoes/avaliar.test.ts`
 Expected: PASS.
 
-- [ ] **Step 7: Correr tudo**
+- [ ] **Step 8: Correr tudo**
 
 Run: `npm test && npm run arvore && npx tsc --noEmit`
 Expected: PASS, `núcleo limpo`, typecheck mudo.
 
-- [ ] **Step 8: Commitar**
+- [ ] **Step 9: Commitar**
 
 ```bash
 git add -A
@@ -6078,6 +6528,94 @@ que diz que falta o ;, e nao 'linha invalida' nem 'funcao desconhecida'.
 A tolerancia de 2 caracteres trata uma transposicao como 1, e nao como 2.
 "
 ```
+
+---
+
+#### Task 6 —(decisoes e o que ficou por provar)
+
+Sete defeitos no código que o plano trazia, e três deles eram meus. A lista
+inteira, porque o padrão é o que se aprende:
+
+1. **O `comparar` do plano importava um tipo de `projecoes/`.** A assinatura
+   era `comparar(gerado: Gerado, texto: string)`, e o `Gerado` vive em
+   `projecoes/tipos.ts`. Um núcleo a importar a camada que só existe para
+   conhecer sintaxe é o invariante inteiro virado do avesso — e a prova é que
+   nunca houve problema: o que se comparava era `gerado.texto`, e as anotações
+   nunca entraram na comparação. **A assinatura estava a pedir mais do que a
+   função usava.** Passou a ser `comparar(esperado: string, obtido: string)`.
+   **Custaria:** nada, e a camada ficou com a direção certa.
+
+2. **O ficheiro de teste do próprio plano violava o invariante.**
+   `src/nucleo/divergencia.test.ts` importava `java` e `python` para poder
+   escrever o resultado esperado — e o `verificar-arvore` o apanhou, porque
+   conta os testes. Um núcleo a importar projeções num **teste** é pior do que
+   no código: o teste passa a provar a coisa errada. O teste do núcleo ficou só
+   com texto, e o que cruza as duas linguagens foi para o `avaliar.test.ts`,
+   que vive em `projecoes/` e as pode importar. **Custaria:** a separação
+   entre «o que o núcleo faz» e «o que o núcleo provoca».
+
+3. **A tolerância de 2 engolia o ponto-e-vírgula em falta de Java.** Um `;` em
+   falta é uma diferença de **um** caractere, e a lição de Java perdia o
+   exemplo mais curto que tem: a linha que é quase a mesma e mesmo assim está
+   errada. A comparação media a distância antes de dizer o que faltava, e a
+   distância de 1 comia o erro. Passou a haver uma verificação de **forma**
+   antes da contagem: se a linha esperada acaba num fecho e a escrita não, é
+   divergência, seja qual for a distância. E o simétrico também, porque um `;` a
+   mais numa linha de Python é o mesmo buraco ao contrário. **Custaria:** uma
+   tabela de dois fechos no núcleo — e é uma tabela de **nomes** de fechos, não
+   de sintaxe: o núcleo continua sem saber nada de linguagem.
+
+4. **A `distância` do plano não fazia o que o comentário dela prometia.** Dizer
+   «uma transposição custa 1» e custar 2 não é um erro que se veja: a tolerância
+   é 2, portanto o teste passava na mesma. A linha de *duas* iterações atrás
+   estava a ser lida na de *uma*, e por isso a troca de adjacentes nunca era
+   encontrada. Passou a guardar duas linhas. **É a nona vez, em treze tarefas,
+   que um teste passava por uma margem que escondia o defeito.** Um teste que
+   passa com folga não está a fixar o que diz que fixa, e a única forma de
+   saber se fixa é exigir o valor exato.
+
+5. **`print(total + 1)` não era lido por nenhuma das projeções.** Nem Python,
+   nem Java. A leitura da conta estava escrita **duas vezes**, uma dentro de
+   cada `lerAtribuir`, e nenhuma dentro de cada `lerImprimir` — e essa linha é
+   a que a lição de Python precisa para mostrar a dívida a pagar-se no uso. A
+   segunda projeção pagou a fatura da duplicação. Saiu para
+   `src/projecoes/termos.ts`, com o que muda entre linguagens por argumento.
+
+6. **Um teste meu passava pelo motivo errado.** O teste da dívida em Python
+   escrevia `print(total + 1)` e aceitava qualquer `FalhaRuntime` no passo 2 — e
+   o que lá estava era o **erro de leitura** da linha, que também é
+   `FalhaRuntime` e também está no passo 2. Passava a testar outra coisa sem
+   ninguém dar por isso. Passou a exigir o texto da mensagem, que só a
+   incompatibilidade diz. **Custaria:** nada, e a lição passou a estar provada
+   em vez de adivinhada.
+
+7. **`dividirEmLinhas` só aparava espaços à direita**, e o teste dizia «espaços
+   nas pontas». O teste estava certo: quem copia de um painel escreve
+   `  a = 1  ` e a linha é a mesma. Espaços no meio ficam, porque no meio são o
+   texto — e é essa diferença, entre o que a pessoa quis dizer e o que
+   escreveu, que a comparação anda a medir. **Custaria:** nada.
+
+**A decisão mais cara desta tarefa, registada aqui:** a classe do erro responde
+a **que género de coisa** está errada, e não a **quando**. Um `;` em falta em
+Java é `FalhaRuntime`, e é-o porque não é um tipo trocado: pô-lo em `Recusa`
+obrigaria a inventar um `esperado` e um `obtido` que não são tipos, e um
+`Recusa` com tipos inventados é pior do que um `FalhaRuntime` honesto. O
+**quando** é a mensagem que diz — e a projeção de Java diz que o compilador
+recusa a linha antes de o código correr. Está fixado por um teste que exige as
+duas coisas ao mesmo tempo: a classe **e** a mensagem.
+
+E **o que a classe observada não inclui** continua a ser `QuebraEquivalencia`,
+por uma razão que esta tarefa tornou visível: a divergência entre blocos e
+texto é um erro de comparação, não do programa. O programa está certo e o texto
+é que diverge, e uma sondagem que espera `Recusa` nunca pode ser satisfeita por
+alguém que escreveu a linha de outra maneira — seria dar a nota a uma coisa que
+não se estava a perguntar.
+
+**O que ficou por provar:** nada. Esta tarefa não afirma nada sobre a linguagem
+das pessoas: `comparar` e `avaliarTexto` julgam **o que a projeção leu**, e o
+que a projeção leu já foi julgado nas Tasks 4 e 5, com as suas limitações
+declaradas. A única afirmação é sobre código nosso, e o `tsc` e os testes são o
+que a sustenta.
 
 ---
 

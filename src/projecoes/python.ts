@@ -6,6 +6,7 @@ import type { EventoLido } from '../nucleo/semantica';
 import { val } from '../nucleo/tipos';
 import type { FalhaRuntime, Valor } from '../nucleo/tipos';
 import { Emissor, textoDe } from './emissor';
+import { eNome, eventosDeConta, ladoCulpado } from './termos';
 import type { Gerado, LerResultado, Projection } from './tipos';
 
 export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
@@ -102,7 +103,7 @@ const CICLO = /^for\s+_\s+in\s+range\(\s*(\d+)\s*\)\s*:$/;
 // Um inteiro, ou um inteiro com casas decimais. `x = 1.5` é Python e
 // compila; recusá-lo é dizer ao aluno que está a escrever uma coisa que não
 // é Python, e ele acredita.
-const NUMERO = /^[-+]?\d+(\.\d+)?$/;
+const NÚMERO = /^[-+]?\d+(\.\d+)?$/;
 // Texto entre aspas simples **ou duplas** — e nada mais. A casa é a das
 // simples; o que se aceita são as duas. Recusar `x = "olá"` seria ensinar o
 // aluno a desconfiar do produto, que é o pior que um professor de sintaxe
@@ -110,8 +111,6 @@ const NUMERO = /^[-+]?\d+(\.\d+)?$/;
 // Python que `x = \`olá\`` é erro de sintaxe, e aceitar aqui seria trocar um
 // erro que o aluno cometia por um que o produto inventava.
 const TEXTO = /^(['"])([\s\S]*?)\1$/;
-const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 
 function erro(passo: number, porque: string, remedio: string): FalhaRuntime {
   return {
@@ -131,7 +130,7 @@ function desescapar(s: string): string {
 
 function valorDe(termo: string, passo: number): Valor | null {
   const origem = { bloco: 'texto', ranhura: 0, passo };
-  if (NUMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
+  if (NÚMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
   const txt = TEXTO.exec(termo);
   if (txt) return val('texto', desescapar(txt[2]!), AMOSTRA, origem);
   if (termo === 'True') return val('lógico', true, AMOSTRA, origem);
@@ -195,7 +194,7 @@ function tentarLer(t: string, passo: number): LerResultado {
 }
 
 function lerImprimir(dentro: string, passo: number): LerResultado {
-  if (NUMERO.test(dentro)) {
+  if (NÚMERO.test(dentro)) {
     return {
       eventos: [{ passo, tipo: 'imprimir', valor: valorDe(dentro, passo)! }],
       erros: [],
@@ -205,7 +204,7 @@ function lerImprimir(dentro: string, passo: number): LerResultado {
   if (txt) {
     return { eventos: [{ passo, tipo: 'imprimir', valor: valorDe(dentro, passo)! }], erros: [] };
   }
-  if (NOME.test(dentro)) {
+  if (eNome(dentro)) {
     // `print(total)` não declara tipo. Emitir aqui um `usar` com
     // `tipoValor: 'texto'` fazia o núcleo responder "total guarda número, e
     // este sítio precisa de texto" — um erro que o Python não tem, numa
@@ -213,6 +212,18 @@ function lerImprimir(dentro: string, passo: number): LerResultado {
     // impõe tipo a nada.
     return { eventos: [{ passo, tipo: 'usar', nome: dentro }], erros: [] };
   }
+
+  // Uma conta dentro do `print`. **Faltava aqui, e é a linha de que a lição
+  // de Python precisa:** `total = 'olá'` passa, e é `print(total + 1)` que
+  // diz que este sítio precisa de número. Sem esta rama o produto recusava a
+  // linha — e com a recusa certa, por motivo errado, que é pior do que não
+  // dizer nada.
+  //
+  // O `tipoDosNomes` é `'número'` **por causa do Python**: `'olá' + 1` é erro
+  // logo a correr, porque o Python não converte nada sozinho. O mesmo código
+  // na Java passa `undefined`, e a diferença está escrita num lugar só.
+  const conta = eventosDeConta(dentro, passo, (t) => valorDe(t, passo), 'número');
+  if (conta !== null) return { eventos: conta, erros: [] };
   return {
     eventos: [],
     erros: [
@@ -253,56 +264,34 @@ function lerAtribuir(nome: string, resto: string, passo: number): LerResultado {
     };
   }
 
-  if (NOME.test(resto)) {
+  if (eNome(resto)) {
     // Uma cópia não impõe tipo ao destino. `x = total` é válido com
     // qualquer coisa em `total`.
     return { eventos: [{ passo, tipo: 'usar', nome: resto }], erros: [] };
   }
 
-  const expressao = EXPRESSAO.exec(resto);
-  if (expressao) {
-    const esquerda = expressao[1]!;
-    const direita = expressao[3]!;
-    // Um termo de uma conta é um número, um texto, True/False — ou o nome
-    // de outra variável. Um nome não é um termo inválido: é o termo mais
-    // comum, e é o que faz `total = total + 1` ser a linha da lição. O que
-    // não é um termo é `2 - 3` escrito do lado direito de um `1 -`.
-    const legivel = (t: string): boolean => valorDe(t, passo) !== null || NOME.test(t);
-    if (legivel(esquerda) && legivel(direita)) {
-      const eventos: EventoLido[] = [];
-      // Um nome do lado esquerdo é um uso, e o uso vem **antes** da
-      // operação: `total = total + 1` com `total` por guardar tem de falhar
-      // em `total`, não na soma. A ordem dos eventos é o que decide isso.
-      //
-      // O uso declara `número` porque é isso que o sítio exige: em Python
-      // `+ - * /` são operações numéricas. E é este `tipoValor` que dá a
-      // linha mais importante da lição — `total = 'olá'` passa, e a linha
-      // seguinte é que rebenta com "total guarda texto, e este sítio
-      // precisa de número". Se a conta não declarasse nada, o produto não
-      // teria como dizer ao aluno a coisa mais importante que sabe sobre
-      // Python: que o texto entra em silêncio e rebenta em baixo.
-      for (const t of [esquerda, direita]) {
-        if (NOME.test(t)) eventos.push({ passo, tipo: 'usar', nome: t, tipoValor: 'número' });
-      }
-      eventos.push({
-        passo,
-        tipo: 'operar',
-        operacao: expressao[2] as '+' | '-' | '*' | '/',
-        a: valorDe(esquerda, passo),
-        b: valorDe(direita, passo),
-      });
-      return { eventos, erros: [] };
-    }
+  // Um termo de uma conta é um número, um texto, True/False — ou o nome de
+  // outra variável. Um nome não é um termo inválido: é o termo mais comum, e é
+  // o que faz `total = total + 1` ser a linha da lição. O que não é um termo
+  // é `2 - 3` escrito do lado direito de um `1 -`.
+  //
+  // A leitura da conta é a do leitor partilhado, e a diferença entre_requireer
+  // número e não requerer está escrita num sítio só, e não em dois — que é
+  // como os dois ficheiros divergiam.
+  const conta = eventosDeConta(resto, passo, (t) => valorDe(t, passo), 'número');
+  if (conta !== null) return { eventos: conta, erros: [] };
+  const culpado = ladoCulpado(resto, (t) => valorDe(t, passo));
+  if (culpado !== null) {
     // A expressão é válida para o Python e não se sabe ler. Dizer isso é
-    // ensino; transformar o termo em `0` sem dizer nada é fazer o aluno
-    // ler `a = 1 - 0` e pensar que foi o que escreveu.
+    // ensino; transformar o termo em `0` sem dizer nada é fazer o aluno ler
+    // `a = 1 - 0` e pensar que foi o que escreveu.
     return {
       eventos: [],
       erros: [
         erro(
           passo,
           `Esta conta ainda não sei ler: "${resto}". Numa conta, cada lado tem de ser um número, um texto, True/False, ou o nome de outra variável.`,
-          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, True/False, ou o nome de outra variável. O termo "${legivel(esquerda) ? direita : esquerda}" não é nenhum dos quatro.`,
+          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, True/False, ou o nome de outra variável. O termo "${culpado}" não é nenhum dos quatro.`,
         ),
       ],
     };

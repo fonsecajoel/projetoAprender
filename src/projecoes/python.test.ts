@@ -492,7 +492,7 @@ describe('a projeção e a sua política', () => {
 
   it('emit e ler são o mesmo objeto, e é para isso que serve', () => {
     // Escrever `total = 5` e ler `total = 5` é a mesma pessoa. Se `emit` e
-    // `ler` fossem dois objectos separados, cada um com as suas ideias
+    // `ler` fossem dois objetos separados, cada um com as suas ideias
     // sobre o que é Python, a lição ensinaria duas linguagens diferentes
     // com o mesmo nome.
     const escrito = python.emit(pilha(guardar('total', 5))).texto;

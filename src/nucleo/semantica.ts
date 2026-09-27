@@ -95,6 +95,23 @@ function operacaoDiz(operacao: '+' | '-' | '*' | '/'): string {
   return { '+': 'juntar', '-': 'subtrair', '*': 'multiplicar', '/': 'dividir' }[operacao];
 }
 
+/** A parte da frase que diz **quando** a recusa aparece.
+ *
+ *  A diferença entre as seis linguagens *é* esta parte, e uma frase que só
+ *  dissesse o que está errado deixaria essa diferença invisível mesmo depois de
+ *  estar escrita no código. Alguém que lê "total guarda texto, e este sítio
+ *  precisa de número" sem saber se o erro vem antes ou depois de o programa
+ *  correr não aprendeu nada que distinga uma linguagem de outra — e é
+ *  precisamente essa distinção que a lição existe para ensinar.
+ *
+ *  Nenhuma destas frases nomeia uma linguagem. O momento é um fato sobre a
+ *  linguagem, não o nome dela, e o núcleo diz o momento sem saber qual é. */
+const QUANDO: Record<Quando, string> = {
+  'antes de correr': 'A recusa vem antes de o código correr: nem chega a começar.',
+  'ao usar': 'O erro só aparece quando este valor é usado, e não antes.',
+  'quando o dado entra': 'A limitação não se resolve: fica escrita no dado, para sempre.',
+};
+
 function erroDePasso(passo: number, porque: string, remedio: string, origem: Origem): Erro {
   return { classe: 'FalhaRuntime', porque, passo, remedio, origem };
 }
@@ -123,7 +140,7 @@ export function interpretar(
           recusada.recusado = true;
           erros.push({
             ...E(restricao(alvo, 'o que guardas'), ev.valor),
-            porque: `Um sítio de ${alvo} não guarda ${ev.tipoValor}.`,
+            porque: `Um sítio de ${alvo} não guarda ${ev.tipoValor}. ${QUANDO[politica.quando]}`,
             remedio:
               politica.quando === 'quando o dado entra'
                 ? `Guarda aqui um ${alvo}. A limitação fica escrita no dado e vale para sempre.`
@@ -171,7 +188,7 @@ export function interpretar(
           erros.push(
             erroDePasso(
               ev.passo,
-              `${ev.nome} guarda ${guardado.tipo}, e este sítio precisa de ${ev.tipoValor}.`,
+              `${ev.nome} guarda ${guardado.tipo}, e este sítio precisa de ${ev.tipoValor}. ${QUANDO[politica.quando]}`,
               `Guarda ${ev.nome} como ${ev.tipoValor}.`,
               origemDe(ev.passo),
             ),

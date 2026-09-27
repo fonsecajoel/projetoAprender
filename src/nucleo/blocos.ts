@@ -28,7 +28,7 @@ export interface BlocoLeigo {
   inputs?: Record<string, EntradaLeiga>;
 }
 
-/** Ids de bloco. Slugs ASCII em minúsculas: são a identidade do bloco, e
+/** Os ids de bloco. Slugs ASCII em minúsculas: são a identidade do bloco, e
  *  nunca o texto que o utilizador lê. O texto vive no Blockly e no YAML. */
 export const BLOCOS = {
   guardar: 'guardar',
@@ -60,15 +60,45 @@ const PALAVRAS_PYTHON = new Set([
   'raise', 'return', 'True', 'try', 'while', 'with', 'yield',
 ]);
 
-/** Converte um nome escrito por uma pessoa num identificador Python válido. */
-export function identificador(nome: string): string {
+const PALAVRAS_JAVA = new Set([
+  'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
+  'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum',
+  'extends', 'final', 'float', 'for', 'goto', 'if', 'implements', 'import',
+  'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package',
+  'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp',
+  'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient',
+  'try', 'void', 'volatile', 'while',
+]);
+
+/** Converte um nome escrito por uma pessoa num identificador que não choca
+ *  com a linguagem. Os acentos saem, o que não é ASCII vira `_`, e um nome
+ *  que começa por número ganha um `v_` à frente.
+ *
+ *  As palavras reservadas entram no fim e **por linguagem**: `int` é palavra em
+ *  Java e não é em Python, e `class` é palavra nas duas. Uma lista só — a da
+ *  primeira linguagem — produz `int int = 5;`, que não é Java, e o aluno
+ *  recebe um erro de sintaxe numa linha em que só escreveu o nome da variável.
+ *  Uma palavra reservada que não apanhe é o mesmo tipo de erro que uma
+ *  palavra que apanha a mais: nos dois, o produto escreveu uma coisa que não
+ *  quereva escrever. */
+function identificadorDe(nome: string, reservadas: Set<string>): string {
   const base = nome
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, '_');
   const limpo = base.length === 0 || /^[0-9]/.test(base) ? `v_${base}` : base;
-  return PALAVRAS_PYTHON.has(limpo) ? `${limpo}_` : limpo;
+  return reservadas.has(limpo) ? `${limpo}_` : limpo;
+}
+
+/** Um identificador Python válido. */
+export function identificador(nome: string): string {
+  return identificadorDe(nome, PALAVRAS_PYTHON);
+}
+
+/** Um identificador Java válido. */
+export function identificadorJava(nome: string): string {
+  return identificadorDe(nome, PALAVRAS_JAVA);
 }
 
 export const TIPO_DE_BLOCO: Record<string, Tipo> = {
@@ -77,3 +107,35 @@ export const TIPO_DE_BLOCO: Record<string, Tipo> = {
   logico: 'lógico',
   acts: 'actor',
 };
+
+// ---------------------------------------------------------------------------
+// Ler um bloco
+// ---------------------------------------------------------------------------
+//
+// Estas três funções vivem ao lado de `BlocoLeigo` — e não em cada projeção —
+// porque todas as projeções precisam delas e porque uma delas já foi escrita
+// duas vezes com o mesmo erro. `corpoDe` é o caso: o corpo de um `repetir`
+// vive em `inputs.CORPO.stack`, e `pilhaDe` também abre uma pilha de um
+// `CORPO`. Confundir os dois dá um `for` repetido até a pilha estourar, e o
+// erro que aparece ao aluno fala da pilha e não dos blocos.
+
+/** O valor de uma ranhura, ou `undefined` se não houver. */
+export function entradaDe(b: BlocoLeigo, chave: string): unknown {
+  const i = b.inputs?.[chave];
+  return i !== undefined && 'valor' in i ? i.valor : undefined;
+}
+
+/** O que a pessoa escreveu no bloco.
+ *
+ *  O nome de uma variável é um `campo`, não uma entrada. Ler o nome de um
+ *  `guardar` de `inputs.NOME` — que não existe — produz `undefined = 5` para o
+ *  bloco mais básico do produto, e esse é o tipo de bug que só aparece quando
+ *  se vê o texto gerado, nunca num teste que só verifique tipos. */
+export function campoDe(b: BlocoLeigo, chave: string): unknown {
+  return b.fields?.[chave]?.valor;
+}
+
+/** O corpo de um `repetir`, e não `pilhaDe(b)`. */
+export function corpoDe(b: BlocoLeigo): BlocoLeigo[] {
+  return b.inputs?.CORPO?.stack ?? [];
+}

@@ -1,9 +1,11 @@
 import type { Language } from '../nucleo/tipos';
+import { java } from './java';
 import { python } from './python';
 import type { Projection } from './tipos';
 
 export const REGISTO: Partial<Record<Language, Projection>> = {
   python,
+  java,
 };
 
 export const LINGUAGENS_COM_PROJECAO: Language[] = Object.keys(REGISTO) as Language[];

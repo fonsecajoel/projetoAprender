@@ -111,6 +111,27 @@ describe('emit: teste dourado', () => {
     expect(python.emit(pilha(dizer({ txt: "it's" }))).texto).toBe("print('it\\'s')\n");
   });
 
+  it('fuga a linha nova, porque uma linha nova dentro de aspas não é Python', () => {
+    // Verificado contra o Python 3.14: `x = 'a` + linha nova + `b'` dá
+    // `unterminated string literal (detected at line 1)`. Escrever o caractere
+    // tal e qual produzia duas linhas, e a segunda era código — o aluno via um
+    // programa partido sem que nada lhe dissesse que estava partido.
+    expect(python.emit(pilha(dizer({ txt: 'a\nb' }))).texto).toBe("print('a\\nb')\n");
+    expect(python.emit(pilha(dizer({ txt: 'a\tb\r\nc' }))).texto).toBe("print('a\\tb\\r\\nc')\n");
+    // A barra de fugar tem de ser a primeira a ser tratada: se a `\` virasse
+    // `\\` depois de o `\n` virar `\n`, cada fuga passava a duplicar-se.
+    expect(python.emit(pilha(dizer({ txt: 'a\\nb' }))).texto).toBe("print('a\\\\nb')\n");
+  });
+
+  it('e o que o leitor lê é o que a pessoa escreveu', () => {
+    // A fuga e a desfuga são o mesmo caminho pelos dois lados. Se divergirem,
+    // quem escreve o bloco vê uma coisa e o painel de texto lê outra, e a
+    // diferença é um caractere que ninguém consegue ver.
+    const ev = python.ler("print('a\\nb')\n").eventos[0]!;
+    if (ev.tipo !== 'imprimir') throw new Error('esperava imprimir');
+    expect(ev.valor.valor).toBe('a\nb');
+  });
+
   it('programa vazio gera string vazia e zero anotações', () => {
     const g = python.emit(null);
     expect(g.texto).toBe('');

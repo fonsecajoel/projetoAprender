@@ -68,7 +68,7 @@ Cinco classes de erro ou modo de falha que a spec v2 implica, que nenhum teste d
 
 ## File Structure
 
-Os 42 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
+Os 43 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
 `- Create:` de cada tarefa — o que significa que se um ficheiro entrar na
 lista sem nenhuma tarefa o criar, ou sair da lista sem ser apagado de uma
 tarefa, esta secção está errada e o plano também. `java/variavel.yml` **não**
@@ -88,8 +88,9 @@ src/
                                        RestricaoDeTipo, as três classes de
                                        Erro. `remedio`, nunca `python`/`java`.
     trace.ts                           Trace, TraceBuilder, registar.            T1
-    blocos.ts                          BlocoLeigo, BLOCOS, CORES, os            T2
-                                       construtores (guardar, repetir, ...).
+    blocos.ts                          BlocoLeigo, BLOCOS, CORES,               T2
+                                       entradaDe, campoDe, corpoDe,
+                                       identificador, identificadorJava.
     avaliador.ts                       Regra + Avaliador. Blocos → Trace.       T2
     testes/dados.ts                    Blocos prontos para os testes.           T2
     semantica.ts                       O INVARIANTE. Eventos tipados           T3
@@ -104,10 +105,13 @@ src/
     tipos.ts                           Familia, Projection, Gerado,             T4
                                        Anotacao, LerResultado. `Policy` não
                                        vive aqui — vem do núcleo.
+    emissor.ts                         `Emissor`, `textoDe`, `linhasDe`.         T4
+                                       O que é igual nas seis: contar as
+                                       linhas e numerar as anotações.
     registo.ts                         REGISTO, obter, temProjecao,             T4
                                        LINGUAGENS_COM_PROJECAO.
     python.ts                          `emit` + `ler`. A primeira, completa.    T4
-    java.ts                            `emit` + `ler`, e DECLARACAO.            T5
+    java.ts                            `emit` + `ler`, e `declaracaoDe`.         T5
                                        A que prova a costura.
     avaliar.ts                         emitir, avaliarTexto, comparar-texto,     T6
                                        classificar.
@@ -1526,7 +1530,7 @@ export interface BlocoLeigo {
   inputs?: Record<string, EntradaLeiga>;
 }
 
-/** Ids de bloco. Slugs ASCII em minúsculas: são a identidade do bloco, e
+/** Os ids de bloco. Slugs ASCII em minúsculas: são a identidade do bloco, e
  *  nunca o texto que o utilizador lê. O texto vive no Blockly e no YAML. */
 export const BLOCOS = {
   guardar: 'guardar',
@@ -1558,15 +1562,45 @@ const PALAVRAS_PYTHON = new Set([
   'raise', 'return', 'True', 'try', 'while', 'with', 'yield',
 ]);
 
-/** Converte um nome escrito por uma pessoa num identificador Python válido. */
-export function identificador(nome: string): string {
+const PALAVRAS_JAVA = new Set([
+  'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
+  'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum',
+  'extends', 'final', 'float', 'for', 'goto', 'if', 'implements', 'import',
+  'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package',
+  'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp',
+  'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient',
+  'try', 'void', 'volatile', 'while',
+]);
+
+/** Converte um nome escrito por uma pessoa num identificador que não choca
+ *  com a linguagem. Os acentos saem, o que não é ASCII vira `_`, e um nome
+ *  que começa por número ganha um `v_` à frente.
+ *
+ *  As palavras reservadas entram no fim e **por linguagem**: `int` é palavra em
+ *  Java e não é em Python, e `class` é palavra nas duas. Uma lista só — a da
+ *  primeira linguagem — produz `int int = 5;`, que não é Java, e o aluno
+ *  recebe um erro de sintaxe numa linha em que só escreveu o nome da variável.
+ *  Uma palavra reservada que não apanhe é o mesmo tipo de erro que uma
+ *  palavra que apanha a mais: nos dois, o produto escreveu uma coisa que não
+ *  quereva escrever. */
+function identificadorDe(nome: string, reservadas: Set<string>): string {
   const base = nome
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, '_');
   const limpo = base.length === 0 || /^[0-9]/.test(base) ? `v_${base}` : base;
-  return PALAVRAS_PYTHON.has(limpo) ? `${limpo}_` : limpo;
+  return reservadas.has(limpo) ? `${limpo}_` : limpo;
+}
+
+/** Um identificador Python válido. */
+export function identificador(nome: string): string {
+  return identificadorDe(nome, PALAVRAS_PYTHON);
+}
+
+/** Um identificador Java válido. */
+export function identificadorJava(nome: string): string {
+  return identificadorDe(nome, PALAVRAS_JAVA);
 }
 
 export const TIPO_DE_BLOCO: Record<string, Tipo> = {
@@ -1575,6 +1609,38 @@ export const TIPO_DE_BLOCO: Record<string, Tipo> = {
   logico: 'lógico',
   acts: 'actor',
 };
+
+// ---------------------------------------------------------------------------
+// Ler um bloco
+// ---------------------------------------------------------------------------
+//
+// Estas três funções vivem ao lado de `BlocoLeigo` — e não em cada projeção —
+// porque todas as projeções precisam delas e porque uma delas já foi escrita
+// duas vezes com o mesmo erro. `corpoDe` é o caso: o corpo de um `repetir`
+// vive em `inputs.CORPO.stack`, e `pilhaDe` também abre uma pilha de um
+// `CORPO`. Confundir os dois dá um `for` repetido até a pilha estourar, e o
+// erro que aparece ao aluno fala da pilha e não dos blocos.
+
+/** O valor de uma ranhura, ou `undefined` se não houver. */
+export function entradaDe(b: BlocoLeigo, chave: string): unknown {
+  const i = b.inputs?.[chave];
+  return i !== undefined && 'valor' in i ? i.valor : undefined;
+}
+
+/** O que a pessoa escreveu no bloco.
+ *
+ *  O nome de uma variável é um `campo`, não uma entrada. Ler o nome de um
+ *  `guardar` de `inputs.NOME` — que não existe — produz `undefined = 5` para o
+ *  bloco mais básico do produto, e esse é o tipo de bug que só aparece quando
+ *  se vê o texto gerado, nunca num teste que só verifique tipos. */
+export function campoDe(b: BlocoLeigo, chave: string): unknown {
+  return b.fields?.[chave]?.valor;
+}
+
+/** O corpo de um `repetir`, e não `pilhaDe(b)`. */
+export function corpoDe(b: BlocoLeigo): BlocoLeigo[] {
+  return b.inputs?.CORPO?.stack ?? [];
+}
 ```
 
 - [ ] **Step 5: Escrever `src/nucleo/avaliador.ts`**
@@ -2196,6 +2262,35 @@ describe('interpretar: o mesmo programa, seis políticas', () => {
     expect(erros[0]!.remedio).toContain('para sempre');
   });
 
+  it('a recusa diz QUANDO acontece, e não só o que está errado', () => {
+    // A `Policy` tem `quando` para isto, e o `porque` era só "Um sítio de
+    // número não guarda texto" — que está certo e não diz nada de quando. É a
+    // lacuna mais cara do produto: a diferença entre as seis linguagens **é** o
+    // momento, e quem não sabe se o erro aparece antes ou depois de o programa
+    // correr não aprendeu nada que distinga uma linguagem de outra.
+    const antes = interpretar([atribuir('total', t('olá'), 'número')], POLITICAS.java, origemNo);
+    const noDado = interpretar([atribuir('total', t('olá'), 'número')], POLITICAS.sql, origemNo);
+
+    expect(antes[0]!.porque).toMatch(/antes de o código correr/);
+    expect(noDado[0]!.porque).toMatch(/no dado/);
+    // E as duas frases têm de ser diferentes entre si, ou a diferença de
+    // momento voltou a ser invisível mesmo estando escrita no código.
+    expect(antes[0]!.porque).not.toBe(noDado[0]!.porque);
+  });
+
+  it('e o erro de incompatibilidade também diz quando aparece', () => {
+    // Esta é a linha mais importante da lição de Python: `total = 'olá'` passa,
+    // e a linha seguinte é que rebenta. Sem o momento, o aluno lê "total guarda
+    // texto, e este sítio precisa de número" e não percebe que o estrago já
+    // estava feito uma linha antes.
+    const aoUsar = interpretar(
+      [atribuir('total', t('olá')), usar('total', 'número')],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(aoUsar[0]!.porque).toMatch(/quando este valor é usado/);
+  });
+
   it('nenhuma das seis produz um erro sem porque nem sem remedio', () => {
     for (const nome of TODAS) {
       const erros = interpretar(
@@ -2574,6 +2669,23 @@ function operacaoDiz(operacao: '+' | '-' | '*' | '/'): string {
   return { '+': 'juntar', '-': 'subtrair', '*': 'multiplicar', '/': 'dividir' }[operacao];
 }
 
+/** A parte da frase que diz **quando** a recusa aparece.
+ *
+ *  A diferença entre as seis linguagens *é* esta parte, e uma frase que só
+ *  dissesse o que está errado deixaria essa diferença invisível mesmo depois de
+ *  estar escrita no código. Alguém que lê "total guarda texto, e este sítio
+ *  precisa de número" sem saber se o erro vem antes ou depois de o programa
+ *  correr não aprendeu nada que distinga uma linguagem de outra — e é
+ *  precisamente essa distinção que a lição existe para ensinar.
+ *
+ *  Nenhuma destas frases nomeia uma linguagem. O momento é um fato sobre a
+ *  linguagem, não o nome dela, e o núcleo diz o momento sem saber qual é. */
+const QUANDO: Record<Quando, string> = {
+  'antes de correr': 'A recusa vem antes de o código correr: nem chega a começar.',
+  'ao usar': 'O erro só aparece quando este valor é usado, e não antes.',
+  'quando o dado entra': 'A limitação não se resolve: fica escrita no dado, para sempre.',
+};
+
 function erroDePasso(passo: number, porque: string, remedio: string, origem: Origem): Erro {
   return { classe: 'FalhaRuntime', porque, passo, remedio, origem };
 }
@@ -2602,7 +2714,7 @@ export function interpretar(
           recusada.recusado = true;
           erros.push({
             ...E(restricao(alvo, 'o que guardas'), ev.valor),
-            porque: `Um sítio de ${alvo} não guarda ${ev.tipoValor}.`,
+            porque: `Um sítio de ${alvo} não guarda ${ev.tipoValor}. ${QUANDO[politica.quando]}`,
             remedio:
               politica.quando === 'quando o dado entra'
                 ? `Guarda aqui um ${alvo}. A limitação fica escrita no dado e vale para sempre.`
@@ -2650,7 +2762,7 @@ export function interpretar(
           erros.push(
             erroDePasso(
               ev.passo,
-              `${ev.nome} guarda ${guardado.tipo}, e este sítio precisa de ${ev.tipoValor}.`,
+              `${ev.nome} guarda ${guardado.tipo}, e este sítio precisa de ${ev.tipoValor}. ${QUANDO[politica.quando]}`,
               `Guarda ${ev.nome} como ${ev.tipoValor}.`,
               origemDe(ev.passo),
             ),
@@ -2911,12 +3023,12 @@ interface BlocoLeigo {
 Blocos do primeiro conceito: `guardar`, `repetir`, `dizer`, `log`, `pilha`. **`dizer` é o que escreve no ecrã** (`print`) e **`log` emite `log(...)`**, uma função que ainda não existe — é o passo que mostra a Python a falhar a correr. Não existe bloco `media`, e não há `vazio`: um bloco que não produz nada é `vazio` no YAML e não chega ao `emit`.
 
 **Files:**
-- Create: `src/projecoes/tipos.ts`, `src/projecoes/registo.ts`, `src/projecoes/python.ts`
+- Create: `src/projecoes/tipos.ts`, `src/projecoes/registo.ts`, `src/projecoes/emissor.ts`, `src/projecoes/python.ts`
 - Test: `src/projecoes/python.test.ts`, `src/projecoes/registo.test.ts`
 
 **Interfaces:**
 - Consumes: Task 1 — `Language`, `Tipo`, `Valor`, `Erro`, `restricao`, `MAX_ITERACOES`; Task 2 — `BlocoLeigo`, `identificador`, `pilhaDe`; Task 3 — `POLITICAS`, `EventoLido`, `AMOSTRA`.
-- Produces: `Familia`, `Projection`, `Gerado`, `Anotacao`, `LerResultado`, `REGISTO`, `obter(linguagem)`, `temProjecao(linguagem)`, `LINGUAGENS_COM_PROJECAO`, `python`, `BLOCOS_IMPERATIVOS`.
+- Produces: `Familia`, `Projection`, `Gerado`, `Anotacao`, `LerResultado`, `REGISTO`, `obter(linguagem)`, `temProjecao(linguagem)`, `LINGUAGENS_COM_PROJECAO`, `python`, `BLOCOS_IMPERATIVOS`, `Emissor`, `NOMES_DE_CONTADOR`, `textoDe(e)`, `linhasDe(texto)`.
 
 - [ ] **Step 1: Escrever o teste falhado — a projecão Python**
 
@@ -3033,6 +3145,27 @@ describe('emit: teste dourado', () => {
 
   it('fuga aspas simples no texto com barra', () => {
     expect(python.emit(pilha(dizer({ txt: "it's" }))).texto).toBe("print('it\\'s')\n");
+  });
+
+  it('fuga a linha nova, porque uma linha nova dentro de aspas não é Python', () => {
+    // Verificado contra o Python 3.14: `x = 'a` + linha nova + `b'` dá
+    // `unterminated string literal (detected at line 1)`. Escrever o caractere
+    // tal e qual produzia duas linhas, e a segunda era código — o aluno via um
+    // programa partido sem que nada lhe dissesse que estava partido.
+    expect(python.emit(pilha(dizer({ txt: 'a\nb' }))).texto).toBe("print('a\\nb')\n");
+    expect(python.emit(pilha(dizer({ txt: 'a\tb\r\nc' }))).texto).toBe("print('a\\tb\\r\\nc')\n");
+    // A barra de fugar tem de ser a primeira a ser tratada: se a `\` virasse
+    // `\\` depois de o `\n` virar `\n`, cada fuga passava a duplicar-se.
+    expect(python.emit(pilha(dizer({ txt: 'a\\nb' }))).texto).toBe("print('a\\\\nb')\n");
+  });
+
+  it('e o que o leitor lê é o que a pessoa escreveu', () => {
+    // A fuga e a desfuga são o mesmo caminho pelos dois lados. Se divergirem,
+    // quem escreve o bloco vê uma coisa e o painel de texto lê outra, e a
+    // diferença é um caractere que ninguém consegue ver.
+    const ev = python.ler("print('a\\nb')\n").eventos[0]!;
+    if (ev.tipo !== 'imprimir') throw new Error('esperava imprimir');
+    expect(ev.valor.valor).toBe('a\nb');
   });
 
   it('programa vazio gera string vazia e zero anotações', () => {
@@ -3441,17 +3574,36 @@ import { LINGUAGENS_COM_PROJECAO, obter, temProjecao } from './registo';
 import { BLOCOS_IMPERATIVOS } from './python';
 
 describe('o registo', () => {
-  it('tem Python, e só Python por enquanto', () => {
-    expect(LINGUAGENS_COM_PROJECAO).toEqual(['python']);
+  it('tem Python e Java, e só essas duas', () => {
+    expect([...LINGUAGENS_COM_PROJECAO].sort()).toEqual(['java', 'python']);
+  });
+
+  it('as duas imperativas declaram o mesmo vocabulário de blocos', () => {
+    // As duas partilham os cinco blocos. A lista vive em `python.ts` porque é
+    // onde a spec a escreveu, e a de Java vai buscá-la em vez de a repetir: uma
+    // lista escrita duas vezes diverge no dia em que a spec ganha um bloco, e
+    // ninguém se lembra de ir às duas.
+    expect(obter('java').blocos).toEqual(obter('python').blocos);
+  });
+
+  it('as duas declaram a mesma família, e são as únicas', () => {
+    expect(obter('java').familia).toBe(obter('python').familia);
+    expect(obter('java').familia).toBe('imperativa');
+  });
+
+  it('e as duas declaram políticas opostas, que é o que a costura prova', () => {
+    expect(obter('java').policy.recusaNoTipo).toBe(true);
+    expect(obter('python').policy.recusaNoTipo).toBe(false);
   });
 
   it('obter devolve a projecão pedida', () => {
     expect(obter('python').linguagem).toBe('python');
+    expect(obter('java').linguagem).toBe('java');
   });
 
   it('obter uma linguagem sem projecão diz qual falta, e não devolve indefinido', () => {
-    expect(() => obter('java')).toThrow(/java/);
-    expect(temProjecao('java')).toBe(false);
+    expect(() => obter('go')).toThrow(/go/);
+    expect(temProjecao('go')).toBe(false);
   });
 
   it('a exceção nomeia a linguagem em minúsculas, como a usar em código', () => {
@@ -3466,7 +3618,8 @@ describe('o registo', () => {
 
   it('a exceção diz o que está disponível, e não só o que falta', () => {
     // Um erro que só diz "não há" obriga quem o lê a ir procurar a lista.
-    // Um erro que diz "não há java; há python" diz também o próximo passo.
+    // Um erro que diz "não há go; há java, python" diz também o próximo passo.
+    expect(() => obter('go')).toThrow(/java/);
     expect(() => obter('go')).toThrow(/python/);
   });
 
@@ -3482,11 +3635,12 @@ describe('o registo', () => {
     expect(obter('python').blocos).toEqual(BLOCOS_IMPERATIVOS);
   });
 
-  it('temProjecao é falso para as cinco que faltam, e verdadeiro para a uma que há', () => {
+  it('temProjecao é falso para as quatro que faltam, e verdadeiro para as duas que há', () => {
     const comProjecao = LINGUAGENS_COM_PROJECAO;
-    expect(comProjecao).toHaveLength(1);
+    expect(comProjecao).toHaveLength(2);
     expect(temProjecao('python')).toBe(true);
-    for (const l of ['go', 'java', 'javascript', 'sql', 'typescript'] as const) {
+    expect(temProjecao('java')).toBe(true);
+    for (const l of ['go', 'javascript', 'sql', 'typescript'] as const) {
       expect(temProjecao(l), l).toBe(false);
     }
   });
@@ -3560,11 +3714,13 @@ export interface Projection {
 
 ```typescript
 import type { Language } from '../nucleo/tipos';
+import { java } from './java';
 import { python } from './python';
 import type { Projection } from './tipos';
 
 export const REGISTO: Partial<Record<Language, Projection>> = {
   python,
+  java,
 };
 
 export const LINGUAGENS_COM_PROJECAO: Language[] = Object.keys(REGISTO) as Language[];
@@ -3589,17 +3745,145 @@ export function obter(linguagem: Language): Projection {
 }
 ```
 
-- [ ] **Step 6: Escrever `src/projecoes/python.ts`**
+- [ ] **Step 6: Escrever `src/projecoes/emissor.ts`**
+
+O que é igual nas seis projeções, e que por isso vive uma vez só. O `Emissor`
+da primeira projeção contava as linhas do corpo de um laço a partir de 1, e a
+anotação do `x = 1` dizia "linha 1" — sendo que a linha 1 é o `for`. **Uma
+anotação que aponta para a linha errada é pior do que nenhuma**: o aluno lê a
+explicação ao lado da linha errada e aprende a explicação errada, com a
+confiança de quem a leu no sítio certo. Duas cópias teriam o bug duas vezes, e
+corrigir uma deixaria a outra a dizer que a coisa está bem.
+
+Os nomes de contador são escolhidos **por nível de aninhamento** e não por
+emissão: um laço dentro de outro não pode repetir o nome — `for (int i…) { for
+(int i…) }` não compila — mas dois laços irmãos **podem**, e devem, porque é o
+que se escreve à mão.
+
+`src/projecoes/emissor.ts`:
+
+```typescript
+import type { Anotacao } from './tipos';
+
+/** Os nomes de contador disponíveis para os laços, por ordem de preferência. */
+export const NOMES_DE_CONTADOR = ['i', 'j', 'k', 'm', 'n'] as const;
+
+/** Acumula linhas e anotações, sabendo em que linha do programa está.
+ *
+ *  Vive aqui, e não em cada projeção, porque é a *mesma* em todas: o que muda
+ *  entre linguagens é o texto que se escreve e a frase que o explica — e isso
+ *  é o `emitir` de cada uma. O que não muda é a contagem das linhas, e a
+ *  contagem é a parte em que a primeira projeção tinha o bug: o emissor de um
+ *  corpo de laço contava a partir de 1 e a anotação do `x = 1` dizia "linha
+ *  1", sendo que a linha 1 é o `for`. **Uma anotação que aponta para a linha
+ *  errada é pior do que nenhuma**: o aluno lê a explicação ao lado da linha
+ *  errada e aprende a explicação errada, com a confiança de quem a leu no sítio
+ *  certo.
+ *
+ *  Duas cópias desta classe teriam o bug duas vezes, e corrigir uma deixaria a
+ *  outra a dizer que a coisa está bem.
+ *
+ *  Os nomes de contador são escolhidos **por nível de aninhamento** e não por
+ *  emissão, e a diferença importa em Java: um laço dentro de outro não pode
+ *  repetir o nome — `for (int i…) { for (int i…) }` não compila, porque a
+ *  variável já está declarada — mas dois laços irmãos **podem**, e devem: é o
+ *  que se escreve à mão, e um `j` que aparece sem um `i` antes dele confunde
+ *  quem está a ler. Um `Set` partilhado pela emissão dava `i` e `j` a dois
+ *  irmãos; um `Set` novo por nível dava `i` aos dois e `i` outra vez ao
+ *  aninhado, que também não compila. Cada nível vê os nomes dos níveis que o
+ *  cercam e os seus, e é daí que sai `i`, `j`, e outra vez `i`. */
+export class Emissor {
+  readonly linhas: string[] = [];
+  readonly anotacoes: Anotacao[] = [];
+
+  private readonly nomesPorNivel: Map<number, string[]>;
+
+  constructor(
+    private nivel = 0,
+    private base = 0,
+    nomesPorNivel?: Map<number, string[]>,
+  ) {
+    this.nomesPorNivel = nomesPorNivel ?? new Map<number, string[]>();
+  }
+
+  recuo(): string {
+    return '    '.repeat(this.nivel);
+  }
+
+  linha(texto: string, porque: string): void {
+    this.linhas.push(this.recuo() + texto);
+    this.anotacoes.push({ linha: this.base + this.linhas.length, porque });
+  }
+
+  /** O emissor do corpo de um bloco que abre uma linha — um laço.
+   *
+   *  As linhas do pai já contadas são a base, e é isso que faz a primeira
+   *  linha do corpo ser a linha a seguir à do laço. O `nome` é o contador que
+   *  o laço vai usar, e ele desce **numa cópia** do mapa: o corpo não pode
+   *  repetir o nome, e os laços que vierem a seguir deste laço no mesmo sítio
+   *  podem — que é o que se escreve à mão, e o que a cópia dá. */
+  entrar(nome?: string): Emissor {
+    const nomes = new Map(this.nomesPorNivel);
+    if (nome !== undefined) {
+      nomes.set(this.nivel, [...(nomes.get(this.nivel) ?? []), nome]);
+    }
+    return new Emissor(this.nivel + 1, this.base + this.linhas.length, nomes);
+  }
+
+  /** Pega nas linhas de um corpo e junta-as às deste, por ordem.
+   *
+   *  Chamar isto **antes** de escrever a linha de fecho é o que põe a
+   *  chaveta a seguir ao corpo. Ao contrário, o laço abre, o fecho fecha, e o
+   *  corpo fica escrito lá fora — código que não compila, com a anotação de
+   *  cada linha do corpo a apontar para uma linha que não existe. */
+  absorver(outro: Emissor): void {
+    this.linhas.push(...outro.linhas);
+    this.anotacoes.push(...outro.anotacoes);
+  }
+
+  /** Um nome de contador que nenhum laço à volta esteja a usar.
+   *
+   *  Não reserva nada: quem reserva é o `entrar`, e só para o corpo. Guardar o
+   *  nome aqui atava os laços irmãos — o segundo `for` sairia `j`, e um `j` sem
+   *  um `i` antes dele é uma coisa que ninguém escreve à mão. */
+  nomeDeContador(): string {
+    const tomados = new Set<string>();
+    for (const nomes of this.nomesPorNivel.values()) {
+      for (const nome of nomes) tomados.add(nome);
+    }
+    for (const nome of NOMES_DE_CONTADOR) {
+      if (!tomados.has(nome)) return nome;
+    }
+    // Cinco laços aninhados já são absurdo para uma lição, e um nome novo é o
+    // que o Java faria com `var`. O erro — se algum dia aparecer — diz o que
+    // aconteceu, em vez de virar um `undefined` no meio do texto.
+    return `c${this.nivel}_${tomados.size}`;
+  }
+}
+
+/** O programa inteiro, como texto: uma linha por linha emitida, com `\n`. */
+export function textoDe(e: Emissor): string {
+  return e.linhas.map((l) => `${l}\n`).join('');
+}
+
+/** As linhas de um texto gerado, sem a linha a mais do fim. */
+export function linhasDe(texto: string): string[] {
+  return texto.replace(/\n$/, '').split('\n');
+}
+```
+
+- [ ] **Step 7: Escrever `src/projecoes/python.ts`**
 
 ```typescript
 import type { BlocoLeigo } from '../nucleo/blocos';
-import { identificador } from '../nucleo/blocos';
+import { corpoDe, campoDe, entradaDe, identificador } from '../nucleo/blocos';
 import { pilhaDe } from '../nucleo/avaliador';
 import { AMOSTRA, POLITICAS } from '../nucleo/semantica';
 import type { EventoLido } from '../nucleo/semantica';
 import { val } from '../nucleo/tipos';
 import type { FalhaRuntime, Valor } from '../nucleo/tipos';
-import type { Anotacao, Gerado, LerResultado, Projection } from './tipos';
+import { Emissor, textoDe } from './emissor';
+import type { Gerado, LerResultado, Projection } from './tipos';
 
 export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
 
@@ -3607,35 +3891,21 @@ export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
 // Escrever: blocos → Python
 // ---------------------------------------------------------------------------
 
-function entradaDe(b: BlocoLeigo, chave: string): unknown {
-  const i = b.inputs?.[chave];
-  return i && 'valor' in i ? i.valor : undefined;
-}
-
-/** O nome de um `guardar` está nos `fields`, não nos `inputs`.
+/** Escreve um texto como um literal Python.
  *
- *  O `BlocoLeigo` separa o que a pessoa escreve no bloco do que se liga a
- *  outros blocos, e o nome de uma variável é a primeira coisa. Ler o nome de
- *  `inputs.NOME` — que não existe — produz `undefined = 5` para o bloco mais
- *  básico do produto, e esse é o tipo de bug que só aparece quando se vê o
- *  texto gerado, nunca num teste que só verifique tipos. */
-function campoDe(b: BlocoLeigo, chave: string): unknown {
-  return b.fields?.[chave]?.valor;
-}
-
-/** O corpo de um `repetir`, e não `pilhaDe(b)`.
- *
- *  `pilhaDe` abre uma pilha e, se não for uma pilha, devolve o próprio bloco
- *  — que é o que se quer no topo e é uma recursão infinita no corpo de um
- *  laço. O corpo vive em `inputs.CORPO.stack`, e confundir os dois `CORPO`
- *  — o da pilha e o do laço — produz `for _ in range(3):` repetido até a
- *  pilha estourar. */
-function corpoDe(b: BlocoLeigo): BlocoLeigo[] {
-  return b.inputs?.CORPO?.stack ?? [];
-}
-
+ *  A barra de fugar é tratada **primeiro**, sempre. Se o `\n` se transformasse
+ *  numa fuga antes de a barra ser dobrada, cada fuga seria duplicada — e o
+ *  texto `a\nb` (barra, n, b) sairia `a\\nb`, que o Python lê como barra
+ *  seguida de n. Verificado contra o Python 3.14: uma linha nova escrita tal
+ *  e qual dentro de aspas dá `unterminated string literal`, e o produto nunca
+ *  mostra ao aluno uma linha que não corre. */
 function fugar(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t')
+    .replace(/'/g, "\\'");
 }
 
 function literal(entrada: unknown): string {
@@ -3648,37 +3918,6 @@ function literal(entrada: unknown): string {
     return `'${fugar(String((entrada as { txt: unknown }).txt))}'`;
   }
   return `'${fugar(String(entrada))}'`;
-}
-
-/** Acumula linhas e anotações, sabendo em que linha do programa está.
- *
- *  O `base` é o número de linhas que o pai já emitiu. Sem ele, o emissor de
- *  um corpo de laço contaria a partir de 1 e a anotação do `x = 1` diria
- *  "linha 1" — sendo que a linha 1 é o `for`. Uma anotação que aponta para
- *  a linha errada é pior do que nenhuma: o aluno lê a explicação ao lado
- *  da linha errada e aprende a explicação errada. */
-class Emissor {
-  readonly linhas: string[] = [];
-  readonly anotacoes: Anotacao[] = [];
-
-  constructor(
-    private nivel = 0,
-    private base = 0,
-  ) {}
-
-  recuo(): string {
-    return '    '.repeat(this.nivel);
-  }
-
-  linha(texto: string, porque: string): void {
-    this.linhas.push(this.recuo() + texto);
-    this.anotacoes.push({ linha: this.base + this.linhas.length, porque });
-  }
-
-  /** As linhas do `for` já contadas: o corpo começa a seguir. */
-  entrar(): Emissor {
-    return new Emissor(this.nivel + 1, this.base + this.linhas.length);
-  }
 }
 
 function emitir(b: BlocoLeigo, e: Emissor): void {
@@ -3722,11 +3961,9 @@ function emitir(b: BlocoLeigo, e: Emissor): void {
       } else {
         for (const filho of corpo) emitir(filho, dentro);
       }
-      e.linhas.push(...dentro.linhas);
-      e.anotacoes.push(...dentro.anotacoes);
+      e.absorver(dentro);
       return;
     }
-
     default:
       e.linha(`# bloco do v2: ${b.type}`, 'Este bloco ainda não está nesta lição.');
   }
@@ -3982,10 +4219,7 @@ export const python: Projection = {
   emit(programa: BlocoLeigo | null): Gerado {
     const e = new Emissor();
     for (const bloco of pilhaDe(programa)) emitir(bloco, e);
-    return {
-      texto: e.linhas.map((l) => `${l}\n`).join(''),
-      anotacoes: e.anotacoes,
-    };
+    return { texto: textoDe(e), anotacoes: e.anotacoes };
   },
 
   ler(texto: string): LerResultado {
@@ -4012,7 +4246,7 @@ export const python: Projection = {
 };
 ```
 
-- [ ] **Step 7: Ler expressões — `total = total + 1`**
+- [ ] **Step 8: Ler expressões — `total = total + 1`**
 
 A linha mais importante da lição é uma atribuição cuja direita é uma conta. Sem isto o `ler` diz «Python não sabe o que fazer» a uma linha perfectly válida, e a lição mente sobre a linguagem que está a ensinar.
 
@@ -4154,17 +4388,17 @@ describe('ler: o for', () => {
 
 **Por que é que isto importa para a lição e não é um extra:** a linha `total = total + 1` é o momento em que Python deixa de ser um ficheiro de texto e passa a ser um programa. Sem a expressão lida, o aluno lê a linha e o produto diz-lhe que é um erro — e ele aprende a distrustar do professor em vez de aprender a ler.
 
-- [ ] **Step 8: Correr os testes e ver passar**
+- [ ] **Step 9: Correr os testes e ver passar**
 
 Run: `npx vitest run src/projecoes`
 Expected: PASS.
 
-- [ ] **Step 9: Correr a suite toda, o verificador de árvore e o typecheck**
+- [ ] **Step 10: Correr a suite toda, o verificador de árvore e o typecheck**
 
 Run: `npm test && npm run arvore && npx tsc --noEmit`
 Expected: PASS, `núcleo limpo`, e o typecheck mudo.
 
-- [ ] **Step 10: Commitar**
+- [ ] **Step 11: Commitar**
 
 ```bash
 git add -A
@@ -4339,69 +4573,205 @@ Em `src/projecoes/registo.test.ts`, substitua o primeiro `it` e acrescente este:
 import { describe, expect, it } from 'vitest';
 import { java } from './java';
 import { python } from './python';
-import { dizer, guardar, guardarTexto, log, pilha, repetir } from '../nucleo/testes/dados';
 import { POLITICAS, interpretar } from '../nucleo/semantica';
+import type { EventoLido } from '../nucleo/semantica';
+import { val } from '../nucleo/tipos';
+import type { Tipo, Valor } from '../nucleo/tipos';
+import { dizer, guardar, guardarTexto, log, pilha, repetir } from '../nucleo/testes/dados';
+import { linhasDe } from './emissor';
 
-describe('emit: o mesmo bloco, outra sintaxe', () => {
-  it('guardar escreve o tipo, porque em Java escreve-se à mão', () => {
+/** O que `emit` aceita. `ReturnType<typeof java.emit>` seria o `Gerado` que ele
+ *  devolve — e o que se quer escrever aqui é o bloco que se lhe dá. */
+type Programa = Parameters<typeof java.emit>[0];
+
+const AMOSTRA = { porque: 'aqui', remedio: 'aqui' } as const;
+
+function v(tipo: Tipo, valor: unknown, passo = 1): Valor {
+  return val(tipo, valor, AMOSTRA, { bloco: 'texto', ranhura: 0, passo });
+}
+
+function eventoDe(texto: string, i = 0): EventoLido {
+  const ev = java.ler(texto).eventos[i];
+  if (ev === undefined) throw new Error(`a linha "${texto}" não produziu evento ${i}`);
+  return ev;
+}
+
+describe('emit: o mesmo bloco, outra linguagem', () => {
+  it('o mesmo programa dá texto diferente nas duas projeções', () => {
+    // A prova de que a costura é real e não um rótulo: um `BlocoLeigo`, dois
+    // textos, e a diferença entre eles não está em nenhum `if` — está na
+    // projeção, que é a única camada que conhece sintaxe.
+    const programa = pilha(guardar('total', 5), log({ ref: 'total' }));
+    expect(python.emit(programa).texto).toBe('total = 5\nlog(total)\n');
+    expect(java.emit(programa).texto).toBe('int total = 5;\nlog(total);\n');
+  });
+
+  it('guardar número escreve o tipo à mão', () => {
+    // Em Java o tipo escreve-se antes do nome, sempre. É a linha inteira da
+    // lição: o mesmo bloco que em Python dá `total = 5` dá aqui `int total = 5;`.
     expect(java.emit(pilha(guardar('total', 5))).texto).toBe('int total = 5;\n');
   });
 
-  it('o mesmo bloco dá texto diferente em Python e em Java', () => {
-    const p = pilha(guardar('total', 5));
-    expect(python.emit(p).texto).toBe('total = 5\n');
-    expect(java.emit(p).texto).toBe('int total = 5;\n');
+  it('o tipo escrito depende do valor, e não só do genre', () => {
+    // `int` não aceita casas decimais e `double` aceita. Um `Record<Tipo, string>`
+    // — um nome por tipo — escreveria `int` para o 1.5 e produziria Java que
+    // não compila. O `Tipo` deste produto só tem um `número`, e é a projeção
+    // que sabe que em Java esse número tem duas palavras.
+    expect(java.emit(pilha(guardar('total', 1.5))).texto).toBe('double total = 1.5;\n');
+    expect(java.emit(pilha(guardarTexto('total', 5))).texto).toBe('String total = "5";\n');
+    expect(java.emit(pilha(guardar('pronto', true))).texto).toBe('boolean pronto = true;\n');
   });
 
-  it('guardar texto', () => {
-    expect(java.emit(pilha(guardarTexto('nome', 'olá'))).texto).toBe('String nome = "olá";\n');
+  it('um guardar de outra variável escreve var, e diz porquê', () => {
+    // O tipo de `contagem` só existe quando o programa corre, e um `int` escrito
+    // aqui seria uma adivinhação: se `contagem` for um texto, `int total =
+    // contagem;` não compila. `var` existe em Java, deixa o compilador
+    // descobrir, e por isso é a única palavra honesta para este caso — que a
+    // anotação tem de explicar, porque a palavra sozinha ensina o contrário da
+    // lição.
+    const g = java.emit(pilha(guardar('total', { ref: 'contagem' })));
+    expect(g.texto).toBe('var total = contagem;\n');
+    expect(g.anotacoes[0]!.porque).toContain('var');
   });
 
-  it('dizer escreve System.out.println', () => {
+  it('dizer é o System.out.println, e aceita qualquer tipo', () => {
     expect(java.emit(pilha(dizer({ txt: 'olá' }))).texto).toBe('System.out.println("olá");\n');
+    expect(java.emit(pilha(dizer(5))).texto).toBe('System.out.println(5);\n');
+    expect(java.emit(pilha(dizer({ ref: 'total' }))).texto).toBe('System.out.println(total);\n');
   });
 
-  it('log de uma referência', () => {
-    expect(java.emit(pilha(log({ ref: 'total' }))).texto).toBe('log(total);\n');
+  it('fuga a barra e a linha nova, porque uma linha nova fecha a string', () => {
+    // `System.out.println("a` + linha nova + `b");` é uma string por terminar.
+    // Verificado: é a mesma armadilha do Python, e a correção é a mesma.
+    expect(java.emit(pilha(dizer({ txt: 'a\nb' }))).texto).toBe('System.out.println("a\\nb");\n');
+    expect(java.emit(pilha(dizer({ txt: 'diz "olá"' }))).texto)
+      .toBe('System.out.println("diz \\"olá\\"");\n');
+    // A barra de fugar primeiro, sempre: `a\nb` com barra sai `a\\nb`, que o
+    // Java lê como barra seguida de n.
+    expect(java.emit(pilha(dizer({ txt: 'a\\nb' }))).texto)
+      .toBe('System.out.println("a\\\\nb");\n');
   });
 
-  it('repetir escreve o for clássico com chavetas', () => {
+  it('repetir escreve o for clássico, e a chaveta fecha depois do corpo', () => {
+    // A ordem das linhas é o que decide se o Java é válido. A primeira versão
+    // desta projeção empurrava o `}` para antes do corpo — abria, fechava, e o
+    // corpo ficava escrito lá fora.
     expect(java.emit(pilha(repetir(3, [guardar('x', 1)]))).texto)
       .toBe('for (int i = 0; i < 3; i++) {\n    int x = 1;\n}\n');
   });
 
-  it('repetir aninhado abre duas chavetas', () => {
+  it('dois laços aninhados não podem usar o mesmo nome de contador', () => {
+    // O nome do contador não pode ser um contador de módulo: com dois laços
+    // aninhados, o mesmo nome é uma variável repetida em Java.
     expect(java.emit(pilha(repetir(2, [repetir(2, [guardar('x', 1)])]))).texto)
       .toBe('for (int i = 0; i < 2; i++) {\n    for (int j = 0; j < 2; j++) {\n        int x = 1;\n    }\n}\n');
   });
 
-  it('repetir sem corpo fecha a chaveta na mesma', () => {
+  it('dois laços irmãos podem usar o mesmo nome, e o texto lê-se melhor', () => {
+    expect(java.emit(pilha(repetir(2, [guardar('x', 1)]), repetir(2, [guardar('y', 2)]))).texto)
+      .toBe(
+        'for (int i = 0; i < 2; i++) {\n    int x = 1;\n}\n' +
+          'for (int i = 0; i < 2; i++) {\n    int y = 2;\n}\n',
+      );
+  });
+
+  it('e duas emissões não se baralham entre si', () => {
+    // Um contador de módulo seria reposto no início de cada `emit` e por isso
+    // pareceria funcionar — até dois `emit` intercalados, o que um ecrã React
+    // faz sem querer. O `Set` de nomes é por emissão.
+    const primeiro = java.emit(pilha(repetir(2, [repetir(2, [guardar('x', 1)])]))).texto;
+    const meio = java.emit(pilha(repetir(9, [guardar('y', 1)]))).texto;
+    const segundo = java.emit(pilha(repetir(2, [repetir(2, [guardar('x', 1)])]))).texto;
+    expect(meio).toContain('int i = 0; i < 9;');
+    expect(segundo).toBe(primeiro);
+  });
+
+  it('um laço sem corpo fecha a chaveta na mesma, porque em Java isso é legal', () => {
+    // Um bloco vazio entre chavetas é Java válido. Em Python o `for` sem corpo
+    // não é — e é a diferença que a anotação tem de fazer, se é que a faz.
     expect(java.emit(pilha(repetir(3, []))).texto)
       .toBe('for (int i = 0; i < 3; i++) {\n}\n');
   });
 
-  it('programa vazio gera string vazia e zero anotações', () => {
-    const g = java.emit(null);
-    expect(g.texto).toBe('');
-    expect(g.anotacoes).toEqual([]);
-  });
-
-  it('toda linha gerada tem anotação com porque e linha certa', () => {
+  it('toda linha gerada tem anotação, com o número de linha certo', () => {
+    // Quatro linhas: o `for`, os dois blocos do corpo, e o `}`. A primeira
+    // versão deste teste dizia cinco, e a contagem certa está a dois testes
+    // acima — um número escrito sem contar passa porque ninguém o confere.
     const g = java.emit(pilha(repetir(2, [guardar('x', 1), log({ ref: 'x' })])));
-    const linhas = g.texto.trimEnd().split('\n');
-    expect(linhas).toHaveLength(5);
-    expect(g.anotacoes).toHaveLength(5);
+    expect(linhasDe(g.texto)).toEqual([
+      'for (int i = 0; i < 2; i++) {',
+      '    int x = 1;',
+      '    log(x);',
+      '}',
+    ]);
+    expect(g.anotacoes).toHaveLength(4);
     for (let i = 0; i < g.anotacoes.length; i += 1) {
       expect(g.anotacoes[i]!.linha).toBe(i + 1);
       expect(g.anotacoes[i]!.porque.length).toBeGreaterThan(0);
     }
   });
 
+  it('a anotação do corpo conta a partir do for, e a da chaveta aponta para a chaveta', () => {
+    const g = java.emit(pilha(repetir(2, [guardar('x', 1), log({ ref: 'x' })])));
+    const porLinha = new Map(g.anotacoes.map((a) => [a.linha, a.porque]));
+    expect(porLinha.get(1)).toContain('2');
+    expect(porLinha.get(2)).toContain('Guarda x');
+    expect(porLinha.get(3)).toContain('log');
+    expect(porLinha.get(4)).toContain('chaveta');
+  });
+
+  it('o que o emit escreve, o ler lê — e com o mesmo tipo', () => {
+    // A promessa da T4 escrita de forma a não depender de alguém a lembrar
+    // dela: cada linha que o `emit` produz, o `ler` tem de devolver com o tipo
+    // que a linha declara. Se os dois lados divergirem, o painel de texto passa
+    // a discordar do ecrã de blocos, e o aluno vê as duas coisas ao mesmo
+    // tempo sem saber qual é a errada.
+    const casos: Array<[Programa, Tipo]> = [
+      [pilha(guardar('total', 5)), 'número'],
+      [pilha(guardar('total', 1.5)), 'número'],
+      [pilha(guardarTexto('total', 5)), 'texto'],
+      [pilha(guardar('pronto', false)), 'lógico'],
+      [pilha(repetir(3, [guardar('x', 1)])), 'número'],
+    ];
+    for (const [programa, tipo] of casos) {
+      const linhas = linhasDe(java.emit(programa).texto);
+      for (const linha of linhas) {
+        if (linha.trim() === '}' || linha.startsWith('for')) continue;
+        const r = java.ler(`${linha}\n`);
+        expect(r.erros, linha).toEqual([]);
+        const ev = r.eventos[0]!;
+        if (ev.tipo === 'atribuir') {
+          expect(ev.tipoValor, linha).toBe(tipo);
+          expect(ev.restricao, linha).toBe(tipo);
+        }
+      }
+    }
+  });
+
   it('nenhuma anotação menciona outra linguagem', () => {
     const g = java.emit(pilha(guardar('total', 5), log({ ref: 'total' })));
+    expect(g.anotacoes.length).toBeGreaterThan(0);
     for (const a of g.anotacoes) {
       expect(a.porque).not.toMatch(/Python|Go|TypeScript|SQL|JavaScript/);
     }
+  });
+
+  it('nenhuma anotação diz que o programa vai correr bem, porque em Java não se sabe', () => {
+    const g = java.emit(pilha(guardar('total', 5), log({ ref: 'total' })));
+    for (const a of g.anotacoes) {
+      expect(a.porque).not.toMatch(/vai correr|funciona|corre bem|não dá erro/);
+    }
+  });
+
+  it('um bloco desconhecido gera um comentário, nunca código inválido', () => {
+    expect(java.emit({ type: 'condicao', inputs: { VALOR: { valor: 1 } } }).texto)
+      .toBe('// bloco do v2: condicao\n');
+  });
+
+  it('programa vazio gera string vazia e zero anotações', () => {
+    const g = java.emit(null);
+    expect(g.texto).toBe('');
+    expect(g.anotacoes).toEqual([]);
   });
 });
 
@@ -4412,22 +4782,59 @@ describe('ler: o que a Java aceita', () => {
     expect(r.eventos).toHaveLength(1);
   });
 
-  it('a atribuição declara a restrição, que é o que faz a recusa ao parse', () => {
-    const ev = java.ler('int total = 5;\n').eventos[0]!;
+  it('a atribuição declara a restrição, e é isso que faz a recusa ao parse', () => {
+    // `int total = "olá";` é recusado em Java antes de o programa correr, e a
+    // recusa vem do `restricao` que este evento traz. A mesma linha em Python
+    // não tem onde declarar nada, e por isso não pode ser recusada.
+    const ev = eventoDe('int total = 5;\n');
     if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
     expect(ev.tipoValor).toBe('número');
     expect(ev.restricao).toBe('número');
   });
 
+  it('int e double são ambos número, e ambos declaram número', () => {
+    for (const linha of ['int total = 5;', 'double total = 5;', 'double total = 1.5;']) {
+      const ev = eventoDe(`${linha}\n`);
+      if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
+      expect(ev.tipoValor, linha).toBe('número');
+      expect(ev.restricao, linha).toBe('número');
+    }
+  });
+
   it('String declarado', () => {
-    const ev = java.ler('String nome = "olá";\n').eventos[0]!;
+    const ev = eventoDe('String nome = "olá";\n');
     if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
     expect(ev.tipoValor).toBe('texto');
     expect(ev.restricao).toBe('texto');
   });
 
-  it('System.out.println conta como uso', () => {
-    expect(java.ler('System.out.println(total);\n').erros).toEqual([]);
+  it('boolean declarado', () => {
+    const ev = eventoDe('boolean pronto = true;\n');
+    if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
+    expect(ev.tipoValor).toBe('lógico');
+  });
+
+  it('var não declara tipo a ninguém, e a atribuição não impõe um', () => {
+    // `var` é o único sítio de Java onde o tipo não se escreve, e por isso é o
+    // único onde a atribuição não impõe um tipo. Tratar o `var` como se
+    // declarasse `int` faria o produto recusar `var total = "olá";`, que é Java
+    // válido.
+    const ev = eventoDe('var total = "olá";\n');
+    if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
+    expect(ev.tipoValor).toBe('texto');
+    expect(ev.restricao).toBeUndefined();
+  });
+
+  it('System.out.println conta como uso, e sem tipo declarado', () => {
+    // O `println` é sobrecarregado: em Java aceita qualquer tipo. Um `usar` com
+    // `tipoValor: 'texto'` faria o núcleo dizer "total guarda número, e este
+    // sítio precisa de texto" — um erro que o Java não tem.
+    const r = java.ler('int total = 5;\nSystem.out.println(total);\n');
+    expect(r.erros).toEqual([]);
+    const usar = r.eventos[1]!;
+    if (usar.tipo !== 'usar') throw new Error('esperava usar');
+    expect(usar.nome).toBe('total');
+    expect(usar.tipoValor).toBeUndefined();
   });
 
   it('o for clássico conta as voltas', () => {
@@ -4441,49 +4848,177 @@ describe('ler: o que a Java aceita', () => {
   it('linhas em branco são ignoradas', () => {
     expect(java.ler('\n\n  \n').erros).toEqual([]);
   });
+
+  it('as chavetas e os comentários não são erro', () => {
+    expect(java.ler('// um comentário\n{\n}\n').erros).toEqual([]);
+  });
+
+  it('o texto lido é o texto que foi escrito', () => {
+    const ev = eventoDe('String nome = "a\\nb";\n');
+    if (ev.tipo !== 'atribuir') throw new Error('esperava atribuir');
+    expect(ev.valor.valor).toBe('a\nb');
+  });
 });
 
-describe('ler: o que a Java recusa', () => {
-  it('total = 5 sem tipo não é Java', () => {
+describe('ler: o que a Java recusa, e o que diz', () => {
+  it('falta o ponto-e-vírgula é dito como falta de ponto-e-vírgula', () => {
+    // O ponto de revisão da spec: uma falta de `;` em Java tem de ser
+    // reportada como falta de `;`, e não como "função desconhecida". A regra é
+    // simétrica à do Python e faz a mesma coisa: só se culpa o `;` depois de a
+    // linha ter falhado por outra razão, e porque sem ele a linha lê bem.
+    const r = java.ler('int total = 5\n');
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.porque).toContain('ponto-e-vírgula');
+    expect(r.erros[0]!.porque).not.toMatch(/função|funcao|não conhece/);
+    expect(r.erros[0]!.remedio).toContain(';');
+  });
+
+  it('falta o ponto-e-vírgula numa atribuição com tipo', () => {
+    expect(java.ler('String nome = "olá"\n').erros[0]!.porque).toContain('ponto-e-vírgula');
+  });
+
+  it('e a falta de ponto-e-vírgula não é inventada onde o ponto-e-vírgula está dentro de um texto', () => {
+    expect(java.ler('String nome = "a;b";\n').erros).toEqual([]);
+  });
+
+  it('falta o tipo é dito como falta de tipo, e o mesmo erro não se repete', () => {
     const r = java.ler('total = 5;\n');
     expect(r.erros).toHaveLength(1);
-    expect(r.erros[0]!.porque).toContain('Java');
-    expect(r.erros[0]!.porque).toMatch(/int|tipo/);
+    expect(r.erros[0]!.porque).toContain('tipo');
+    expect(r.erros[0]!.porque).not.toContain('ponto-e-vírgula');
+    expect(r.erros[0]!.remedio).toContain('int');
   });
 
-  it('sem ponto-e-vírgula não é Java', () => {
-    expect(java.ler('int total = 5\n').erros).toHaveLength(1);
+  it('quando faltam as duas coisas, o erro diz as duas', () => {
+    // Dizer "falta o tipo" a quem também falta o `;` é meio mentira, e a
+    // pessoa vai corrigir o tipo, correr, e receber outro erro sobre a mesma
+    // linha. Um erro, com as duas partes visíveis, resolve a linha de uma vez.
+    const r = java.ler('total = 5\n');
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.porque).toContain('tipo');
+    expect(r.erros[0]!.porque).toContain('ponto-e-vírgula');
   });
 
-  it('o erro tem porque e remedio', () => {
+  it('a mensagem do tipo não afirma que um nome sem tipo é sempre errado', () => {
+    // Numa linha já declarada o tipo não se repete: `int total; total = 5;` é
+    // Java válido. Dizer que esta linha nunca é válida ensina uma coisa falsa
+    // sobre a linguagem, e a pessoa encontra a linha mais tarde.
+    expect(java.ler('total = 5;\n').erros[0]!.porque).toMatch(/declarado|declara/);
+  });
+
+  it('log é recusado antes de correr, e a mensagem diz que é o compilador que recusa', () => {
+    // A linha mais importante da lição de Java. A mesma linha em Python só
+    // falha quando o código corre, e a diferença entre as duas frases é a
+    // costura a fazer-se.
+    const r = java.ler('log(total);\n');
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.porque).toMatch(/compilador|compilar|correr/);
+  });
+
+  it('e o Python dá a mesma linha um erro que só aparece a correr', () => {
+    const emPython = python.ler('log(total);\n');
+    expect(emPython.erros).toHaveLength(1);
+    expect(emPython.erros[0]!.porque).toContain('corre');
+  });
+
+  it('texto de outra linguagem é recusado com o motivo, não com "não percebo"', () => {
+    const r = java.ler("print('olá')\n");
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.porque.length).toBeGreaterThan(10);
+    expect(r.erros[0]!.remedio.length).toBeGreaterThan(0);
+  });
+
+  it('e a mesma linha é recusada pelas duas linguagens, por motivos diferentes', () => {
+    // A mesma pessoa escreve `total = 5;` a achar que é Python. Em Python o
+    // problema é o `;`; em Java é o tipo. A lição não é "isto está errado" — é
+    // que o que falta depende da linguagem, e é por isso que a sintaxe se
+    // escreve à mão.
+    expect(python.ler('total = 5;\n').erros[0]!.porque).toContain('ponto-e-vírgula');
+    expect(java.ler('total = 5;\n').erros[0]!.porque).toContain('tipo');
+  });
+
+  it('e o inverso: uma linha de Java é recusada em Python', () => {
+    expect(python.ler('int total = 5;\n').erros).toHaveLength(1);
+  });
+
+  it('o erro tem porque e remedio, nunca um código nu', () => {
     const r = java.ler('total = 5;\n');
     expect(r.erros[0]!.porque.length).toBeGreaterThan(10);
     expect(r.erros[0]!.remedio.length).toBeGreaterThan(0);
   });
+
+  it('o passo do erro é a linha certa', () => {
+    const r = java.ler('int total = 5;\n\n\ntotal = 5;\n');
+    expect(r.erros).toHaveLength(1);
+    expect(r.erros[0]!.passo).toBe(4);
+  });
 });
 
-describe('a costura: o mesmo texto julgado pelas duas políticas', () => {
+describe('a costura: a mesma pergunta, as duas políticas', () => {
   it('o mesmo programa dá Recusa em Java e silêncio em Python', () => {
-    // A diferença vem inteira da `Policy`. Não há uma linha de código
-    // duplicada entre as duas projeções para isto funcionar.
-    const guardarTextoComoNumero = { passo: 1, tipo: 'atribuir', nome: 'total', tipoValor: 'texto' as const, restricao: 'número' as const, valor: { tipo: 'texto' as const, valor: 'olá', explicacao: { porque: 'x', remedio: 'y' }, origem: { bloco: 't', ranhura: 0, passo: 1 }, recusado: false } };
+    // A diferença vem da `Policy` e de mais lado nenhum: os mesmos eventos
+    // entram nos dois núcleos. Se este teste precisasse de um `if` sobre a
+    // linguagem, era porque a costura tinha pasado para o meio.
+    const eventos: EventoLido[] = [
+      { passo: 1, tipo: 'atribuir', nome: 'total', tipoValor: 'número', valor: v('número', 5) },
+      {
+        passo: 1,
+        tipo: 'atribuir',
+        nome: 'total',
+        tipoValor: 'texto',
+        valor: v('texto', 'olá'),
+        restricao: 'número',
+      },
+    ];
+    const origem = (passo: number) => ({ bloco: 'texto', ranhura: 0, passo });
 
-    const emJava = interpretar([guardarTextoComoNumero], POLITICAS.java, () => ({ bloco: 't', ranhura: 0, passo: 1 }));
-    const emPython = interpretar([guardarTextoComoNumero], POLITICAS.python, () => ({ bloco: 't', ranhura: 0, passo: 1 }));
+    const emJava = interpretar(eventos, POLITICAS.java, origem);
+    const emPython = interpretar(eventos, POLITICAS.python, origem);
 
     expect(emJava).toHaveLength(1);
     expect(emJava[0]!.classe).toBe('Recusa');
     expect(emPython).toEqual([]);
   });
 
-  it('e o passo seguinte é que paga a dívida em Python', () => {
-    const usarDepois = { passo: 2, tipo: 'usar' as const, nome: 'total', tipoValor: 'número' as const };
-    const guardar = { passo: 1, tipo: 'atribuir' as const, nome: 'total', tipoValor: 'texto' as const, restricao: 'número' as const, valor: { tipo: 'texto' as const, valor: 'olá', explicacao: { porque: 'x', remedio: 'y' }, origem: { bloco: 't', ranhura: 0, passo: 1 }, recusado: false } };
+  it('e a diferença é o momento, não a classe', () => {
+    // A `Policy` tem duas decisões separadas: `recusaNoTipo` diz *se* há
+    // recusa, `quando` diz *como se fala* dela. Um produto que metesse a
+    // segunda dentro da primeira diria "antes de correr" a uma linguagem que
+    // recusa a meio da execução.
+    const eventos: EventoLido[] = [
+      {
+        passo: 1,
+        tipo: 'atribuir',
+        nome: 'total',
+        tipoValor: 'texto',
+        valor: v('texto', 'olá'),
+        restricao: 'número',
+      },
+    ];
+    const origem = (passo: number) => ({ bloco: 'texto', ranhura: 0, passo });
+    const antes = interpretar(eventos, POLITICAS.java, origem);
+    const noDado = interpretar(eventos, POLITICAS.sql, origem);
+    expect(antes[0]!.classe).toBe('Recusa');
+    expect(noDado[0]!.classe).toBe('Recusa');
+    expect((noDado[0] as { remedio: string }).remedio).toContain('dado');
+    expect((antes[0] as { remedio: string }).remedio).not.toContain('dado');
+  });
 
-    const emPython = interpretar([guardar, usarDepois], POLITICAS.python, (p) => ({ bloco: 't', ranhura: 0, passo: p }));
-    expect(emPython).toHaveLength(1);
-    expect(emPython[0]!.classe).toBe('FalhaRuntime');
-    expect(emPython[0]!.passo).toBe(2);
+  it('o mesmo nome usado antes de existir é o mesmo erro nas duas', () => {
+    // A revisão da spec pede este teste pelo nome da variável e pelo passo. E é
+    // igual nas duas porque um nome que não existe não é um problema de tipo:
+    // é um nome, e o núcleo é quem sabe os nomes.
+    const eventos: EventoLido[] = [{ passo: 3, tipo: 'usar', nome: 'total' }];
+    for (const linguagem of ['python', 'java'] as const) {
+      const erros = interpretar(eventos, POLITICAS[linguagem], (passo) => ({
+        bloco: 'texto',
+        ranhura: 0,
+        passo,
+      }));
+      expect(erros, linguagem).toHaveLength(1);
+      expect(erros[0]!.porque, linguagem).toContain('total');
+      expect((erros[0] as { passo: number }).passo, linguagem).toBe(3);
+    }
   });
 });
 ```
@@ -4497,81 +5032,86 @@ Expected: FAIL — `./java` não existe, e o registo só tem Python.
 
 ```typescript
 import type { BlocoLeigo } from '../nucleo/blocos';
-import { identificador, pilhaDe } from '../nucleo/blocos';
+import { corpoDe, campoDe, entradaDe, identificadorJava } from '../nucleo/blocos';
+import { pilhaDe } from '../nucleo/avaliador';
 import { AMOSTRA, POLITICAS } from '../nucleo/semantica';
 import type { EventoLido } from '../nucleo/semantica';
 import { val } from '../nucleo/tipos';
-import type { Erro, Tipo, Valor } from '../nucleo/tipos';
+import type { FalhaRuntime, Tipo, Valor } from '../nucleo/tipos';
 import { BLOCOS_IMPERATIVOS } from './python';
-import type { Anotacao, Gerado, LerResultado, Projection } from './tipos';
+import { Emissor, textoDe } from './emissor';
+import type { Gerado, LerResultado, Projection } from './tipos';
 
-/** A palavra que a Java escreve para cada tipo. Aqui está metade da lição:
- *  em Python o tipo não se escreve, e em Java escreve-se sempre. */
-const DECLARACAO: Record<Tipo, string> = {
-  número: 'int',
-  texto: 'String',
-  lógico: 'boolean',
-  lista: 'int[]',
-  função: 'Runnable',
-  actor: 'String',
+// ---------------------------------------------------------------------------
+// Os fatos de Java que esta projeção sabe
+// ---------------------------------------------------------------------------
+//
+// **Não havia um compilador de Java à mão quando esta projeção foi escrita, e
+// por isso ela não afirma nada que não fosse preciso para a lição.** Cada
+// afirmação abaixo é uma que sei e que consigo defender; o que não sei, o
+// `ler` recusa por não saber em vez de chutar. A regra vale mais do que a
+// lista: um produto que recusa texto indevidamente ensina a pessoa a
+// desconfiar do produto, e essa é a única coisa que este produto não pode
+// fazer — passou a vida a dizer "confia no que te digo, e eu digo porquê".
+//
+// **Um erro que não é dado é muito mais barato do que um erro que é dado à
+// cosa.** A recusa tem de ser verdadeira, e o silêncio sobre o que não se
+// sabe fica escrito como uma nota neste ficheiro, e não escondido.
+
+// ---------------------------------------------------------------------------
+// Escrever: blocos → Java
+// ---------------------------------------------------------------------------
+
+/** A palavra de tipo que a Java escreve antes do nome, para um valor dado.
+ *
+ *  Um `Record<Tipo, string>` não chega, e a razão é a lição e não a
+ *  conveniência: **em Java o número tem duas palavras**. `int` não aceita
+ *  casas decimais e `double` aceita. Um nome-por-tipo escreve `int` para o
+ *  `1.5` e produz Java que não compila — e o aluno recebe um erro de Java
+ *  numa linha que ele não escreveu assim, que é a pior forma de errar.
+ *
+ *  E há um quinto caso, o `var`: quando o valor é o nome de outra variável, o
+ *  tipo só existe quando o programa corre, e nenhum destes quatro o sabe. */
+export function declaracaoDe(entrada: unknown): string {
+  if (typeof entrada === 'number') return Number.isInteger(entrada) ? 'int' : 'double';
+  if (typeof entrada === 'boolean') return 'boolean';
+  if (entrada !== null && typeof entrada === 'object' && 'ref' in entrada) return 'var';
+  return 'String';
+}
+
+/** De palavra de Java para o `Tipo` do produto, para o `ler`.
+ *
+ *  O `var` está de fora de propósito: é a única palavra que não declara tipo a
+ *  ninguém, e o `ler` diz isso omitindo a restrição em vez de a pôr a
+ *  `número`. */
+const TIPO_DE_PALAVRA: Record<string, Tipo> = {
+  int: 'número',
+  double: 'número',
+  String: 'texto',
+  boolean: 'lógico',
 };
 
-const LITERAL_LOGICO: Record<string, string> = { true: 'true', false: 'false' };
-
-function tipoDeEntrada(entrada: unknown): Tipo {
-  if (typeof entrada === 'number') return 'número';
-  if (typeof entrada === 'boolean') return 'lógico';
-  if (entrada && typeof entrada === 'object' && 'ref' in entrada) return 'número';
-  return 'texto';
+function fugar(s: string): string {
+  // A barra de fugar primeiro, sempre — e a ordem importa: se o `\n` virasse
+  // fuga antes de a barra ser dobrada, cada fuga seria duplicada.
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
 }
 
 function literal(entrada: unknown): string {
   if (typeof entrada === 'number') return String(entrada);
-  if (typeof entrada === 'boolean') return LITERAL_LOGICO[String(entrada)]!;
-  if (entrada && typeof entrada === 'object' && 'ref' in entrada) {
+  if (typeof entrada === 'boolean') return entrada ? 'true' : 'false';
+  if (entrada !== null && typeof entrada === 'object' && 'ref' in entrada) {
     return String((entrada as { ref: unknown }).ref);
   }
-  if (entrada && typeof entrada === 'object' && 'txt' in entrada) {
+  if (entrada !== null && typeof entrada === 'object' && 'txt' in entrada) {
     return `"${fugar(String((entrada as { txt: unknown }).txt))}"`;
   }
   return `"${fugar(String(entrada))}"`;
-}
-
-function fugar(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-function entradaDe(b: BlocoLeigo, chave: string): unknown {
-  const i = b.inputs[chave];
-  return i && 'valor' in i ? i.valor : undefined;
-}
-
-class Emissor {
-  readonly linhas: string[] = [];
-  readonly anotacoes: Anotacao[] = [];
-
-  constructor(private nivel = 0) {}
-
-  recuo(): void {
-    this.linhas.push('    '.repeat(this.nivel));
-  }
-
-  linha(texto: string, tipo: Tipo, porque: string): void {
-    this.recuo();
-    this.linhas.push(texto);
-    this.anotacoes.push({ linha: this.linhas.length, tipo, porque });
-  }
-
-  entrar(): Emissor {
-    return new Emissor(this.nivel + 1);
-  }
-}
-
-let contadorDeCiclo = 0;
-
-function nomeDoContador(): string {
-  contadorDeCiclo += 1;
-  return ['i', 'j', 'k', 'l'][contadorDeCiclo - 1] ?? `c${contadorDeCiclo}`;
 }
 
 function emitir(b: BlocoLeigo, e: Emissor): void {
@@ -4581,67 +5121,84 @@ function emitir(b: BlocoLeigo, e: Emissor): void {
       return;
 
     case 'guardar': {
-      const nome = identificador(String(entradaDe(b, 'NOME')));
+      const nome = identificadorJava(String(campoDe(b, 'nome')));
       const entrada = entradaDe(b, 'VALOR');
-      const tipo = tipoDeEntrada(entrada);
-      e.linha(
-        `${DECLARACAO[tipo]} ${nome} = ${literal(entrada)};`,
-        tipo,
-        `Guarda ${nome}. O ${DECLARACAO[tipo]} antes do nome é o tipo, e escreve-se sempre.`,
-      );
+      const palavra = declaracaoDe(entrada);
+      // A anotação é a lição inteira quando a palavra tem um tipo, e é uma
+      // ressalva honesta quando é `var`. Uma anotação igual nos dois casos
+      // diria "o tipo escreve-se sempre" ao lado de uma linha onde o tipo não
+      // se escreve, e quem lê as duas coisas aprende uma delas e ignora a outra.
+      const porque =
+        palavra === 'var'
+          ? `O tipo de ${String((entrada as { ref: unknown }).ref)} só se sabe quando o código corre, e o \`var\` deixa o compilador descobri-lo.`
+          : `Guarda ${nome} como ${palavra}, e o tipo escreve-se aqui à mão.`;
+      e.linha(`${palavra} ${nome} = ${literal(entrada)};`, porque);
       return;
     }
 
     case 'dizer': {
-      const entrada = entradaDe(b, 'VALOR');
       e.linha(
-        `System.out.println(${literal(entrada)});`,
-        tipoDeEntrada(entrada),
-        'Mostra o valor no ecrã.',
+        `System.out.println(${literal(entradaDe(b, 'VALOR'))});`,
+        'Mostra o valor no ecrã. O `println` aceita qualquer tipo, por isso aqui não há tipo a escrever.',
       );
       return;
     }
 
     case 'log': {
-      const entrada = entradaDe(b, 'VALOR');
       e.linha(
-        `log(${literal(entrada)});`,
-        tipoDeEntrada(entrada),
-        'Chama uma função que ainda não escreveste. O compilador diz que não a encontra, e diz antes de correr.',
+        `log(${literal(entradaDe(b, 'VALOR'))});`,
+        'Chama `log`, uma função que ainda não escreveste. Enquanto não a escreveres, o compilador recusa esta linha antes de o código correr.',
       );
       return;
     }
 
     case 'repetir': {
       const vezes = String(entradaDe(b, 'PASSOS'));
-      const c = nomeDoContador();
-      e.linha(`for (int ${c} = 0; ${c} < ${vezes}; ${c}++) {`, 'número', `Repete ${vezes} vezes.`);
-      const dentro = e.entrar();
-      for (const filho of pilhaDe(b)) emitir(filho, dentro);
-      e.linha('}', 'texto', 'Fecha o ciclo.');
-      e.linhas.push(...dentro.linhas);
-      e.anotacoes.push(...dentro.anotacoes);
+      const c = e.nomeDeContador();
+      e.linha(
+        `for (int ${c} = 0; ${c} < ${vezes}; ${c}++) {`,
+        `Repete o que está entre chavetas ${vezes} vezes, a contar com ${c}.`,
+      );
+      // `absorver` **antes** da linha de fecho. Ao contrário, o `for` abre, o
+      // `}` fecha, e o corpo fica escrito lá fora — Java que não compila, com
+      // as anotações do corpo a apontar para linhas que não existem.
+      const dentro = e.entrar(c);
+      for (const filho of corpoDe(b)) emitir(filho, dentro);
+      e.absorver(dentro);
+      // Uma `{` e uma `}` vazias são Java válido. Um `for` vazio não é Python,
+      // e a diferença é o que faz a projeção de Python emitir um `pass`: duas
+      // linguagens, o mesmo bloco vazio, e uma delas obriga a dizer alguma
+      // coisa e a outra não.
+      e.linha('}', 'Fecha o ciclo: a chaveta a fechar é o fim daquilo que repete.');
       return;
     }
 
     default:
-      e.linha(`// bloco do v2: ${b.type}`, 'texto', 'Este bloco ainda não está nesta lição.');
+      e.linha(`// bloco do v2: ${b.type}`, 'Este bloco ainda não está nesta lição.');
   }
 }
 
-const ATRIBUIR = /^(int|String|boolean)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?);$/;
+// ---------------------------------------------------------------------------
+// Ler: Java → fatos
+// ---------------------------------------------------------------------------
+
+// O `;` faz parte do padrão, e é a sua ausência que dá a mensagem do ponto-e-
+// vírgula. Se ficasse de fora, o `ler` não distinguiria "falta o ponto" de
+// "falta o tipo", e a pessoa corrigia uma coisa e recebia o erro da outra.
+const ATRIBUIR = /^(int|double|String|boolean|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+);$/;
 const IMPRIMIR = /^System\.out\.println\(\s*(.+?)\s*\);$/;
 const CICLO = /^for\s*\(\s*int\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*0;\s*[A-Za-z_][A-Za-z0-9_]*\s*<\s*(\d+);\s*[A-Za-z_][A-Za-z0-9_]*\s*\+\+\s*\)\s*\{$/;
-const NUMERO = /^[-+]?\d+$/;
+// Uma atribuição sem a palavra de tipo. Serve só para a mensagem: `total = 5;`
+// é isto, e o que falta é o tipo.
+const SEM_TIPO = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/;
+// Um literal numérico de Java. Sem sinal: o `-` é uma operação, não parte do
+// número, e `1.5` é o único formato com ponto que a Java aceita.
+const NUMERO = /^\d+(\.\d+)?$/;
 const TEXTO = /^"((?:[^"\\]|\\.)*)"$/;
+const NOME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const EXPRESSAO = /^(.+?)\s*([+\-*/])\s*(.+)$/;
 
-const TIPO_DE_PALAVRA: Record<string, Tipo> = {
-  int: 'número',
-  String: 'texto',
-  boolean: 'lógico',
-};
-
-function erro(passo: number, porque: string, remedio: string): Erro {
+function erro(passo: number, porque: string, remedio: string): FalhaRuntime {
   return {
     classe: 'FalhaRuntime',
     porque,
@@ -4652,93 +5209,228 @@ function erro(passo: number, porque: string, remedio: string): Erro {
 }
 
 function desescapar(s: string): string {
-  return s.replace(/\\(["\\])/g, '$1');
+  return s.replace(/\\(["\\nrt])/g, (_m, c: string) =>
+    c === 'n' ? '\n' : c === 'r' ? '\r' : c === 't' ? '\t' : c,
+  );
 }
 
-function lerLinha(texto: string, passo: number): LerResultado {
-  const t = texto.trim();
-  if (t.length === 0) return { eventos: [], erros: [] };
+function valorDe(termo: string, passo: number): Valor | null {
+  const origem = { bloco: 'texto', ranhura: 0, passo };
+  if (NUMERO.test(termo)) return val('número', Number(termo), AMOSTRA, origem);
+  const txt = TEXTO.exec(termo);
+  if (txt) return val('texto', desescapar(txt[1]!), AMOSTRA, origem);
+  if (termo === 'true') return val('lógico', true, AMOSTRA, origem);
+  if (termo === 'false') return val('lógico', false, AMOSTRA, origem);
+  return null;
+}
 
-  if (t === '}' || t === '{') return { eventos: [], erros: [] };
+/** A mesma regra de Python, com o sinal trocado.
+ *
+ *  Em Python o ponto-e-vírgula é o que estraga a linha; aqui é o que falta.
+ *  Nos dois casos só se toca nele **depois** de a linha ter falhado por outra
+ *  razão, e porque a linha com o `;` lê bem. Sem essa segunda condição,
+ *  `String s = "a;b";` — Java válido — era recusada por causa de um
+ *  ponto-e-vírgula que estava dentro de uma palavra. */
+function lerLinha(bruta: string, passo: number): LerResultado {
+  const t = bruta.trim();
+  if (t.length === 0 || t === '{' || t === '}' || t.startsWith('//')) {
+    return { eventos: [], erros: [] };
+  }
 
+  const r = tentarLer(t, passo);
+  if (r.erros.length === 0) return r;
+
+  const semPonto = !t.endsWith(';');
+  if (semPonto && tentarLer(`${t};`, passo).erros.length === 0) {
+    return {
+      eventos: [],
+      erros: [
+        erro(
+          passo,
+          'Em Java cada linha acaba em ponto-e-vírgula, e esta acaba sem.',
+          'Acrescenta o ";" no fim da linha.',
+        ),
+      ],
+    };
+  }
+  return semTipo(t.replace(/;$/, '').trim(), passo, semPonto);
+}
+
+/** A linha parece uma atribuição e não tem a palavra de tipo.
+ *
+ *  `total = 5;` não é Java porque o tipo não está lá. Mas `int total;` seguido
+ *  de `total = 5;` **é** Java, e dizer que a segunda linha nunca é válida
+ *  ensina uma coisa falsa — que a pessoa encontra mais tarde, quando escrever
+ *  a primeira. Por isso a honestidade cabe numa frase, e a frase é a lição: em
+ *  Java o tipo escreve-se uma vez, na declaração. */
+function semTipo(corpo: string, passo: number, faltaPonto: boolean): LerResultado {
+  const m = SEM_TIPO.exec(corpo);
+  if (m) {
+    const porque =
+      'Em Java o tipo escreve-se antes do nome, e esta linha não tem tipo nenhum. ' +
+      'Se o nome já tivesse sido declarado numa linha antes, esta linha era válida — ' +
+      'e é por isso que o tipo se escreve uma vez só, na declaração.';
+    return {
+      eventos: [],
+      erros: [
+        erro(
+          passo,
+          faltaPonto ? `${porque} E falta também o ponto-e-vírgula no fim da linha.` : porque,
+          `Escreve o tipo antes do nome, como em "${sugestaoDe(m[1]!, m[2]!)}".`,
+        ),
+      ],
+    };
+  }
+  return {
+    eventos: [],
+    erros: [
+      erro(
+        passo,
+        `Esta linha não é Java: "${corpo}".`,
+        'Uma linha de Java é uma declaração com tipo, um System.out.println, ou um for.',
+      ),
+    ],
+  };
+}
+
+/** A linha que a pessoa queria escrever, com o tipo que a Java exige. */
+function sugestaoDe(nome: string, resto: string): string {
+  const v = valorDe(resto, 1);
+  if (v === null) return `var ${nome} = ${resto};`;
+  return `${declaracaoDe(v.valor)} ${nome} = ${literal(v.valor)};`;
+}
+
+function tentarLer(t: string, passo: number): LerResultado {
   const ci = CICLO.exec(t);
   if (ci) {
     return { eventos: [{ passo, tipo: 'ciclo', iteracoes: Number(ci[1]) }], erros: [] };
   }
 
   const im = IMPRIMIR.exec(t);
-  if (im) {
-    const dentro = im[1]!;
-    if (NUMERO.test(dentro)) {
-      return { eventos: [{ passo, tipo: 'imprimir', valor: val('número', Number(dentro), AMOSTRA, { bloco: 'texto', ranhura: 0, passo }) }], erros: [] };
-    }
-    const tx = TEXTO.exec(dentro);
-    if (tx) {
-      return { eventos: [{ passo, tipo: 'imprimir', valor: val('texto', desescapar(tx[1]!), AMOSTRA, { bloco: 'texto', ranhura: 0, passo }) }], erros: [] };
-    }
-    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(dentro)) {
-      return { eventos: [{ passo, tipo: 'usar', nome: dentro, tipoValor: 'texto' }], erros: [] };
-    }
-    return { eventos: [], erros: [erro(passo, `Java não sabe o que mostrar: "${dentro}".`, 'Dentro do println só pode estar um nome, um número ou um texto.')] };
-  }
+  if (im) return lerImprimir(im[1]!, passo);
 
   const at = ATRIBUIR.exec(t);
-  if (at) {
-    const tipoDeclarado = TIPO_DE_PALAVRA[at[1]!]!;
-    const nome = at[2]!;
-    const resto = at[3]!.trim();
-    const origem = { bloco: 'texto', ranhura: 0, passo };
+  if (at) return lerAtribuir(at[1]!, at[2]!, at[3]!, passo);
 
-    if (NUMERO.test(resto)) {
-      return { eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: 'número', restricao: tipoDeclarado, valor: val('número', Number(resto), AMOSTRA, origem) }], erros: [] };
-    }
-    if (resto === 'true' || resto === 'false') {
-      return { eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: 'lógico', restricao: tipoDeclarado, valor: val('lógico', resto === 'true', AMOSTRA, origem) }], erros: [] };
-    }
-    const tx = TEXTO.exec(resto);
-    if (tx) {
-      return { eventos: [{ passo, tipo: 'atribuir', nome, tipoValor: 'texto', restricao: tipoDeclarado, valor: val('texto', desescapar(tx[1]!), AMOSTRA, origem) }], erros: [] };
-    }
-    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(resto)) {
-      return { eventos: [{ passo, tipo: 'usar', nome: resto, tipoValor: tipoDeclarado }], erros: [] };
-    }
-    return { eventos: [], erros: [erro(passo, `Java não sabe o que fazer com "${resto}".`, 'À direita do = só pode estar um número, um texto entre aspas, true, false, ou o nome de outra variável.')] };
-  }
+  return naoEhJava(t, passo);
+}
 
-  // O caso que prova a costura: `total = 5;` é uma atribuição válida em
-  // muitas linguagens e **não** é Java. A mensagem tem de dizer porquê.
-  const semTipo = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?);?$/.exec(t);
-  if (semTipo) {
-    return {
-      eventos: [],
-      erros: [erro(
-        passo,
-        `Esta linha não é Java: em Java escreve-se o tipo antes do nome, e falta o ponto-e-vírgula.`,
-        `Escreve int ${semTipo[1]} = ${semTipo[2]};`,
-      )],
-    };
-  }
-
-  const semChaveta = /^(.+?[^;{])$/.exec(t);
-  if (semChaveta && !semChaveta[1]!.trim().endsWith(';')) {
-    return {
-      eventos: [],
-      erros: [erro(
-        passo,
-        `Esta linha não é Java: falta o ponto-e-vírgula no fim.`,
-        'Em Java cadastatement acaba em ;',
-      )],
-    };
-  }
-
+function naoEhJava(t: string, passo: number): LerResultado {
   return {
     eventos: [],
-    erros: [erro(
-      passo,
-      `Esta linha não é Java: "${t}".`,
-      'Uma linha de Java é uma declaração com tipo, um System.out.println, um for, ou uma chaveta.',
-    )],
+    erros: [
+      erro(
+        passo,
+        `Esta linha não é Java: "${t}".`,
+        'Uma linha de Java é uma declaração com tipo, um System.out.println, ou um for.',
+      ),
+    ],
   };
+}
+
+function lerImprimir(dentro: string, passo: number): LerResultado {
+  const valor = valorDe(dentro, passo);
+  if (valor !== null) {
+    return { eventos: [{ passo, tipo: 'imprimir', valor }], erros: [] };
+  }
+  if (NOME.test(dentro)) {
+    // O `println` é sobrecarregado e aceita qualquer tipo. Um `usar` com
+    // `tipoValor` viria dizer "total guarda número, e este sítio precisa de
+    // texto" — um erro que a Java não tem, na linha que a Java aceita, e o
+    // aluno concluiria que o produto também se engana.
+    return { eventos: [{ passo, tipo: 'usar', nome: dentro }], erros: [] };
+  }
+  return {
+    eventos: [],
+    erros: [
+      erro(
+        passo,
+        `Java não sabe o que mostrar: "${dentro}".`,
+        'Dentro do println só pode estar um nome, um número ou um texto.',
+      ),
+    ],
+  };
+}
+
+function lerAtribuir(
+  palavra: string,
+  nome: string,
+  resto: string,
+  passo: number,
+): LerResultado {
+  if (resto.startsWith('=')) {
+    return {
+      eventos: [],
+      erros: [
+        erro(
+          passo,
+          'Em Java "==" são dois sinais de igual, e é comparação: serve para perguntar, não põe nada em lado nenhum.',
+          'Para guardar um valor usa um sinal de igual só: "=" em vez de "==".',
+        ),
+      ],
+    };
+  }
+
+  const valor = valorDe(resto, passo);
+  if (valor !== null) {
+    return {
+      eventos: [
+        {
+          passo,
+          tipo: 'atribuir',
+          nome,
+          tipoValor: valor.tipo,
+          valor,
+          // O `restricao` é a palavra escrita na linha, e é o que dá a recusa
+          // *antes de correr*. O `var` não tem: é a única palavra de Java que
+          // não declara tipo a ninguém, e a omissão é a informação.
+          restricao: TIPO_DE_PALAVRA[palavra],
+        },
+      ],
+      erros: [],
+    };
+  }
+
+  if (NOME.test(resto)) {
+    return { eventos: [{ passo, tipo: 'usar', nome: resto }], erros: [] };
+  }
+
+  const expressao = EXPRESSAO.exec(resto);
+  if (expressao) {
+    const esquerda = expressao[1]!;
+    const direita = expressao[3]!;
+    const legivel = (t: string): boolean => valorDe(t, passo) !== null || NOME.test(t);
+    if (legivel(esquerda) && legivel(direita)) {
+      const eventos: EventoLido[] = [];
+      // O uso vem **antes** da operação, e é ele que carrega o tipo exigido.
+      // Em Java a incompatibilidade sai disto: `String total = ...;` seguido de
+      // `int total = total + 1;` é recusado pelo compilador, e é o `restricao`
+      // desta linha que traz o `número` que o `total` não tem.
+      for (const t of [esquerda, direita]) {
+        if (NOME.test(t)) eventos.push({ passo, tipo: 'usar', nome: t, tipoValor: 'número' });
+      }
+      eventos.push({
+        passo,
+        tipo: 'operar',
+        operacao: expressao[2] as '+' | '-' | '*' | '/',
+        a: valorDe(esquerda, passo),
+        b: valorDe(direita, passo),
+      });
+      return { eventos, erros: [] };
+    }
+    return {
+      eventos: [],
+      erros: [
+        erro(
+          passo,
+          `Esta conta ainda não sei ler: "${resto}". Numa conta, cada lado tem de ser um número, um texto, true/false, ou o nome de outra variável.`,
+          `Nesta lição as contas são de dois termos, e cada termo tem de ser um número, um texto, true/false, ou o nome de outra variável. O termo "${legivel(esquerda) ? direita : esquerda}" não é nenhum dos quatro.`,
+        ),
+      ],
+    };
+  }
+
+  return naoEhJava(resto, passo);
 }
 
 export const java: Projection = {
@@ -4747,22 +5439,35 @@ export const java: Projection = {
   policy: POLITICAS.java,
   blocos: BLOCOS_IMPERATIVOS,
 
-  emit(programa: BlocoLeigo): Gerado {
-    contadorDeCiclo = 0;
+  emit(programa: BlocoLeigo | null): Gerado {
     const e = new Emissor();
     for (const bloco of pilhaDe(programa)) emitir(bloco, e);
-    return {
-      texto: e.linhas.map((l) => `${l}\n`).join(''),
-      anotacoes: e.anotacoes,
-    };
+    return { texto: textoDe(e), anotacoes: e.anotacoes };
   },
 
   ler(texto: string): LerResultado {
     const eventos: EventoLido[] = [];
-    const erros: Erro[] = [];
+    const erros: FalhaRuntime[] = [];
     const linhas = texto.split('\n');
     for (let i = 0; i < linhas.length; i += 1) {
-      const r = lerLinha(linhas[i]!, i + 1);
+      const passo = i + 1;
+      const t = linhas[i]!.trim();
+      // O `log` é o bloco que existe para mostrar a diferença entre as duas
+      // epistemologias. Aqui o `ler` recusa-o e a mensagem diz que é o
+      // compilador que recusa; a do Python recusa o mesmo `log` e a mensagem
+      // diz que só se descobre a correr. Duas frases para a mesma linha, e a
+      // diferença entre elas é a lição da costura.
+      if (t.startsWith('log(')) {
+        erros.push(
+          erro(
+            passo,
+            'Em Java não existe nada que se chame log, e o compilador recusa esta linha antes de o código correr.',
+            'Escreve a função log antes de a chamares, ou usa System.out.println.',
+          ),
+        );
+        continue;
+      }
+      const r = lerLinha(linhas[i]!, passo);
       eventos.push(...r.eventos);
       erros.push(...r.erros);
     }
@@ -4895,6 +5600,87 @@ antes do nome. E a assim que a primeira falha de quem salta de uma
 projecao para a outra aparece com porque, e nao com um codigo de erro.
 "
 ```
+
+---
+
+#### Task 5 —(decisoes e o que ficou por provar)
+
+O código desta tarefa é o do ficheiro, e o ficheiro mudou em relação ao que o
+plano tinha escrito. As decisões e o que cada uma custava:
+
+1. **`declaracaoDe(entrada)`, e não uma tabela `Tipo → palavra`.** Em Java o
+   número tem duas palavras: `int` não aceita casas decimais e `double` aceita.
+   Um nome-por-tipo escreve `int` para o `1.5` e produz Java que não compila —
+   e o aluno recebe um erro de Java numa linha que não escreveu assim. A palavra
+   depende do *valor*, e é a projeção que sabe do valor. **Custaria:** uma
+   função onde uma tabela bastava, e a tabela era mais rápida de ler.
+
+2. **`var` quando o valor é o nome de outra variável.** O tipo só existe quando
+   o programa corre, e nenhum dos quatro nomes o sabe. Chutar `int` produz
+   `int total = contagem;`, que não compila se `contagem` for um texto. `var`
+   existe em Java, deixa o compilador descobrir, e por isso é a única palavra
+   honesta — e a anotação tem de dizer isso, porque a palavra sozinha ensina o
+   contrário da lição. No `ler`, o `var` é a única palavra que **não** declara
+   `restricao`, e é a omissão que diz. **Custaria:** uma palavra que parece
+   contradizer a lição, mitada por uma frase.
+
+3. **Contadores por nível de aninhamento, não por emissão.** Um laço dentro de
+   outro não pode repetir o nome; dois laços irmãos **podem**, e devem, porque
+   é o que se escreve à mão e um `j` sem um `i` antes confunde. Um `Set`
+   partilhado pela emissão dava `i` e `j` a dois irmãos; um `Set` novo por
+   nível dava `i` aos dois e `i` outra vez ao aninhado, que também não compila.
+   A reserva vive no `entrar(nome)`, numa cópia do mapa, e dura só o corpo.
+   **Custaria:** um `Map<number, string[]>` partilhado por referência, que é
+   mais difícil de ler do que um contador.
+
+4. **A frase da recusa passou a dizer *quando*.** A `Policy` tem `quando` e o
+   `porque` não o usava: dizia "Um sítio de número não guarda texto", que está
+   certo e não diz se o erro vem antes ou depois de o programa correr. **E essa
+   diferença é a lição**: é o que distingue uma linguagem de outra, e um aluno
+   que não sabe quando não aprendeu nada que as distinga. Isto mudou
+   `semantica.ts` (T3) e não só a projeção. **Custaria:** três frases novas e
+   mais longas no núcleo, e o núcleo continua sem nomear nenhuma linguagem.
+
+5. **`identificadorJava` em `blocos.ts`, ao lado de `identificador`.** `int` é
+   palavra reservada em Java e não é em Python. Uma lista só produz
+   `int int = 5;`. **Custaria:** uma segunda lista de palavras, e a pergunta
+   das outras quatro linguagens fica para o Plano B.
+
+6. **`entradaDe`, `campoDe` e `corpoDe` saíram de `python.ts` para
+   `blocos.ts`.** Três funções sobre a forma de um bloco, que toda a projeção
+   precisa. `corpoDe` é o caso que prova: `pilhaDe` também abre uma pilha a
+   partir de um `CORPO`, e a confusão dá um `for` repetido até a pilha
+   estourar. **Custaria:** tocar em `blocos.ts` (T2) dentro da T5.
+
+7. **`Emissor` saiu para `src/projecoes/emissor.ts`.** É o mesmo nas seis: o
+   que muda é o texto que se escreve e a frase que o explica, e isso é o
+   `emitir` de cada uma. Duas cópias teriam o bug da contagem de linhas duas
+   vezes. **Custaria:** um ficheiro que o plano não previa, e por isso a lista
+   de ficheiros passou de 42 para 43.
+
+8. **A fuga de linha nova, em `python.ts` e em `java.ts`.** `dizer('a\nb')`
+   escrevia uma linha nova verdadeira dentro das aspas. Verificado contra o
+   Python 3.14: dá `unterminated string literal`. O `fugar` trata agora a barra
+   **primeiro**, e só depois `\n`, `\r`, `\t` — ao contrário, cada fuga
+   duplicava-se. Isto é um defeito da T4 que só apareceu por se estar a
+   escrever a segunda projeção. **Custaria:** nada, e era um programa partido
+   a mostrar ao aluno.
+
+**O que ficou por provar, e é uma lacuna assumida:**
+
+- **Não havia um compilador de Java à mão.** Cada afirmação sobre Java nesta
+  projeção é uma que se sabe e se consegue defender; o que não se sabe, o `ler`
+  recusa por não saber em vez de chutar. A regra vale mais do que a lista: um
+  produto que recusa texto indevidamente ensina a desconfiar dele, e é a única
+  coisa que este produto não pode fazer.
+- **`int total = 1.5;` não dá erro nenhum, e Java recusa.** Não é um defeito
+  da projeção: é da **decisão da T1** de que `number` é o único tipo numérico.
+  Com um só `número`, o `1.5` e o `5` são a mesma coisa e não há o que comparar.
+  Dizer que o `int` não aceita o `1.5` exigiria um segundo tipo numérico, e
+  isso muda a lição toda — a decisão é da T13, não desta tarefa. Um erro que não
+  é dado é muito mais barato do que um erro que é dado à coisa.
+- **A `Recusa` de Java não foi vista por um compilador.** O que se viu foi o
+  `tsc` a aceitar o TypeScript que a escreve.
 
 ---
 

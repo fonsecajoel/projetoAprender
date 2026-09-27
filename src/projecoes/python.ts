@@ -1,11 +1,12 @@
 import type { BlocoLeigo } from '../nucleo/blocos';
-import { identificador } from '../nucleo/blocos';
+import { corpoDe, campoDe, entradaDe, identificador } from '../nucleo/blocos';
 import { pilhaDe } from '../nucleo/avaliador';
 import { AMOSTRA, POLITICAS } from '../nucleo/semantica';
 import type { EventoLido } from '../nucleo/semantica';
 import { val } from '../nucleo/tipos';
 import type { FalhaRuntime, Valor } from '../nucleo/tipos';
-import type { Anotacao, Gerado, LerResultado, Projection } from './tipos';
+import { Emissor, textoDe } from './emissor';
+import type { Gerado, LerResultado, Projection } from './tipos';
 
 export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
 
@@ -13,35 +14,21 @@ export const BLOCOS_IMPERATIVOS = ['guardar', 'repetir', 'dizer', 'log'];
 // Escrever: blocos → Python
 // ---------------------------------------------------------------------------
 
-function entradaDe(b: BlocoLeigo, chave: string): unknown {
-  const i = b.inputs?.[chave];
-  return i && 'valor' in i ? i.valor : undefined;
-}
-
-/** O nome de um `guardar` está nos `fields`, não nos `inputs`.
+/** Escreve um texto como um literal Python.
  *
- *  O `BlocoLeigo` separa o que a pessoa escreve no bloco do que se liga a
- *  outros blocos, e o nome de uma variável é a primeira coisa. Ler o nome de
- *  `inputs.NOME` — que não existe — produz `undefined = 5` para o bloco mais
- *  básico do produto, e esse é o tipo de bug que só aparece quando se vê o
- *  texto gerado, nunca num teste que só verifique tipos. */
-function campoDe(b: BlocoLeigo, chave: string): unknown {
-  return b.fields?.[chave]?.valor;
-}
-
-/** O corpo de um `repetir`, e não `pilhaDe(b)`.
- *
- *  `pilhaDe` abre uma pilha e, se não for uma pilha, devolve o próprio bloco
- *  — que é o que se quer no topo e é uma recursão infinita no corpo de um
- *  laço. O corpo vive em `inputs.CORPO.stack`, e confundir os dois `CORPO`
- *  — o da pilha e o do laço — produz `for _ in range(3):` repetido até a
- *  pilha estourar. */
-function corpoDe(b: BlocoLeigo): BlocoLeigo[] {
-  return b.inputs?.CORPO?.stack ?? [];
-}
-
+ *  A barra de fugar é tratada **primeiro**, sempre. Se o `\n` se transformasse
+ *  numa fuga antes de a barra ser dobrada, cada fuga seria duplicada — e o
+ *  texto `a\nb` (barra, n, b) sairia `a\\nb`, que o Python lê como barra
+ *  seguida de n. Verificado contra o Python 3.14: uma linha nova escrita tal
+ *  e qual dentro de aspas dá `unterminated string literal`, e o produto nunca
+ *  mostra ao aluno uma linha que não corre. */
 function fugar(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t')
+    .replace(/'/g, "\\'");
 }
 
 function literal(entrada: unknown): string {
@@ -54,37 +41,6 @@ function literal(entrada: unknown): string {
     return `'${fugar(String((entrada as { txt: unknown }).txt))}'`;
   }
   return `'${fugar(String(entrada))}'`;
-}
-
-/** Acumula linhas e anotações, sabendo em que linha do programa está.
- *
- *  O `base` é o número de linhas que o pai já emitiu. Sem ele, o emissor de
- *  um corpo de laço contaria a partir de 1 e a anotação do `x = 1` diria
- *  "linha 1" — sendo que a linha 1 é o `for`. Uma anotação que aponta para
- *  a linha errada é pior do que nenhuma: o aluno lê a explicação ao lado
- *  da linha errada e aprende a explicação errada. */
-class Emissor {
-  readonly linhas: string[] = [];
-  readonly anotacoes: Anotacao[] = [];
-
-  constructor(
-    private nivel = 0,
-    private base = 0,
-  ) {}
-
-  recuo(): string {
-    return '    '.repeat(this.nivel);
-  }
-
-  linha(texto: string, porque: string): void {
-    this.linhas.push(this.recuo() + texto);
-    this.anotacoes.push({ linha: this.base + this.linhas.length, porque });
-  }
-
-  /** As linhas do `for` já contadas: o corpo começa a seguir. */
-  entrar(): Emissor {
-    return new Emissor(this.nivel + 1, this.base + this.linhas.length);
-  }
 }
 
 function emitir(b: BlocoLeigo, e: Emissor): void {
@@ -128,11 +84,9 @@ function emitir(b: BlocoLeigo, e: Emissor): void {
       } else {
         for (const filho of corpo) emitir(filho, dentro);
       }
-      e.linhas.push(...dentro.linhas);
-      e.anotacoes.push(...dentro.anotacoes);
+      e.absorver(dentro);
       return;
     }
-
     default:
       e.linha(`# bloco do v2: ${b.type}`, 'Este bloco ainda não está nesta lição.');
   }
@@ -388,10 +342,7 @@ export const python: Projection = {
   emit(programa: BlocoLeigo | null): Gerado {
     const e = new Emissor();
     for (const bloco of pilhaDe(programa)) emitir(bloco, e);
-    return {
-      texto: e.linhas.map((l) => `${l}\n`).join(''),
-      anotacoes: e.anotacoes,
-    };
+    return { texto: textoDe(e), anotacoes: e.anotacoes };
   },
 
   ler(texto: string): LerResultado {

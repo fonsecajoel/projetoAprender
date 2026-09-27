@@ -126,6 +126,35 @@ describe('interpretar: o mesmo programa, seis políticas', () => {
     expect(erros[0]!.remedio).toContain('para sempre');
   });
 
+  it('a recusa diz QUANDO acontece, e não só o que está errado', () => {
+    // A `Policy` tem `quando` para isto, e o `porque` era só "Um sítio de
+    // número não guarda texto" — que está certo e não diz nada de quando. É a
+    // lacuna mais cara do produto: a diferença entre as seis linguagens **é** o
+    // momento, e quem não sabe se o erro aparece antes ou depois de o programa
+    // correr não aprendeu nada que distinga uma linguagem de outra.
+    const antes = interpretar([atribuir('total', t('olá'), 'número')], POLITICAS.java, origemNo);
+    const noDado = interpretar([atribuir('total', t('olá'), 'número')], POLITICAS.sql, origemNo);
+
+    expect(antes[0]!.porque).toMatch(/antes de o código correr/);
+    expect(noDado[0]!.porque).toMatch(/no dado/);
+    // E as duas frases têm de ser diferentes entre si, ou a diferença de
+    // momento voltou a ser invisível mesmo estando escrita no código.
+    expect(antes[0]!.porque).not.toBe(noDado[0]!.porque);
+  });
+
+  it('e o erro de incompatibilidade também diz quando aparece', () => {
+    // Esta é a linha mais importante da lição de Python: `total = 'olá'` passa,
+    // e a linha seguinte é que rebenta. Sem o momento, o aluno lê "total guarda
+    // texto, e este sítio precisa de número" e não percebe que o estrago já
+    // estava feito uma linha antes.
+    const aoUsar = interpretar(
+      [atribuir('total', t('olá')), usar('total', 'número')],
+      POLITICAS.python,
+      origemNo,
+    );
+    expect(aoUsar[0]!.porque).toMatch(/quando este valor é usado/);
+  });
+
   it('nenhuma das seis produz um erro sem porque nem sem remedio', () => {
     for (const nome of TODAS) {
       const erros = interpretar(

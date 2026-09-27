@@ -425,6 +425,41 @@ describe('a lição de Python que está no repositório', () => {
     expect(CARREGAR(variavelPython, 'python').titulo).not.toMatch(/^[a-z0-9-]+$/);
   });
 
+  it('um bloco escondido dentro de uma pilha é conferido como os outros', () => {
+    // O vocabulário é conferido no `type` de fora e **dentro** também. Com a
+    // conferência só por fora, um `enquanto` dentro de uma pilha validava: a
+    // linha parecia ser de Python e a emissão escrevia um comentário a dizer
+    // que o bloco ainda não existe. É o mesmo buraco do `programa as never`,
+    // um nível mais abaixo.
+    const l = licaoMinima();
+    l.blocos = [
+      {
+        type: 'pilha',
+        inputs: { CORPO: { stack: [{ type: 'enquanto' }] } },
+      },
+    ];
+    const razao = razaoDe(dump(l));
+    expect(razao).toMatch(/enquanto/);
+    expect(razao).toMatch(/blocos\[0\]\.inputs\.CORPO\.stack\[0\]\.type/);
+    // E o caminho aponta para o sítio, que é o que faz a regra ser usada.
+    expect(razao).toMatch(/stack\[0\]/);
+  });
+
+  it('a referência tem um nome e nada mais: o ficheiro vive num sítio só', () => {
+    // Aceitar `linhas` dentro da referência seria aceitar uma segunda versão
+    // do ficheiro, e as duas divergiriam sem ninguém dar por isso.
+    const l = licaoMinima();
+    const passo = (l.passos as Record<string, unknown>[])[0]!;
+    passo.referencia = { nome: 'variavel.py' };
+    const licao = CARREGAR(dump(l), 'python');
+    expect(licao.passos[0]!.referencia).toEqual({ nome: 'variavel.py' });
+
+    passo.referencia = { nome: 'variavel.py', linhas: ['total = 5'] };
+    const razao = razaoDe(dump(l));
+    expect(razao).toMatch(/só pode ter "nome"/);
+    expect(razao).toMatch(/referencia\.linhas|linhas/);
+  });
+
   it('cada programa de prova é escrito de verdade pela projeção da linguagem', () => {
     const l = CARREGAR(variavelPython, 'python');
     for (const s of l.sondas) {

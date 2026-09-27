@@ -132,6 +132,11 @@ export interface Passo {
   /** A palavra a nomear. Só pode existir em `fase: nomear`, e é obrigatória
    *  em `fase: nomear`. */
   nomear?: string;
+  /** O ficheiro que este passo manda ler. Tem um nome e **nada mais**: as
+   *  linhas estão na sonda deste passo, e um segundo sítio seria uma segunda
+   *  versão do ficheiro — a que divergiria sem ninguém dar por isso, e a
+   *  lição deixaria de ser sobre o ficheiro que o aluno está a ler. */
+  referencia?: { nome: string };
 }
 
 export interface Licao {

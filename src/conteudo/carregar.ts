@@ -98,6 +98,22 @@ function blocoDe(v: unknown, caminho: string, vocabulario: readonly string[]): B
     if (o[chave] === undefined) continue;
     objeto(o[chave], `${caminho}.${chave}`, `o bloco "${type}" tem um ${chave} que não é um mapa`);
   }
+  // O vocabulário é conferido **dentro** dos blocos também. A primeira versão
+  // olhava só para o `type` de fora, e um `enquanto` escondido dentro de uma
+  // pilha passava a validação: a linha parecia ser de Python e a emissão
+  // escrevia um comentário a dizer que o bloco ainda não existe. É o mesmo
+  // buraco que o `programa as never` abria, só que um nível mais abaixo.
+  const entradas = o.inputs as Record<string, { stack?: unknown }> | undefined;
+  for (const [chave, entrada] of Object.entries(entradas ?? {})) {
+    if (entrada === null || typeof entrada !== 'object') continue;
+    const pilha = (entrada as { stack?: unknown }).stack;
+    if (pilha === undefined) continue;
+    lista(pilha, `${caminho}.inputs.${chave}.stack`, `o corpo de "${type}" tem de ser uma lista de blocos`).forEach(
+      (filho, i) => {
+        blocoDe(filho, `${caminho}.inputs.${chave}.stack[${i}]`, vocabulario);
+      },
+    );
+  }
   return {
     type,
     ...(o.fields === undefined ? {} : { fields: o.fields as Bloco['fields'] }),
@@ -241,6 +257,22 @@ function validarPasso(
   if (ids.size !== momentos.length) {
     throw new ErroDeAutoria('há dois momentos com o mesmo id neste passo.', `${caminho}.momentos`);
   }
+  if (p.referencia !== undefined) {
+    const ref = objeto(p.referencia, `${caminho}.referencia`, 'a referência tem de ser um mapa com um nome');
+    const chaves = Object.keys(ref);
+    if (chaves.length !== 1 || chaves[0] !== 'nome') {
+      // A regra do ficheiro num sítio só. Aceitar `linhas` aqui seria
+      // aceitar uma segunda versão do ficheiro, e as duas divergiriam sem
+      // ninguém dar por isso — que é a forma mais cara de uma lição deixar de
+      // falar do ficheiro que o aluno está a ler.
+      throw new ErroDeAutoria(
+        `a referência só pode ter "nome", e tem ${chaves.length === 0 ? 'nada' : `"${chaves.join('", "')}"`}. ` +
+          'As linhas do ficheiro estão na sonda deste passo.',
+        `${caminho}.referencia`,
+      );
+    }
+    texto(ref.nome, `${caminho}.referencia.nome`, 'a referência tem de dizer o nome do ficheiro');
+  }
   if (fase !== 'nomear' && p.nomear !== undefined) {
     throw new ErroDeAutoria(
       `a fase deste passo é "${fase}", e uma fase "${fase}" não dá nome a nada. A palavra "${String(p.nomear)}" não tem onde aparecer.`,
@@ -254,6 +286,9 @@ function validarPasso(
     sonda,
     momentos,
     ...(fase === 'nomear' ? { nomear: texto(p.nomear, `${caminho}.nomear`, 'a fase nomear sem palavra repete o que a fase explicar já disse') } : {}),
+    ...(p.referencia === undefined
+      ? {}
+      : { referencia: { nome: texto((p.referencia as { nome?: unknown }).nome, `${caminho}.referencia.nome`, 'a referência tem de dizer o nome do ficheiro') } }),
   };
 }
 

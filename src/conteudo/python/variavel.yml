@@ -1,102 +1,540 @@
+# A lição «O que é uma variável», em Python.
+#
+# Este ficheiro é o currículo. Não há painel de administração nem base de
+# dados: uma lição é um YAML que se revê num `git diff`, e quem o corrige
+# não precisa de escrever código.
+#
+# Duas regras que o carregador impõe e que valem para todas as lições:
+#   - só `esperado.classe` é comparado com o motor
+#   - `esperado.porque` é prosa de autoria e nunca é comparada com nada
+#
+# E uma regra que é desta lição: o `nome` de uma variável vive em
+# `fields.nome`, em minúsculas, e o valor vive em `inputs.VALOR`, em
+# maiúsculas. Escrever `NOME` não dá erro nenhum — o carregador aceita — e
+# escreve `undefined = 5` no ecrã do aluno.
+
 id: variavel
 linguagem: python
-titulo: A caixa que guarda o valor
-porqueTitulo: >-
-  Uma linha que conta não deixa nada para a linha de baixo usar. Uma
-  variável é a caixa onde o valor fica à espera de ser precisado outra vez.
+titulo: O que é uma variável
+porqueTitulo: >
+  Uma variável é um nome que se dá a um valor para o usar mais tarde. E o
+  valor tem um tipo, e é esse tipo — não a variável — que decide o que se
+  pode fazer a seguir. Esta lição é sobre essa decisão.
 
-# O vocabulário desta lição. Cada entrada tem de ser um bloco que a projeção
-# de Python sabe escrever — o carregador recusa o resto, e diz quais são.
+paraSaberQueFez: >
+  Consegues ler um ficheiro de Python que nunca viste e dizer, linha a linha,
+  o que ela faz e o que a segura quando erra. Se chegaste a ler o `log(total)`
+  e a dizer que rebenta quando o código corre — e não antes —, chegaste.
+
+# O vocabulário desta lição: os blocos que o aluno pode arrastar. Cada um
+# traz os valores de origem, e o `nome` é um `field` enquanto o valor é um
+# `input`. A distinção não é cosmética — trocar os dois escreve `undefined`
+# no sítio onde vai o nome.
 blocos:
   - type: guardar
+    fields:
+      nome:
+        valor: total
+    inputs:
+      VALOR:
+        valor: 5
+  - type: repetir
+    inputs:
+      PASSOS:
+        valor: 3
+      CORPO:
+        stack:
+          - type: guardar
+            fields:
+              nome:
+                valor: total
+            inputs:
+              VALOR:
+                valor:
+                  ref: total
   - type: dizer
-
-passos:
-  - fase: explicar
-    porque: >-
-      Este bloco põe um número dentro de uma caixa, e dá um nome à caixa.
-      Sem o nome, o número desaparecia no fim da linha; com o nome, qualquer
-      linha a seguir pode buscá-lo.
-    bloco:
-      type: guardar
-      fields:
-        nome: { valor: total }
-      inputs:
-        VALOR: { valor: 5 }
-    sonda: guarda-um-numero
-    momentos:
-      - id: l1
-        texto: O que é que esta linha põe dentro da caixa?
-        palavras: [guardar, número, total]
-        fonte: leitura
-      - id: l2
-        texto: E se a caixa não tivesse nome?
-        palavras: [nome, sumir, desaparecer]
-        fonte: leitura
-
-  - fase: fazer
-    porque: >-
-      Agora escreves tu a linha. O produto escreve o que fez e diz se é o que
-      a linha diz — e o que diz é o mesmo que o Python diria, nem mais
-      simpático nem mais directo.
-    bloco:
-      type: guardar
-      fields:
-        nome: { valor: total }
-      inputs:
-        VALOR: { valor: 5 }
-    sonda: guarda-um-numero
-    momentos:
-      - id: f1
-        texto: Escreve a linha que põe 5 dentro de uma caixa chamada total.
-        palavras: []
-        fonte: texto
-
-  - fase: nomear
-    porque: >-
-      A caixa é o que torna o número útil mais tarde, e o nome é metade do que
-      a torna útil. Escrever `total = 5` sem saber o que `total` é é escrever
-      um programa que só tu percebes.
-    nomear: variável
-    bloco:
-      type: guardar
-      fields:
-        nome: { valor: total }
-      inputs:
-        VALOR: { valor: 5 }
-    sonda: guarda-um-numero
-    momentos:
-      - id: n1
-        texto: Como se chama a caixa que guarda o valor?
-        palavras: [variável, caixa, nome]
-        fonte: leitura
+    inputs:
+      VALOR:
+        valor:
+          ref: total
+  - type: log
+    inputs:
+      VALOR:
+        valor:
+          ref: total
 
 sondas:
   - nome: guarda-um-numero
-    pergunta: O que é que este programa faz?
-    porque: >-
-      A sonda é a única coisa que prova que a pessoa entendeu. Está antes da
-      experiência de propósito: quem vai adivinhar é quem ainda tem algo a
-      aprender, e quem vai dizer que é um número já sabe.
+    pergunta: 'O que vai aparecer no ecrã?'
+    porque: >
+      A forma mais simples de guardar: um nome, um sinal de igual, e um
+      número. Nada mais acontece, e é por isso que é o primeiro exemplo.
     prova:
       forma: programa
       programa:
-        type: pilha
+        type: guardar
+        fields:
+          nome:
+            valor: total
         inputs:
+          VALOR:
+            valor: 5
+    esperado:
+      classe: Observacao
+      porque: >
+        Guarda um número e não dá erro nenhum. É o caminho feliz, e o
+        ficheiro fica com uma linha nova.
+
+  - nome: guarda-um-texto
+
+    pergunta: 'Trocar o número por uma palavra muda o que aparece?'
+    porque: >
+      O mesmo gesto, com um texto em vez de um número. Repara que o nome não
+      muda e a forma não muda: muda o que lá está dentro.
+    prova:
+      forma: programa
+      programa:
+        type: guardar
+        fields:
+          nome:
+            valor: nome
+        inputs:
+          VALOR:
+            valor: olá
+    esperado:
+      classe: Observacao
+      porque: >
+        Um texto entre aspas é um texto, e o Python guarda-o sem dizer nada.
+
+  - nome: repete-tres-vezes
+
+    pergunta: 'O número que aparece é o que estava guardado, ou é outro?'
+    porque: >
+      O ciclo corre três vezes. A linha de baixo é executada três vezes, e é
+      por isso que um `for` muda o que um programa faz sem mudar o que está
+      escrito.
+    prova:
+      forma: programa
+      programa:
+        type: repetir
+        inputs:
+          PASSOS:
+            valor: 3
           CORPO:
             stack:
               - type: guardar
                 fields:
-                  nome: { valor: total }
+                  nome:
+                    valor: x
                 inputs:
-                  VALOR: { valor: 5 }
+                  VALOR:
+                    valor: 1
     esperado:
       classe: Observacao
-      porque: >-
-        O programa corre e não dá erro nenhum, que é o que esta lição ensina
-        a desconfiar: uma linha que não falha não é uma linha que funciona,
-        é uma linha que ainda não foi usada.
+      porque: >
+        Três voltas de uma atribuição simples. Corre, e não dá erro.
 
-paraSaberQueFez: >-
-  Fizeste quando conseguiste escrever uma linha que guarda um número e dizer,
-  sem ver a lição, o que a linha faz e o que a protege.
+  - nome: texto-que-nao-e-numero
+
+    pergunta: 'Esta linha dá erro?'
+    porque: >
+      Esta é a sonda que faz a lição. Guardar um texto num sítio onde se
+      espera um número **não dá erro nenhum em Python**. A lição tem de
+      resistir à tentação de dizer que dá.
+    prova:
+      forma: programa
+      texto: "total = 'olá'\n"
+    esperado:
+      classe: Observacao
+      porque: >
+        Python não avisa. Aceita o texto e segue em frente, e a culpa vai
+        aparecer mais abaixo, na linha que usa o valor como número.
+
+  - nome: o-erro-que-nao-esta-no-lugar
+
+    pergunta: 'O que acontece quando se soma uma palavra a um número?'
+    porque: >
+      A outra metade da mesma verdade. Guardar o texto foi aceite; usá-lo como
+      número é que rebenta — e rebenta agora, a correr.
+    prova:
+      forma: programa
+      texto: |
+        total = 'olá'
+        total = total + 1
+    esperado:
+      classe: FalhaRuntime
+      porque: >
+        O texto chegou a um sítio que precisa de um número, e aí sim falha.
+        Repara que a linha que falha é a segunda, e a que está errada é a
+        primeira. Esta é a lição de Python em duas linhas: o sintoma não está
+        onde está a causa.
+
+  - nome: uma-funcao-que-nao-existe
+
+    pergunta: 'O que acontece quando o código chama por uma função que não escreveste?'
+    porque: >
+      `log` é uma função que ainda não escreveste. Em Python isso só se
+      descobre quando o código corre, e o erro aparece na linha do `log`,
+      muito depois de a causa estar resolvida.
+    prova:
+      forma: programa
+      texto: |
+        total = 5
+        log(total)
+    esperado:
+      classe: FalhaRuntime
+      porque: >
+        A função não existe, e o Python não avisa antes de correr. É a mesma
+        história da linha anterior, com outro nome: o Python deixa-te escrever
+        e cobra-te depois.
+
+  - nome: variavel-que-nunca-foi-guardada
+
+    pergunta: 'O Python adivinha o que querias dizer, ou recusa?'
+    porque: >
+      Usar um nome que não foi guardado. O Python não adivinha o que querias
+      dizer, e esta recusa é a única que é dele — e note-se que acontece
+      *antes* de correr, ao contrário de tudo o que viste até agora. Há
+      coisas que o Python apanha logo, e há coisas que só apanha tarde.
+    prova:
+      forma: programa
+      texto: "print(total)\n"
+    esperado:
+      classe: FalhaRuntime
+      porque: >
+        Não há nada guardado com esse nome. Todas as linguagens param aqui,
+        todas com a mesma resposta: o nome não existe.
+
+  - nome: o-que-o-ficheiro-diz
+
+    pergunta: 'Este ficheiro de quinze linhas corre até ao fim?'
+    porque: >
+      O ficheiro inteiro, lido de uma vez. Esta é a soma da lição: se isto
+      passar, o ficheiro de quinze linhas é legível.
+    prova:
+      forma: programa
+      texto: |
+        total = 5
+        preco = 3
+        nome = 'olá'
+        pronto = True
+        for _ in range(3):
+            total = total + 1
+        print(total)
+        print(nome)
+        print(preco)
+        total = 'olá'
+        print(total)
+        log(total)
+        pronto = False
+        print(pronto)
+        total = total + preco
+    esperado:
+      classe: FalhaRuntime
+      porque: >
+        Lê-se até `log`, que rebenta: é a primeira das duas falhas, e é uma
+        falha de função, não de tipo. A segunda vem cinco linhas depois, quando
+        o `total` — que deixou de ser número na linha 10 — chega a um sítio
+        que precisa de número. Nenhuma das duas diz onde está a causa.
+
+passos:
+  - fase: explicar
+    porque: >
+      Uma variável é um nome que se dá a um valor. O nome é teu, o valor é o
+      que lá está, e o Python não liga os dois. Podes escrever `total` e a
+      seguir `nome` e o Python trata os dois da mesma forma.
+    bloco:
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: 5
+    sonda: guarda-um-numero
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: fazer
+    porque: >
+      Guarda um número com o nome `total`. Depois guarda um texto com o nome
+      `nome`. Repara que o nome é a parte que fica à esquerda, e que podes
+      repetir o gesto infinitas vezes.
+    bloco:
+      type: pilha
+      inputs:
+        CORPO:
+          stack:
+            - type: guardar
+              fields:
+                nome:
+                  valor: total
+              inputs:
+                VALOR:
+                  valor: 5
+            - type: guardar
+              fields:
+                nome:
+                  valor: nome
+              inputs:
+                VALOR:
+                  valor: olá
+    sonda: guarda-um-texto
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: fazer
+    porque: >
+      Agora o mesmo gesto, três vezes seguidas, dentro de um `for`. O que está
+      escrito não muda — muda quantas vezes o Python o executa. É a primeira
+      vez que vês um programa fazer algo que não está escrito linha a linha, e
+      é por isso que vale a pena parares aqui.
+    bloco:
+      type: repetir
+      inputs:
+        PASSOS:
+          valor: 3
+        CORPO:
+          stack:
+            - type: guardar
+              fields:
+                nome:
+                  valor: x
+              inputs:
+                VALOR:
+                  valor: 1
+    sonda: repete-tres-vezes
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: explicar
+    porque: >
+      O que muda entre `total = 5` e `nome = 'olá'` não é o nome nem a forma: é
+      o tipo do que está dentro. Um número e um texto são coisas diferentes, e
+      a diferença só aparece quando tentas misturá-los.
+    bloco:
+      type: guardar
+      fields:
+        nome:
+          valor: nome
+      inputs:
+        VALOR:
+          valor: olá
+    sonda: texto-que-nao-e-numero
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: fazer
+    porque: >
+      Guarda um texto com o nome `total` e usa-o logo a seguir como número.
+      Espera que corra bem. Não corre, e o que te vai dizer é que o `total`
+      guarda texto — a uma linha de distância de onde o trocaste.
+    bloco:
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: olá
+    sonda: o-erro-que-nao-esta-no-lugar
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: nomear
+    nomear: variável
+    porque: >
+      O nome que se dá ao valor chama-se variável. O valor chama-se valor. E o
+      gesto de ligar os dois — nome, sinal de igual, valor — chama-se
+      atribuição. São estas duas palavras que vais ouvir em qualquer linguagem
+      onde quer que escrevas, e é por isso que uma delas não precisa de ser
+      traduzida: `total = 5` é uma atribuição em todas.
+    bloco:
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: 5
+    sonda: guarda-um-numero
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: nomear
+    nomear: atribuição
+    porque: >
+      A linha `total = 'olá'` não deu erro nenhum. Em Python **não existe
+      recusa por tipo**: nada te avisou, nada te impediu, e o ficheiro ficou
+      pronto a correr com o erro lá dentro. A recusa que existe neste produto
+      vem do robô e do painel de texto, onde o tipo é declarado à mão — não vem
+      do ficheiro. A palavra para a linha que aceita um valor sem dizer nada
+      é *atribuição*.
+    bloco:
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: olá
+    sonda: texto-que-nao-e-numero
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: explicar
+    porque: >
+      Python não te avisou, e não foi distração: foi escolha. O Python escolheu
+      ser fácil de escrever e lento de falhar, e tu acabaste de ver o preço.
+      Repara no que este produto faz com essa escolha: o robô e o painel de
+      texto **recusam-te o valor antes de o programa existir**. A linguagem não
+      te protege; o que está à volta da linguagem protege-te, e é por isso que
+      estás a ler esta lição em vez de a adivinhar.
+    bloco:
+      type: log
+      inputs:
+        VALOR:
+          valor:
+            ref: total
+    sonda: uma-funcao-que-nao-existe
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: fazer
+    porque: >
+      Lê o ficheiro de quinze linhas inteiro. Para cada linha, diz o que ela
+      faz. Depois diz quais são as duas que rebentam, e qual é a que as
+      estragou. O ficheiro está no painel; não o executes, lê-lo.
+    bloco:
+      type: pilha
+    sonda: o-que-o-ficheiro-diz
+
+    referencia:
+      nome: variavel.py
+
+    momentos:
+      - id: l1
+        texto: 'O que faz a linha 1?'
+        palavras: ['guarda', 'atribui', 'cria', 'guardar', 'atribuição', 'valor', 'número']
+        fonte: leitura
+      - id: l2
+        texto: 'O que faz a linha 2?'
+        palavras: ['guarda', 'atribui', 'cria', 'guardar', 'atribuição', 'valor', 'número']
+        fonte: leitura
+      - id: l3
+        texto: 'O que é o nome, e o que é a palavra entre aspas?'
+        palavras: ['texto', 'palavra', 'string', 'guarda', 'atribui', 'nome']
+        fonte: leitura
+      - id: l4
+        texto: 'O que é True aqui?'
+        palavras: ['lógico', 'booleano', 'verdade', 'verdadeiro', 'lógica', 'guarda']
+        fonte: leitura
+      - id: l5
+        texto: 'O que faz a linha 5?'
+        palavras: ['repete', 'ciclo', 'for', 'vezes', 'voltas', 'três', '3']
+        fonte: leitura
+      - id: l6
+        texto: 'O que faz a linha 6?'
+        palavras: ['soma', 'incrementa', 'acrescenta', 'mais', 'dentro', 'ciclo', 'repete']
+        fonte: leitura
+      - id: l7
+        texto: 'O que faz a linha 7?'
+        palavras: ['mostra', 'imprime', 'escreve', 'print', 'ecrã', 'total']
+        fonte: leitura
+      - id: l8
+        texto: 'O que faz a linha 8?'
+        palavras: ['mostra', 'imprime', 'escreve', 'print', 'ecrã', 'nome']
+        fonte: leitura
+      - id: l9
+        texto: 'O que faz a linha 9?'
+        palavras: ['mostra', 'imprime', 'escreve', 'print', 'ecrã', 'preco']
+        fonte: leitura
+      - id: l10
+        texto: 'O que muda na linha 10?'
+        palavras: ['texto', 'palavra', 'string', 'total', 'deixa', 'muda', 'troca', 'sobrescreve']
+        fonte: leitura
+      - id: l11
+        texto: 'O que faz a linha 11?'
+        palavras: ['mostra', 'imprime', 'escreve', 'print', 'total']
+        fonte: leitura
+      - id: l12
+        texto: 'O que vai acontecer na linha 12?'
+        palavras: ['erro', 'função', 'existe', 'log', 'rebenta', 'falha']
+        fonte: leitura
+      - id: l13
+        texto: 'O que é False aqui?'
+        palavras: ['lógico', 'booleano', 'falso', 'lógica', 'guarda', 'muda']
+        fonte: leitura
+      - id: l14
+        texto: 'O que faz a linha 14?'
+        palavras: ['mostra', 'imprime', 'escreve', 'print', 'ecrã', 'pronto', 'chega', 'chegar']
+        fonte: leitura
+      - id: l15
+        texto: 'O que faz a linha 15?'
+        palavras: ['soma', 'junta', 'acrescenta', 'preco', 'total', 'erro', 'número', 'texto']
+        fonte: leitura
+
+  - fase: fazer
+    porque: >
+      Uma última coisa, e é a única em que as seis linguagens concordam.
+      Escreve `print(total)` sem nunca ter guardado nada com o nome `total`.
+      Todas as linguagens param aqui, todas com a mesma resposta: o nome não
+      existe. Repara que este erro **não** é do mesmo género — aqui o Python
+      não está a falhar tarde, está a dizer que nunca soube do que falavas.
+    bloco:
+      type: dizer
+      inputs:
+        VALOR:
+          valor:
+            ref: total
+    sonda: variavel-que-nunca-foi-guardada
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos
+
+  - fase: nomear
+    nomear: erro de execução
+    porque: >
+      A palavra que descreve o que este ficheiro faz quando erra chama-se
+      *erro de execução*, e a diferença entre ele e uma recusa é **quando**:
+      a recusa é antes de correr, o erro de execução é a correr. Guardar essa
+      diferença é a primeira coisa que precisas de levar deste ficheiro, e é a
+      razão de a próxima lição ser escrita numa linguagem que recusa.
+    bloco:
+      type: log
+      inputs:
+        VALOR:
+          valor:
+            ref: total
+    sonda: o-que-o-ficheiro-diz
+    momentos:
+      - id: p
+        texto: 'Este passo é um só: faz o que o texto acima te pede.'
+        palavras: []
+        fonte: blocos

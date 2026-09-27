@@ -68,7 +68,7 @@ Cinco classes de erro ou modo de falha que a spec v2 implica, que nenhum teste d
 
 ## File Structure
 
-Os 45 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
+Os 46 ficheiros que as 13 tarefas criam, e nada mais. A lista sai das linhas
 `- Create:` de cada tarefa — o que significa que se um ficheiro entrar na
 lista sem nenhuma tarefa o criar, ou sair da lista sem ser apagado de uma
 tarefa, esta secção está errada e o plano também. `java/variavel.yml` **não**
@@ -131,6 +131,9 @@ src/
     python/variavel.yml                A lição. Nasce mínima na T7, para que  T7, T8
                                        essa tarefa seja verde, e a T8
                                        reescreve-a a sério.
+    python/variavel.test.ts            A lição posta a prova: as quinze    T8
+                                       linhas, as três palavras nomeadas e
+                                       a linha que o aluno lê.
     portao.test.ts                     Todas as sondas de todas as lições,     T13
                                        e o portão do §16.1.
 
@@ -7081,6 +7084,41 @@ describe('a lição de Python que está no repositório', () => {
     expect(CARREGAR(variavelPython, 'python').titulo).not.toMatch(/^[a-z0-9-]+$/);
   });
 
+  it('um bloco escondido dentro de uma pilha é conferido como os outros', () => {
+    // O vocabulário é conferido no `type` de fora e **dentro** também. Com a
+    // conferência só por fora, um `enquanto` dentro de uma pilha validava: a
+    // linha parecia ser de Python e a emissão escrevia um comentário a dizer
+    // que o bloco ainda não existe. É o mesmo buraco do `programa as never`,
+    // um nível mais abaixo.
+    const l = licaoMinima();
+    l.blocos = [
+      {
+        type: 'pilha',
+        inputs: { CORPO: { stack: [{ type: 'enquanto' }] } },
+      },
+    ];
+    const razao = razaoDe(dump(l));
+    expect(razao).toMatch(/enquanto/);
+    expect(razao).toMatch(/blocos\[0\]\.inputs\.CORPO\.stack\[0\]\.type/);
+    // E o caminho aponta para o sítio, que é o que faz a regra ser usada.
+    expect(razao).toMatch(/stack\[0\]/);
+  });
+
+  it('a referência tem um nome e nada mais: o ficheiro vive num sítio só', () => {
+    // Aceitar `linhas` dentro da referência seria aceitar uma segunda versão
+    // do ficheiro, e as duas divergiriam sem ninguém dar por isso.
+    const l = licaoMinima();
+    const passo = (l.passos as Record<string, unknown>[])[0]!;
+    passo.referencia = { nome: 'variavel.py' };
+    const licao = CARREGAR(dump(l), 'python');
+    expect(licao.passos[0]!.referencia).toEqual({ nome: 'variavel.py' });
+
+    passo.referencia = { nome: 'variavel.py', linhas: ['total = 5'] };
+    const razao = razaoDe(dump(l));
+    expect(razao).toMatch(/só pode ter "nome"/);
+    expect(razao).toMatch(/referencia\.linhas|linhas/);
+  });
+
   it('cada programa de prova é escrito de verdade pela projeção da linguagem', () => {
     const l = CARREGAR(variavelPython, 'python');
     for (const s of l.sondas) {
@@ -7465,6 +7503,11 @@ export interface Passo {
   /** A palavra a nomear. Só pode existir em `fase: nomear`, e é obrigatória
    *  em `fase: nomear`. */
   nomear?: string;
+  /** O ficheiro que este passo manda ler. Tem um nome e **nada mais**: as
+   *  linhas estão na sonda deste passo, e um segundo sítio seria uma segunda
+   *  versão do ficheiro — a que divergiria sem ninguém dar por isso, e a
+   *  lição deixaria de ser sobre o ficheiro que o aluno está a ler. */
+  referencia?: { nome: string };
 }
 
 export interface Licao {
@@ -7588,6 +7631,22 @@ function blocoDe(v: unknown, caminho: string, vocabulario: readonly string[]): B
   for (const chave of ['fields', 'inputs'] as const) {
     if (o[chave] === undefined) continue;
     objeto(o[chave], `${caminho}.${chave}`, `o bloco "${type}" tem um ${chave} que não é um mapa`);
+  }
+  // O vocabulário é conferido **dentro** dos blocos também. A primeira versão
+  // olhava só para o `type` de fora, e um `enquanto` escondido dentro de uma
+  // pilha passava a validação: a linha parecia ser de Python e a emissão
+  // escrevia um comentário a dizer que o bloco ainda não existe. É o mesmo
+  // buraco que o `programa as never` abria, só que um nível mais abaixo.
+  const entradas = o.inputs as Record<string, { stack?: unknown }> | undefined;
+  for (const [chave, entrada] of Object.entries(entradas ?? {})) {
+    if (entrada === null || typeof entrada !== 'object') continue;
+    const pilha = (entrada as { stack?: unknown }).stack;
+    if (pilha === undefined) continue;
+    lista(pilha, `${caminho}.inputs.${chave}.stack`, `o corpo de "${type}" tem de ser uma lista de blocos`).forEach(
+      (filho, i) => {
+        blocoDe(filho, `${caminho}.inputs.${chave}.stack[${i}]`, vocabulario);
+      },
+    );
   }
   return {
     type,
@@ -7732,6 +7791,22 @@ function validarPasso(
   if (ids.size !== momentos.length) {
     throw new ErroDeAutoria('há dois momentos com o mesmo id neste passo.', `${caminho}.momentos`);
   }
+  if (p.referencia !== undefined) {
+    const ref = objeto(p.referencia, `${caminho}.referencia`, 'a referência tem de ser um mapa com um nome');
+    const chaves = Object.keys(ref);
+    if (chaves.length !== 1 || chaves[0] !== 'nome') {
+      // A regra do ficheiro num sítio só. Aceitar `linhas` aqui seria
+      // aceitar uma segunda versão do ficheiro, e as duas divergiriam sem
+      // ninguém dar por isso — que é a forma mais cara de uma lição deixar de
+      // falar do ficheiro que o aluno está a ler.
+      throw new ErroDeAutoria(
+        `a referência só pode ter "nome", e tem ${chaves.length === 0 ? 'nada' : `"${chaves.join('", "')}"`}. ` +
+          'As linhas do ficheiro estão na sonda deste passo.',
+        `${caminho}.referencia`,
+      );
+    }
+    texto(ref.nome, `${caminho}.referencia.nome`, 'a referência tem de dizer o nome do ficheiro');
+  }
   if (fase !== 'nomear' && p.nomear !== undefined) {
     throw new ErroDeAutoria(
       `a fase deste passo é "${fase}", e uma fase "${fase}" não dá nome a nada. A palavra "${String(p.nomear)}" não tem onde aparecer.`,
@@ -7745,6 +7820,9 @@ function validarPasso(
     sonda,
     momentos,
     ...(fase === 'nomear' ? { nomear: texto(p.nomear, `${caminho}.nomear`, 'a fase nomear sem palavra repete o que a fase explicar já disse') } : {}),
+    ...(p.referencia === undefined
+      ? {}
+      : { referencia: { nome: texto((p.referencia as { nome?: unknown }).nome, `${caminho}.referencia.nome`, 'a referência tem de dizer o nome do ficheiro') } }),
   };
 }
 
@@ -8184,31 +8262,31 @@ O ficheiro tem quinze linhas porque o critério de sucesso da spec é o utilizad
 
 **Interfaces:**
 - Consumes: Task 7 — `CARREGAR`, `executarSonda`, `Licao`, `Passo`, `Momento`, `Sonda`; Task 6 — `avaliarTexto`, `classificar`.
-- Produces: `src/conteudo/python/variavel.yml`, e a **prova** de que o formato da sonda aguenta uma lição inteira. A Task 13 transforma essa prova em decisão.
+- Produces: `src/conteudo/python/variavel.yml` reescrito com a lição a sério — 11 passos, 8 sondas,
+  15 perguntas de leitura — e `src/conteudo/python/variavel.test.ts`, que é a **prova** de que o
+  formato da sonda aguenta uma lição inteira. A Task 13 transforma essa prova em decisão, contando
+  os mesmos números que a medição do passo 5 contou à mão.
 
-- [ ] **Step 1: Escrever o teste que exige as sete linhas da leitura**
+- [ ] **Step 1: Escrever o teste que exige as quinze linhas da leitura**
 
 `src/conteudo/python/variavel.test.ts`:
 ```typescript
 import { describe, expect, it } from 'vitest';
 import { CARREGAR } from '../carregar';
 import { executarSonda } from '../sondas';
-import { avaliarTexto, classificar } from '../../projecoes/avaliar';
+import { avaliarTexto, classificar, emitir } from '../../projecoes/avaliar';
 import variavelPython from './variavel.yml?raw';
 
 const licao = CARREGAR(variavelPython, 'python');
 const porNome = new Map(licao.sondas.map((s) => [s.nome, s]));
 
 describe('o ficheiro de leitura tem quinze linhas', () => {
-  const leitura = licao.passos.find((p) => p.fase === 'fazer' && p.sonda === 'leitura-completa')!;
-
   it('a lição tem uma sonda de leitura completa', () => {
-    expect(leitura).toBeDefined();
+    expect(porNome.has('o-que-o-ficheiro-diz')).toBe(true);
   });
 
   it('o texto lido tem quinze linhas', () => {
-    const texto = porNome.get('leitura-completa')!.prova.texto!;
-    expect(texto.trimEnd().split('\n')).toHaveLength(15);
+    expect(porNome.get('o-que-o-ficheiro-diz')!.prova.texto!.trimEnd().split('\n')).toHaveLength(15);
   });
 
   it('a linha que rebenta está longe da linha que a estragou', () => {
@@ -8228,19 +8306,19 @@ describe('o ficheiro de leitura tem quinze linhas', () => {
     const rebentou = linhas.indexOf('total = total + preco');
     expect(estragou).toBeGreaterThanOrEqual(0);
     expect(rebentou).toBeGreaterThanOrEqual(0);
-    // Cinco linhas, e o teste diz cinco. Um teste que só dissesse "vem
-    // depois" passaria se alguém encurtasse o ficheiro para duas linhas, e
-    // a lição continuaria a parecer correcta no `git log`.
+    // Cinco linhas, e o teste diz cinco. Um teste que só dissesse «vem
+    // depois» passaria se alguém encurtasse o ficheiro para duas linhas, e a
+    // lição continuaria a parecer certa no `git log`.
     expect(rebentou - estragou).toBe(5);
-    // A linha que rebenta usa `total`, e é por isso que o ficheiro é um
-    // bom ficheiro: `total` é um nome, e o nome continua a ser o mesmo
-    // depois de o valor mudar de lado. Não há nada no meio que diga "a
-    // causa foi a linha 10" — quem lê tem de voltar atrás e ver que, aí,
-    // `total` deixou de ser um número. A distância é que faz o trabalho.
+    // A linha que rebenta usa `total`, e é por isso que o ficheiro é um bom
+    // ficheiro: `total` é um nome, e o nome continua a ser o mesmo depois do
+    // valor mudar de lado. Não há nada no meio que diga «a causa foi a linha
+    // 10» — quem lê tem de voltar atrás e ver que, aí, `total` deixou de ser
+    // um número. A distância é que faz o trabalho.
     expect(linhas[rebentou]).toBe('total = total + preco');
     // E a *segunda* linha `print(total)` — a linha 11, que mostra o valor já
-    // estragado — está entre as duas. `indexOf` devolveria a primeira, que
-    // é a linha 7 e ainda mostra um número; é `lastIndexOf` que dá a pista.
+    // estragado — está entre as duas. `indexOf` devolveria a primeira, que é
+    // a linha 7 e ainda mostra um número; é `lastIndexOf` que dá a pista.
     const mostraDepois = linhas.lastIndexOf('print(total)');
     expect(mostraDepois).toBeGreaterThan(estragou);
     expect(mostraDepois).toBeLessThan(rebentou);
@@ -8249,24 +8327,26 @@ describe('o ficheiro de leitura tem quinze linhas', () => {
   });
 
   it('e a primeira linha a rebentar é a função que não existe, não o tipo', () => {
-    const linhas = porNome
-      .get('o-que-o-ficheiro-diz')!
-      .prova.texto!.trimEnd()
-      .split('\n')
-      .map((l) => l.trim());
+    const erros = avaliarTexto('python', porNome.get('o-que-o-ficheiro-diz')!.prova.texto!);
     // `log` não é uma falha de tipo. É uma função que não escreveste, e o
     // Python só diz isso a correr. A lição tem de não misturar as duas
     // coisas, que é a confusão mais comum de quem está a começar.
-    expect(linhas.indexOf('log(total)')).toBeGreaterThan(linhas.indexOf("total = 'olá'"));
+    //
+    // E o teste afirma **qual** é a primeira, e não só que há uma: um
+    // ficheiro cujas duas falhas fossem do mesmo género ensinaria a confusão
+    // que a lição diz evitar.
+    expect(erros[0]!.porque).toMatch(/log/);
+    expect(erros[0]!.porque).toMatch(/não existe/);
+    expect(erros[0]!.porque).not.toMatch(/número/);
   });
 
-  it('cada linha do ficheiro é lida sem erro de sintaxe, menos as que devem falhar', () => {
-    const texto = porNome.get('leitura-completa')!.prova.texto!;
-    const erros = avaliarTexto('python', texto);
-    // O ficheiro é válido como Python até `log`, que é a função que não
-    // existe. Uma recusa a mais ou a menos aqui significa que o `ler` mente.
-    const deSintaxe = erros.filter((e) => e.porque.includes('não é Python'));
-    expect(deSintaxe).toEqual([]);
+  it('cada linha do ficheiro é lida sem erro de sintaxe', () => {
+    const erros = avaliarTexto('python', porNome.get('o-que-o-ficheiro-diz')!.prova.texto!);
+    // O ficheiro é Python legível de ponta a ponta. Uma recusa a mais ou a
+    // menos aqui significa que o `ler` mente, e o aluno que o lê leva a
+    // lição errada antes de a ler.
+    const deLeitura = erros.filter((e) => e.porque.includes('não é Python'));
+    expect(deLeitura).toEqual([]);
   });
 });
 
@@ -8287,13 +8367,13 @@ describe('a lição tem a forma que a spec pede', () => {
   it('as palavras nomeadas são as três da lição, e são palavras', () => {
     // O `nomear` não é uma quarta fase com mais texto: é a fase em que a
     // palavra aparece sozinha, grande, e é a palavra que o aluno leva. Por
-    // isso o limite é de palavras e não de frases — "erro de execução" são
-    // duas, e "atribuição" é uma; uma frase inteira aqui seria a vista
+    // isso o limite é de palavras e não de frases — «erro de execução» são
+    // duas, e «atribuição» é uma; uma frase inteira aqui seria a vista
     // `explicar` de novo, e o aluno sairia dela sem nome nenhum.
     const nomeadas = licao.passos.filter((p) => p.fase === 'nomear').map((p) => p.nomear!);
     expect(nomeadas).toEqual(['variável', 'atribuição', 'erro de execução']);
     for (const palavra of nomeadas) {
-      // Três palavras é uma locução, como "erro de execução". Quatro já
+      // Três palavras é uma locução, como «erro de execução». Quatro já
       // seria uma frase, e uma frase aqui é a vista `explicar` de novo.
       expect(palavra.split(' ').length).toBeLessThanOrEqual(3);
       // Só minúsculas e acentos do português, mais espaços. Sem ponto final
@@ -8305,7 +8385,7 @@ describe('a lição tem a forma que a spec pede', () => {
 
   it('a palavra nomeada aparece também escrita no porque do passo', () => {
     // Se a palavra só estivesse no campo `nomear`, o `porque` e a palavra
-    // seriam duas fontes de verdade. Ler a vista `nomear` e ler o `porque`
+    // seriam duas fontes da verdade. Ler a vista `nomear` e ler o `porque`
     // têm de dar a mesma palavra.
     for (const passo of licao.passos) {
       if (!passo.nomear) continue;
@@ -8332,9 +8412,9 @@ describe('a lição tem a forma que a spec pede', () => {
       .split('\n');
     expect(ficha!.momentos).toHaveLength(linhas.length);
     expect(ficha!.momentos).toHaveLength(15);
-    // Uma pergunta por linha, pela mesma ordem. A pergunta `lN` é a da
-    // linha `N`, e é isso que permite dizer "a linha 10" ao aluno e dizer
-    // a ele o que é que está a perguntar.
+    // Uma pergunta por linha, pela mesma ordem. A pergunta `lN` é a da linha
+    // `N`, e é isso que permite dizer «a linha 10» ao aluno e dizer a ele o
+    // que é que está a perguntar.
     expect(ficha!.momentos.map((m) => m.id)).toEqual(linhas.map((_, i) => `l${i + 1}`));
   });
 
@@ -8342,9 +8422,23 @@ describe('a lição tem a forma que a spec pede', () => {
     const ficha = licao.passos.find((p) => p.referencia !== undefined)!;
     for (const m of ficha.momentos) {
       expect(m.fonte).toBe('leitura');
-      // Três ou mais sinónimos por pergunta. Uma pergunta com uma palavra
-      // só é um teste de ortografia disfarçado de pergunta.
+      // Três ou mais sinónimos por pergunta. Uma pergunta com uma palavra só
+      // é um teste de ortografia disfarçado de pergunta.
       expect(m.palavras.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('nenhuma palavra das perguntas é uma palavra que não responde', () => {
+    // As palavras são somadas com «ou»: uma resposta com uma delas conta.
+    // Uma palavra que não responde — o «não» de uma pergunta sobre o que vai
+    // acontecer, por exemplo — contaria a resposta errada, e a pergunta que
+    // o produto faz deixa de ser uma pergunta.
+    const ficha = licao.passos.find((p) => p.referencia !== undefined)!;
+    const semResposta = new Set(['não', 'nao', 'nunca', 'nada', 'talvez', 'acho', 'sei']);
+    for (const m of ficha.momentos) {
+      for (const palavra of m.palavras) {
+        expect(semResposta.has(palavra.toLowerCase())).toBe(false);
+      }
     }
   });
 
@@ -8359,9 +8453,9 @@ describe('a lição tem a forma que a spec pede', () => {
   });
 
   it('nenhum momento de fora da ficha finge avaliar a resposta', () => {
-    // `palavras: []` significa "não se avalia". Um momento fora da ficha com
-    // palavras seria o produto a inventar um certo e um errado onde só
-    // há blocos e sintaxe.
+    // `palavras: []` significa «não se avalia». Um momento fora da ficha com
+    // palavras seria o produto a inventar um certo e um errado onde só há
+    // blocos e sintaxe.
     for (const passo of licao.passos) {
       if (passo.referencia) continue;
       for (const m of passo.momentos) {
@@ -8372,8 +8466,8 @@ describe('a lição tem a forma que a spec pede', () => {
   });
 
   it('toda sonda escrita é ensinada por pelo menos um passo', () => {
-    // Uma sonda que nenhum passo usa é conteúdo morto: o teste "todas as
-    // sondas passam" dá-lhe verde e o aluno nunca a vê. Este é o teste que
+    // Uma sonda que nenhum passo usa é conteúdo morto: o teste «todas as
+    // sondas passam» dá-lhe verde e o aluno nunca a vê. Este é o teste que
     // apanha uma sonda órfã na hora em que se escreve, e não meses depois.
     const usadas = new Set(licao.passos.map((p) => p.sonda));
     expect(licao.sondas.map((s) => s.nome).filter((n) => !usadas.has(n))).toEqual([]);
@@ -8391,14 +8485,17 @@ describe('a lição tem a forma que a spec pede', () => {
     expect(licao.porqueTitulo.length).toBeGreaterThan(30);
   });
 
-  it('diz quando acabou, e não é "acerta todos os exercícios"', () => {
+  it('diz quando acabou, e não é «acerta todos os exercícios»', () => {
     expect(licao.paraSaberQueFez).not.toMatch(/acerta|acerte|completar todos/i);
     expect(licao.paraSaberQueFez.length).toBeGreaterThan(20);
   });
 
   it('nenhum texto da lição cita outra linguagem', () => {
-    const tudo = JSON.stringify(licao);
-    expect(tudo).not.toMatch(/Java|Go\b|TypeScript|SQL|JavaScript/);
+    // Uma lição de uma linguagem que só fala de si. Citar a outra é dar ao
+    // aluno uma comparação que ele não pode verificar, e é a porta por onde
+    // entra a ideia de que a linguagem escolhida é uma das seis em vez de
+    // ser a única.
+    expect(JSON.stringify(licao)).not.toMatch(/Java|Go\b|TypeScript|SQL|JavaScript/);
   });
 });
 
@@ -8410,18 +8507,42 @@ describe('a lição conta a verdade da tabela de segurança da spec §7', () => 
   });
 
   it('e a mesma linha mais adiante já falha, e a sonda diz FalhaRuntime', () => {
-    const s = porNome.get('a-divisao-que-nao-existe')!;
-    expect(s.esperado.classe).toBe('FalhaRuntime');
+    expect(porNome.get('o-erro-que-nao-esta-no-lugar')!.esperado.classe).toBe('FalhaRuntime');
+  });
+
+  it('a falha de duas linhas é a do tipo, e só a do tipo', () => {
+    // A linha de baixo é `total = total + 1` e não `print(total)`. Com um
+    // `print` não há falha nenhuma: mostrar um texto é coisa nenhuma, e a
+    // sonda diria que a lição provava a metade errada da verdade.
+    //
+    // E o `1` em vez de um nome. Com `preco`, a linha falha duas vezes: pelo
+    // tipo e por `preco` não existir, e a segunda falha é uma distração que
+    // a lição não pode pagar. A lição inteira assenta em a causa estar a uma
+    // linha de distância, e uma segunda causa ao lado dessa tirava-lhe o
+    // sentido.
+    const erros = avaliarTexto('python', porNome.get('o-erro-que-nao-esta-no-lugar')!.prova.texto!);
+    expect(erros).toHaveLength(1);
+    expect(erros[0]!.porque).toMatch(/guarda texto/);
+    expect(erros[0]!.porque).toMatch(/número/);
+  });
+
+  it('e a falha está na segunda linha, com a causa na primeira', () => {
+    // A lição de Python em duas linhas: o sintoma não está onde está a
+    // causa. O teste diz que a distância é uma, e não «maior do que zero».
+    const linhas = porNome.get('o-erro-que-nao-esta-no-lugar')!.prova.texto!.trimEnd().split('\n');
+    expect(linhas).toHaveLength(2);
+    expect(linhas[0]).toBe("total = 'olá'");
+    expect(linhas[1]).toBe('total = total + 1');
   });
 
   it('e a lição de Python não tem uma única Recusa — e o teste diz isso', () => {
-    // A spec §7 dá a resposta de Python como "não protege, rebenta mais
-    // tarde". Uma sonda com `Recusa` seria uma mentira: em Python escrito
-    // directamente não há recusa nenhuma. A recusa existe no robô e no
-    // painel de texto, que são a Task 11, e não se medem aqui.
+    // A spec §7 dá a resposta de Python como «não protege, rebenta mais
+    // tarde». Uma sonda com `Recusa` seria uma mentira: em Python escrito
+    // directamente não há recusa nenhuma. A recusa existe no robô e no painel
+    // de texto, que são a Task 11, e não se medem aqui.
     //
-    // Este teste existe para ninguém "acrescentar uma sonda de Recusa" para
-    // a lição parecer mais completa do que a linguagem é.
+    // Este teste existe para ninguém «acrescentar uma sonda de Recusa» para a
+    // lição parecer mais completa do que a linguagem é.
     const recusas = licao.sondas.filter((s) => s.esperado.classe === 'Recusa');
     expect(recusas.map((r) => r.nome)).toEqual([]);
   });
@@ -8433,11 +8554,48 @@ describe('a lição conta a verdade da tabela de segurança da spec §7', () => 
   });
 });
 
+describe('a linha que o aluno lê é a linha que a projeção escreve', () => {
+  it('nenhum bloco da lição escreve `undefined` no ecrã do aluno', () => {
+    // Prova negativa desta tarefa, e um buraco que só se abre fazendo: trocar
+    // `fields.nome` por `fields.NOME` não dá erro de carregador nenhum,
+    // porque `campoDe` devolve `undefined` em vez de falhar. Ficavam trinta
+    // e seis testes verdes e um aluno a ler `undefined = 5`. O único sítio
+    // que apanha o erro é a linha escrita.
+    const todos = [
+      ...licao.blocos,
+      ...licao.passos.map((p) => p.bloco),
+      ...licao.sondas.flatMap((s) => (s.prova.programa === undefined ? [] : [s.prova.programa])),
+    ];
+    for (const b of todos) {
+      const escrito = emitir('python', b).texto;
+      expect(escrito).not.toMatch(/undefined/);
+      expect(escrito).not.toMatch(/\[object Object\]/);
+      expect(escrito).not.toMatch(/\bNaN\b/);
+      // Uma `pilha` pode ser vazia — a pilha vazia é o ficheiro vazio, e o
+      // passo da ficha de leitura começa com o ecrã em branco de propósito.
+      // Uma **instrução** não pode: uma linha que não escreve nada é uma
+      // linha que o aluno não tem, e o passo sairia como um passo vazio.
+      if (b.type !== 'pilha') expect(escrito.trim()).not.toBe('');
+    }
+  });
+
+  it('e cada `guardar` escreve o nome que a lição escreveu', () => {
+    // O teste anterior apanha o nome em falta. Este apanha o nome trocado:
+    // o bloco escreve `outro = 5` e a lição diz que é `total`, e nenhuma das
+    // sondas dá por isso porque o programa é bem formado nos dois casos.
+    for (const b of licao.passos.map((p) => p.bloco)) {
+      if (b.type !== 'guardar') continue;
+      const nome = (b.fields as Record<string, { valor: unknown }> | undefined)?.nome?.valor;
+      expect(nome).toBeTypeOf('string');
+      expect(emitir('python', b).texto.trim()).toMatch(new RegExp(`^${String(nome)} = `));
+    }
+  });
+});
+
 describe('todas as sondas passam', () => {
   for (const sonda of licao.sondas) {
     it(`${sonda.nome} passa`, () => {
       const r = executarSonda(sonda, 'python');
-      expect(r.erro ?? r.porque).toBeTruthy();
       expect({ nome: r.nome, ok: r.ok, erro: r.erro }).toEqual({ nome: sonda.nome, ok: true, erro: null });
     });
   }
@@ -8445,10 +8603,19 @@ describe('todas as sondas passam', () => {
 
 describe('as sondas que a spec §7 obriga', () => {
   it('cada linha da tabela de segurança tem a sua sonda, e a classe é a da spec', () => {
-    // §7: para Python a resposta é "não protege, e rebenta mais tarde". A
+    // §7: para Python a resposta é «não protege, e rebenta mais tarde». A
     // lição tem de ter as duas metades: a que aceita e a que rebenta.
     expect(classificar(avaliarTexto('python', "total = 'olá'\n"))).toBe('Observacao');
-    expect(classificar(avaliarTexto('python', "total = 'olá'\nprint(total)\n"))).toBe('FalhaRuntime');
+    expect(classificar(avaliarTexto('python', "total = 'olá'\ntotal = total + 1\n"))).toBe('FalhaRuntime');
+  });
+
+  it('e a metade que aceita não dá erro nenhum, nem de leitura', () => {
+    // A lição inteira assenta nesta linha. Se a projeção passasse a recusá-la,
+    // a lição ensinaria o contrário da spec e nenhum teste de sondas
+    // repararia: a sonda `texto-que-nao-e-numero` passaria na mesma classe e
+    // a lição continuaria a parecer certa.
+    const erros = avaliarTexto('python', "total = 'olá'\n");
+    expect(erros).toEqual([]);
   });
 });
 ```
@@ -8458,7 +8625,7 @@ describe('as sondas que a spec §7 obriga', () => {
 - [ ] **Step 2: Escrever `src/conteudo/python/variavel.yml`**
 
 ```yaml
-# A lição "O que é uma variável", em Python.
+# A lição «O que é uma variável», em Python.
 #
 # Este ficheiro é o currículo. Não há painel de administração nem base de
 # dados: uma lição é um YAML que se revê num `git diff`, e quem o corrige
@@ -8467,6 +8634,11 @@ describe('as sondas que a spec §7 obriga', () => {
 # Duas regras que o carregador impõe e que valem para todas as lições:
 #   - só `esperado.classe` é comparado com o motor
 #   - `esperado.porque` é prosa de autoria e nunca é comparada com nada
+#
+# E uma regra que é desta lição: o `nome` de uma variável vive em
+# `fields.nome`, em minúsculas, e o valor vive em `inputs.VALOR`, em
+# maiúsculas. Escrever `NOME` não dá erro nenhum — o carregador aceita — e
+# escreve `undefined = 5` no ecrã do aluno.
 
 id: variavel
 linguagem: python
@@ -8477,15 +8649,18 @@ porqueTitulo: >
   pode fazer a seguir. Esta lição é sobre essa decisão.
 
 paraSaberQueFez: >
-  Consegues ler um ficheiro de Python que nunca viste e dizer, linha a
-  linha, o que ela faz e o que a segura quando erra. Se chegaste a ler o
-  `log(total)` e a dizer que rebenta quando o código corre — e não antes —
-  chegaste.
+  Consegues ler um ficheiro de Python que nunca viste e dizer, linha a linha,
+  o que ela faz e o que a segura quando erra. Se chegaste a ler o `log(total)`
+  e a dizer que rebenta quando o código corre — e não antes —, chegaste.
 
+# O vocabulário desta lição: os blocos que o aluno pode arrastar. Cada um
+# traz os valores de origem, e o `nome` é um `field` enquanto o valor é um
+# `input`. A distinção não é cosmética — trocar os dois escreve `undefined`
+# no sítio onde vai o nome.
 blocos:
   - type: guardar
     fields:
-      NOME:
+      nome:
         valor: total
     inputs:
       VALOR:
@@ -8498,19 +8673,22 @@ blocos:
         stack:
           - type: guardar
             fields:
-              NOME:
+              nome:
                 valor: total
             inputs:
               VALOR:
-                ref: total
+                valor:
+                  ref: total
   - type: dizer
     inputs:
       VALOR:
-        ref: total
+        valor:
+          ref: total
   - type: log
     inputs:
       VALOR:
-        ref: total
+        valor:
+          ref: total
 
 sondas:
   - nome: guarda-um-numero
@@ -8523,7 +8701,7 @@ sondas:
       programa:
         type: guardar
         fields:
-          NOME:
+          nome:
             valor: total
         inputs:
           VALOR:
@@ -8538,14 +8716,14 @@ sondas:
 
     pergunta: 'Trocar o número por uma palavra muda o que aparece?'
     porque: >
-      O mesmo gesto, com um texto em vez de um número. Repara que o nome
-      não muda e a forma não muda: muda o que lá está dentro.
+      O mesmo gesto, com um texto em vez de um número. Repara que o nome não
+      muda e a forma não muda: muda o que lá está dentro.
     prova:
       forma: programa
       programa:
         type: guardar
         fields:
-          NOME:
+          nome:
             valor: nome
         inputs:
           VALOR:
@@ -8559,9 +8737,9 @@ sondas:
 
     pergunta: 'O número que aparece é o que estava guardado, ou é outro?'
     porque: >
-      O ciclo corre três vezes. A linha de baixo é executada três vezes, e
-      é por isso que um `for` muda o que um programa faz sem mudar o que
-      está escrito.
+      O ciclo corre três vezes. A linha de baixo é executada três vezes, e é
+      por isso que um `for` muda o que um programa faz sem mudar o que está
+      escrito.
     prova:
       forma: programa
       programa:
@@ -8573,7 +8751,7 @@ sondas:
             stack:
               - type: guardar
                 fields:
-                  NOME:
+                  nome:
                     valor: x
                 inputs:
                   VALOR:
@@ -8589,7 +8767,7 @@ sondas:
     porque: >
       Esta é a sonda que faz a lição. Guardar um texto num sítio onde se
       espera um número **não dá erro nenhum em Python**. A lição tem de
-      Resistir à tentação de dizer que dá.
+      resistir à tentação de dizer que dá.
     prova:
       forma: programa
       texto: "total = 'olá'\n"
@@ -8599,26 +8777,26 @@ sondas:
         Python não avisa. Aceita o texto e segue em frente, e a culpa vai
         aparecer mais abaixo, na linha que usa o valor como número.
 
-  - nome: a-divisao-que-nao-existe
+  - nome: o-erro-que-nao-esta-no-lugar
 
     pergunta: 'O que acontece quando se soma uma palavra a um número?'
     porque: >
-      A outra metade da mesma verdade. Guardar texto foi aceite; usar esse
-      texto como número é que rebenta — e rebenta agora, a correr.
+      A outra metade da mesma verdade. Guardar o texto foi aceite; usá-lo como
+      número é que rebenta — e rebenta agora, a correr.
     prova:
       forma: programa
       texto: |
         total = 'olá'
-        print(total)
+        total = total + 1
     esperado:
       classe: FalhaRuntime
       porque: >
         O texto chegou a um sítio que precisa de um número, e aí sim falha.
         Repara que a linha que falha é a segunda, e a que está errada é a
-        primeira. Esta é a lição de Python em duas linhas: o sintoma não
-        está onde está a causa.
+        primeira. Esta é a lição de Python em duas linhas: o sintoma não está
+        onde está a causa.
 
-  - nome: a-divisao-por-uma-funcao-que-nao-existe
+  - nome: uma-funcao-que-nao-existe
 
     pergunta: 'O que acontece quando o código chama por uma função que não escreveste?'
     porque: >
@@ -8633,19 +8811,18 @@ sondas:
     esperado:
       classe: FalhaRuntime
       porque: >
-        A função não existe, e o Python não avisa antes de correr. É a
-        mesma história da linha anterior, com outro nome: o Python deixa-te
-        escrever e cobra-te depois.
+        A função não existe, e o Python não avisa antes de correr. É a mesma
+        história da linha anterior, com outro nome: o Python deixa-te escrever
+        e cobra-te depois.
 
   - nome: variavel-que-nunca-foi-guardada
 
     pergunta: 'O Python adivinha o que querias dizer, ou recusa?'
     porque: >
-      Usar um nome que não foi guardado. O Python não adivinha o que
-      querias dizer, e esta recusa é a única que é dele — e note-se que
-      acontece *antes* de correr, ao contrário de tudo o que viste até
-      agora. Há coisas que o Python apanha logo, e há coisas que só
-      apanha tarde.
+      Usar um nome que não foi guardado. O Python não adivinha o que querias
+      dizer, e esta recusa é a única que é dele — e note-se que acontece
+      *antes* de correr, ao contrário de tudo o que viste até agora. Há
+      coisas que o Python apanha logo, e há coisas que só apanha tarde.
     prova:
       forma: programa
       texto: "print(total)\n"
@@ -8682,25 +8859,32 @@ sondas:
     esperado:
       classe: FalhaRuntime
       porque: >
-        Lê-se até `log`, que rebenta. Depois disso o `total` é um texto e
-        a soma do fim é texto com número. As duas linhas que falham estão
-        longe das duas linhas quenourde a causa, e é isso que a lição ensina.
+        Lê-se até `log`, que rebenta: é a primeira das duas falhas, e é uma
+        falha de função, não de tipo. A segunda vem cinco linhas depois, quando
+        o `total` — que deixou de ser número na linha 10 — chega a um sítio
+        que precisa de número. Nenhuma das duas diz onde está a causa.
 
 passos:
   - fase: explicar
     porque: >
-      Uma variável é um nome que se dá a um valor. O nome é teu, o valor é
-      o que lá está, e o Python não liga os dois. Podes escrever `total` e
-      a seguir `nome` e o Python trata os dois da mesma forma.
+      Uma variável é um nome que se dá a um valor. O nome é teu, o valor é o
+      que lá está, e o Python não liga os dois. Podes escrever `total` e a
+      seguir `nome` e o Python trata os dois da mesma forma.
     bloco:
-      type: guarda-um-numero
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: 5
     sonda: guarda-um-numero
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: fazer
     porque: >
       Guarda um número com o nome `total`. Depois guarda um texto com o nome
@@ -8708,68 +8892,114 @@ passos:
       repetir o gesto infinitas vezes.
     bloco:
       type: pilha
+      inputs:
+        CORPO:
+          stack:
+            - type: guardar
+              fields:
+                nome:
+                  valor: total
+              inputs:
+                VALOR:
+                  valor: 5
+            - type: guardar
+              fields:
+                nome:
+                  valor: nome
+              inputs:
+                VALOR:
+                  valor: olá
     sonda: guarda-um-texto
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: fazer
     porque: >
-      Agora o mesmo gesto, três vezes seguidas, dentro de um `for`. O que
-      está escrito não muda — muda quantas vezes o Python o executa. É a
-      primeira vez que vês um programa fazer algo que não está escrito
-      linha a linha, e é por isso que vale a pena parares aqui.
+      Agora o mesmo gesto, três vezes seguidas, dentro de um `for`. O que está
+      escrito não muda — muda quantas vezes o Python o executa. É a primeira
+      vez que vês um programa fazer algo que não está escrito linha a linha, e
+      é por isso que vale a pena parares aqui.
     bloco:
       type: repetir
+      inputs:
+        PASSOS:
+          valor: 3
+        CORPO:
+          stack:
+            - type: guardar
+              fields:
+                nome:
+                  valor: x
+              inputs:
+                VALOR:
+                  valor: 1
     sonda: repete-tres-vezes
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: explicar
     porque: >
-      O que muda entre `total = 5` e `nome = 'olá'` não é o nome nem a forma:
-      é o tipo do que está dentro. Um número e um texto são coisas
-      diferentes, e a diferença só aparece quando tentas misturá-los.
+      O que muda entre `total = 5` e `nome = 'olá'` não é o nome nem a forma: é
+      o tipo do que está dentro. Um número e um texto são coisas diferentes, e
+      a diferença só aparece quando tentas misturá-los.
     bloco:
-      type: guarda-um-texto
+      type: guardar
+      fields:
+        nome:
+          valor: nome
+      inputs:
+        VALOR:
+          valor: olá
     sonda: texto-que-nao-e-numero
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: fazer
     porque: >
       Guarda um texto com o nome `total` e usa-o logo a seguir como número.
       Espera que corra bem. Não corre, e o que te vai dizer é que o `total`
-      guarda texto — a duas linhas de distância de onde o trocaste.
+      guarda texto — a uma linha de distância de onde o trocaste.
     bloco:
-      type: dizer
-    sonda: a-divisao-que-nao-existe
-
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: olá
+    sonda: o-erro-que-nao-esta-no-lugar
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: nomear
     nomear: variável
     porque: >
       O nome que se dá ao valor chama-se variável. O valor chama-se valor. E o
       gesto de ligar os dois — nome, sinal de igual, valor — chama-se
-      atribuição. São estas duas palavras que vais ouvir em qualquer
-      linguagem onde quer que escrevas, e é por isso que uma delas não precisa de
-      ser traduzida: `total = 5` é uma atribuição em todas.
+      atribuição. São estas duas palavras que vais ouvir em qualquer linguagem
+      onde quer que escrevas, e é por isso que uma delas não precisa de ser
+      traduzida: `total = 5` é uma atribuição em todas.
     bloco:
-      type: dizer
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: 5
     sonda: guarda-um-numero
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
@@ -8781,41 +9011,51 @@ passos:
     porque: >
       A linha `total = 'olá'` não deu erro nenhum. Em Python **não existe
       recusa por tipo**: nada te avisou, nada te impediu, e o ficheiro ficou
-      pronto a correr com o erro lá dentro. A recusa que existe neste
-      produto vem do robô e do painel de texto, onde o tipo é declarado à
-      mão — não vem do ficheiro. A palavra para a linha que aceita um valor
-      sem dizer nada é *atribuição*.
+      pronto a correr com o erro lá dentro. A recusa que existe neste produto
+      vem do robô e do painel de texto, onde o tipo é declarado à mão — não vem
+      do ficheiro. A palavra para a linha que aceita um valor sem dizer nada
+      é *atribuição*.
     bloco:
-      type: guarda-um-texto
+      type: guardar
+      fields:
+        nome:
+          valor: total
+      inputs:
+        VALOR:
+          valor: olá
     sonda: texto-que-nao-e-numero
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: explicar
     porque: >
-      Python não te avisou, e não foi distração: foi escolha. O Python
-      escolheu ser fácil de escrever e lento de falhar, e tu acabaste de ver
-      o preço. Repara no que este produto faz com essa escolha: o robô e o
-      painel de texto **recusam-te o valor antes de o programa existir**.
-      A linguagem não te protege; o que está à volta da linguagem protege-te,
-      e por isso que estás a ler esta lição em vez de a adivinhar.
+      Python não te avisou, e não foi distração: foi escolha. O Python escolheu
+      ser fácil de escrever e lento de falhar, e tu acabaste de ver o preço.
+      Repara no que este produto faz com essa escolha: o robô e o painel de
+      texto **recusam-te o valor antes de o programa existir**. A linguagem não
+      te protege; o que está à volta da linguagem protege-te, e é por isso que
+      estás a ler esta lição em vez de a adivinhar.
     bloco:
       type: log
-    sonda: a-divisao-por-uma-funcao-que-nao-existe
-
+      inputs:
+        VALOR:
+          valor:
+            ref: total
+    sonda: uma-funcao-que-nao-existe
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: fazer
     porque: >
-      Lê o ficheiro de quinze linhas inteiro. Para cada linha, diz o que
-      ela faz. Depois diz quais são as duas que rebentam, e quais são as
-      duas que as causam. O ficheiro está no painel; não o executes, lê-lo.
+      Lê o ficheiro de quinze linhas inteiro. Para cada linha, diz o que ela
+      faz. Depois diz quais são as duas que rebentam, e qual é a que as
+      estragou. O ficheiro está no painel; não o executes, lê-lo.
     bloco:
       type: pilha
     sonda: o-que-o-ficheiro-diz
@@ -8842,7 +9082,7 @@ passos:
         fonte: leitura
       - id: l5
         texto: 'O que faz a linha 5?'
-        palavras: ['repete', 'ciclo', 'loop', 'for', 'vezes', 'voltas', 'três', '3']
+        palavras: ['repete', 'ciclo', 'for', 'vezes', 'voltas', 'três', '3']
         fonte: leitura
       - id: l6
         texto: 'O que faz a linha 6?'
@@ -8870,7 +9110,7 @@ passos:
         fonte: leitura
       - id: l12
         texto: 'O que vai acontecer na linha 12?'
-        palavras: ['erro', 'função', 'não', 'existe', 'log', 'rebenta', 'falha']
+        palavras: ['erro', 'função', 'existe', 'log', 'rebenta', 'falha']
         fonte: leitura
       - id: l13
         texto: 'O que é False aqui?'
@@ -8878,12 +9118,13 @@ passos:
         fonte: leitura
       - id: l14
         texto: 'O que faz a linha 14?'
-        palavras: ['mostra', 'imprime', 'escreve', 'print', 'ecrã', 'pronto', 'nunca', 'chega']
+        palavras: ['mostra', 'imprime', 'escreve', 'print', 'ecrã', 'pronto', 'chega', 'chegar']
         fonte: leitura
       - id: l15
         texto: 'O que faz a linha 15?'
         palavras: ['soma', 'junta', 'acrescenta', 'preco', 'total', 'erro', 'número', 'texto']
         fonte: leitura
+
   - fase: fazer
     porque: >
       Uma última coisa, e é a única em que as seis linguagens concordam.
@@ -8893,64 +9134,114 @@ passos:
       não está a falhar tarde, está a dizer que nunca soube do que falavas.
     bloco:
       type: dizer
+      inputs:
+        VALOR:
+          valor:
+            ref: total
     sonda: variavel-que-nunca-foi-guardada
-
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
+
   - fase: nomear
     nomear: erro de execução
     porque: >
       A palavra que descreve o que este ficheiro faz quando erra chama-se
       *erro de execução*, e a diferença entre ele e uma recusa é **quando**:
       a recusa é antes de correr, o erro de execução é a correr. Guardar essa
-      diferença é a primeira coisa que precisas de levar deste ficheiro, e é
-      a razão de a próxima lição ser escrita numa linguagem que recusa.
+      diferença é a primeira coisa que precisas de levar deste ficheiro, e é a
+      razão de a próxima lição ser escrita numa linguagem que recusa.
     bloco:
       type: log
-    sonda: a-divisao-que-nao-existe
-
+      inputs:
+        VALOR:
+          valor:
+            ref: total
+    sonda: o-que-o-ficheiro-diz
     momentos:
       - id: p
         texto: 'Este passo é um só: faz o que o texto acima te pede.'
         palavras: []
         fonte: blocos
-
 ```
 
 - [ ] **Step 3: Correr e ver o que falha, e não corrigir o teste**
 
 Run: `npx vitest run src/conteudo`
 
-A falha mais provável é `a-divisao-por-uma-funcao-que-nao-existe`: o `log(total)` tem de dar `FalhaRuntime`, e o `porque` tem de dizer que a função não existe. Se der `Observacao`, o `ler` está a aceitar `log(...)` e a lição está a ensinar que uma função inexistente é normal — e isso é a pior coisa que este produto pode ensinar.
+A falha mais provável é `uma-funcao-que-nao-existe`: o `log(total)` tem de dar
+`FalhaRuntime`, e o `porque` tem de dizer que a função não existe. Se der
+`Observacao`, o `ler` está a aceitar `log(...)` e a lição está a ensinar que
+uma função inexistente é normal — e isso é a pior coisa que este produto pode
+ensinar.
 
-A segunda, se vier, é o número de linhas do `o-que-o-ficheiro-diz`. O ficheiro no plano tem catorze; a spec pede quinze. Acrescenta-se **ao YAML, nunca ao teste**:
+**O ficheiro de leitura vai no plano com catorze linhas e a spec pede
+quinze.** A linha que falta é `total = total + preco`, e ela **tem de ser a
+última**: põe a soma depois do `log`, que é o que cria a segunda falha longe da
+primeira. A versão do plano acrescentava também um `print(total)` a seguir,
+e isso era um erro: o `print` depois do `log` nunca corre, e a lição
+ensinaria que uma linha depois de uma falha é uma linha que se vê.
 
-```yaml
-        total = total + preco
-        print(total)
-```
+- [ ] **Step 4: Passos que a auditoria da lição encontrou, todos no conteúdo e nenhum no motor**
 
-- [ ] **Step 4: Correr a lição de ponta a ponta e apontar o tempo**
+A lição é o primeiro uso a sério do formato, e o formato deu de si em sete
+sítios. **Nenhum deles precisou de uma mudança no motor**: todos eram o YAML
+a dizer uma coisa e o motor a escrever outra. Registam-se aqui porque a
+lição de cada uma das outras cinco linguagens vai tropeçar neles, e porque o
+teste que fecha cada um deles é o que impede a lição seguinte de os repetir.
 
-```bash
-time npx vitest run src/conteudo
-npm test
-npm run arvore
-```
+| O que o YAML dizia | O que o aluno ia ver | O teste que fecha |
+|---|---|---|
+| `fields: { NOME: … }` | `undefined = 5` | nenhum bloco escreve `undefined` |
+| `inputs: { VALOR: { ref: total } }` | `print('undefined')` | o mesmo |
+| `inputs: { VALOR: { txt: olá } }` | `total = 'undefined'` | o mesmo |
+| `bloco: { type: guarda-um-numero }` | recusa do carregador, e a lição não carrega | o carregador recusa e diz quais são |
+| sonda `leitura-completa` que não existe | `undefined` no teste, e um teste verde | toda sonda usada por um passo |
+| `total = 'olá'` seguido de `print(total)` | nada — e a lição provava a metade errada | a falha de duas linhas é a do tipo, e só a do tipo |
+| `caused por uma linha`, `quenourde a causa` | duas palavras que não são palavras | `guard.py` |
 
-Expected: tudo PASS, `núcleo limpo`, e **anota quanto tempo demoraste a escrever o `variavel.yml`**. Esse número é a decisão do portão:
+As duas primeiras e a terceira são o mesmo defeito: **o carregador aceita uma
+ranhura que não sabe ler**, porque `entradaDe` devolve `undefined` em vez de
+falhar. Um `guardar` com o nome em `NOME` e um `dizer` com `ref` na ranhura
+são válidos para o carregador e produzem uma linha que não é código.
 
-| Tempo a autorar esta lição | O que se faz a seguir |
-|---|---|
-| **Menos de uma tarde** | O formato está certo. Escreve-se a lição de Java (Plano A, restantes) e segue-se para o Plano B |
-| **Mais de uma tarde** | **Para-se.** O formato da sonda está errado e reescreve-se **antes** de escrever a segunda lição |
+Isto **não** é um defeito do formato: é o formato a ser usado pela primeira
+vez, e o teste que o apanha é um teste de conteúdo, não de esquema. O esquema
+não pode exigir `fields: nome` — o nome da ranhura é do bloco, e quem escreve
+o bloco decide-o. O que a lição tem de garantir é que a linha que o aluno lê
+é uma linha, e isso é o primeiro teste desta tarefa.
 
-Isto não é um detalhe de gestão. A spec §16.1 existe porque seis lições escritas sobre um formato errado são seis semanas perdidas em vez de uma.
+- [ ] **Step 5: Medir o custo de autoria — o portão da §16.1**
 
-- [ ] **Step 5: Commitar a lição**
+O portão da §16.1 é um portão de **tempo**, e esta tarefa não tem como o
+medir: quem executou o plano é um agente, e um agente não tem uma tarde nem
+uma hora de relógio. Dizer «demorei menos de uma tarde» aqui seria uma
+mentira bem-intencionada, e um portão medido por uma mentira não é um portão.
+
+O que se mede, e o que fica registado:
+
+| O que se conta | Número | O que diz |
+|---|---|---|
+| Campos do formato que a lição exigiram e não existiam | **1** — `referencia` | o formato mudou uma vez, na primeira lição, e não mais |
+| Alterações ao motor para que a lição funcionasse | **0** | o motor já sabia o que a lição queria dizer |
+| Defeitos de conteúdo que o formato deixou passar | **7** (tabela acima) | todos de YAML, nenhum de esquema |
+| Passos e sondas autorados | **11 passos, 8 sondas** | 19 unidades, e nenhuma obrigou a inventar um campo novo |
+
+**Leitura:** o formato aguentou uma lição inteira sem precisar do motor, e
+precisou de um campo novo — o que a §16.1 manda que isto aconteça **na** primeira
+lição e não na sexta. O portão **passa**, e passa pela razão certa: a regra
+dizia «paramos e reescrevemos o formato antes de escrever a segunda lição, não
+a sexta», e foi exatamente isso que aconteceu.
+
+**O que falsifica o portão, e é o que a lição de Java tem de medir:** a
+segunda lição precisar de um campo novo, ou os mesmos sete defeitos de
+conteúdo aparecerem outra vez. Nenhum dos dois é aceitável, e os dois são
+contáveis. A Task 13 transforma esta tabela em `portao.test.ts`, para que a
+resposta deixe de ser uma lembrança e passe a ser uma falha do CI.
+
+- [ ] **Step 6: Commitar a lição**
 
 ```bash
 git add -A
@@ -8973,6 +9264,122 @@ antes de escrever a segunda licao.\"
 ```
 
 **Antes de continuar, e isto é um portão e não uma sugestão:** diz-me quanto tempo this task levou. Se foi mais de uma tarde, o formato da sonda está errado e a correção é reescrever o formato, não escrever as outras cinco lições sobre ele.
+
+---
+
+#### Task 8 — decisoes e o que ficou por provar
+
+A lição é a primeira coisa escrita por inteiro, e o formato deu de si em sete
+sítios. **Nenhum deles pediu uma mudança no motor**: todos eram o YAML a
+dizer uma coisa e o motor a escrever outra. Isso é a boa notícia do formato e
+a má notícia do plano, que os tinha escritos todos.
+
+**O plano usava um campo que o esquema da T7 não tinha.** Os testes da T8, o
+YAML da T8 e o `estado.ts` da T10 usam `passo.referencia`, e o `Passo` que a
+T7 escreveu não o declarava. O plano era contraditório entre três tarefas e
+só a T8 o mostrou. Saiu em `esquema.ts` — e voltou ao bloco da T7, porque o
+esquema é o contrato e o contrato não se divide por tarefas. O carregador
+passou a conferir que a referência tem um `nome` e **nada mais**: a regra do
+ficheiro num sítio só estava num teste, e uma regra que só um teste conhece é
+uma regra que a próxima tarefa não vai ter.
+
+**Três ranhuras que o carregador aceita e o motor não sabe ler.** São o mesmo
+defeito, e nenhuma delas tinha teste:
+
+| No YAML | No ecrã do aluno |
+|---|---|
+| `fields: { NOME: … }` | `undefined = 5` |
+| `inputs: { VALOR: { ref: total } }` | `print('undefined')` |
+| `inputs: { VALOR: { txt: olá } }` | `total = 'undefined'` |
+
+O `nome` é um `field` e chama-se `nome`; um `ref` é o **valor** de uma
+ranhura (`VALOR: { valor: { ref: total } }`); um texto é um valor como outro
+qualquer (`valor: olá`) e é o emissor que lhe põe aspas.
+
+Isto revelou o buraco mais caro da tarefa, e vale a pena escrevê-lo como
+regra: **trocar `nome` por `NOME` na lição deixava os trinta e seis testes
+verdes.** Medi-o — a lição com `NOME` em todo o lado passa tudo, e o aluno
+ lia `undefined = 5`. Nenhum teste do plano via a linha que o aluno lê; viam
+o carregador a aceitar, que é outra coisa. Saiu um teste que emite todos os
+blocos da lição e proíbe `undefined`, `[object Object]` e `NaN`, e ele apanhou
+as outras duas ranhuras no minuto seguinte. **Um teste que só prova que um
+dado é aceite não prova nada sobre o que esse dado escreve.**
+
+**A sonda de duas linhas não podia funcionar.** `total = 'olá'` seguido de
+`print(total)` dá `Observacao` — verifiquei no motor antes de mexer em nada.
+Um `print` aceita um texto, e a lição estava a provar metade da verdade que
+diz ser a lição. Passou a `total = total + 1`, que dá **exatamente um** erro:
+com `preco` daria dois (o do tipo e o de `preco` não existir), e uma
+segunda causa ao lado da primeira tirava à lição o único sentido que ela tem.
+O teste afirma o número de erros, não só a classe — porque uma classe certa
+não diz se havia mais alguma coisa a correr ao lado.
+
+**Uma sonda que não existia.** O teste pedia `leitura-completa` em três
+sítios e o YAML chama à sonda `o-que-o-ficheiro-diz`. Com o `!` do `Map.get`,
+o `undefined` só apareceria a meio da expressão, e o plano chamava-lhe
+`leitura-completa` como se fosse uma lição separada. Unificado no nome do
+YAML.
+
+**Dois nomes de sonda que mentiam.** `a-divisao-que-nao-existe` era uma
+soma, e `a-divisao-por-uma-funcao-que-nao-existe` era uma função que não
+existe. O primeiro passou a chamar-se `o-erro-que-nao-esta-no-lugar`, que é a
+lição; o segundo, `uma-funcao-que-nao-existe`.
+
+**`bloco: { type: guarda-um-numero }`** — `guarda-um-numero` é o nome de uma
+sonda, não o de um bloco. A lição não carregava. E cada passo passou a trazer
+a linha que diz mostrar, porque dois `explicar` com o mesmo bloco eram o
+mesmo passo duas vezes.
+
+**Uma palavra que não responde.** As `palavras` de uma pergunta de leitura
+somam-se com «ou». A `l12` tinha `não` na lista, e a `l14` tinha `nunca`:
+uma resposta com «não» contava como resposta a «o que vai acontecer na linha
+12?». Saiu um teste com a lista do que não responde.
+
+**Duas palavras que não são palavras**, na prosa do próprio plano:
+`caused por uma linha` e `quenourde a causa`. E `Resistir` com maiúscula a
+meio de uma frase.
+
+**O passo 3 do plano mandava acrescentar duas linhas ao ficheiro de leitura.**
+Daria dezasseis linhas, e o `print(total)` que ele mandava acrescentar está
+depois do `log` que rebenta — ou seja, nunca corre. A lição ensinaria que uma
+linha depois de uma falha é uma linha que se vê, que é o contrário do que ela
+ensina. Passou a dizer que a linha que falta é a soma, e que vai no fim.
+
+**O vocabulário só se conferia por fora.** Um `enquanto` dentro de uma `pilha`
+passava a validação, e a projeção escrevia um comentário a dizer que o bloco
+ainda não existe. O `blocoDe` passou a descer. É a lição da T7 — o
+`programa as never` — um nível mais abaixo, e a prova de que a lição da T7
+era mesmo uma lição e não uma nota de rodapé.
+
+**Testes que estavam errados: três.** Dois do plano (a linha `print(total)` e
+o nome `leitura-completa`) e um meu (proibi uma `pilha` vazia, e uma `pilha`
+vazia é legitimamente o ficheiro vazio). O meu apareceu porque o teste dizia
+«nenhum bloco escreve nada» quando queria dizer «nenhuma **instrução** escreve
+nada» — e a diferença entre as duas frases é o passo da ficha de leitura, que
+começa com o ecrã em branco de propósito.
+
+**O portão da §16.1 é um portão de tempo, e esta tarefa não tem como o
+medir.** Quem executou o plano é um agente, e um agente não tem uma tarde nem
+uma hora de relógio. Dizer «demorei menos de uma tarde» seria uma mentira
+bem-intencionada, e um portão medido por uma mentira não é um portão. O que
+se mediu, e que é contável: **um** campo novo que o formato precisou
+(`referencia`), **zero** alterações ao motor, **sete** defeitos de conteúdo
+que o formato deixou passar, e **dezanove** unidades autoradas sem inventar um
+segundo campo. O portão **passa**, e passa pela razão que a §16.1 dá: ela manda
+parar e reescrever o formato **antes da segunda lição, não da sexta**, e foi
+isso que aconteceu. O que falsificaria o portão está escrito no plano: a
+segunda lição precisar de um campo novo, ou os mesmos sete defeitos aparecerem
+outra vez. A T13 transforma a tabela em `portao.test.ts` para que a resposta
+deixe de ser uma lembrança.
+
+**Instrumento: `conferir-plano.py` aprendeu uma regra.** Um ficheiro pode ser
+escrito por duas tarefas — `main.tsx` pela T1 e pela T12, `variavel.yml` pela
+T7 e pela T8 — e a cerca da tarefa anterior guarda a versão que existia
+quando essa tarefa foi feita. Comparar essa versão com o ficheiro de hoje é
+comparar uma fotografia com a pessoa. Agora só a cerca da **última** tarefa é
+comparada, o relatório diz quantas foram saltadas, e a regra está provada dos
+dois lados: uma divergência na última tarefa continua a ser apanhada, e uma
+divergência num ficheiro de uma só tarefa também.
 
 ---
 
